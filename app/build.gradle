@@ -50,8 +50,8 @@ dependencies {
     implementation 'com.google.android.material:material:1.11.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 
-    // Rhino JS Engine
-    implementation 'org.mozilla:rhino:1.7.14'
+    // Rhino JS Engine (Android 호환 빌드)
+    implementation 'com.faendir.rhino:rhino-android:1.6.0'
 
     // OkHttp for HTTP requests (replaces org.jsoup in JS)
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
