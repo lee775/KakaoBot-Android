@@ -20,7 +20,7 @@
             android:id="@+id/btnBack"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
-            android:text="< 뒤로"
+            android:text="&lt; 뒤로"
             android:textSize="12sp"
             android:minWidth="0dp"
             android:paddingStart="12dp"
