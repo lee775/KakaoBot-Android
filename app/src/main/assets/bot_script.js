@@ -450,18 +450,18 @@ function foodchoice(replier) {
     replier.reply("오늘은 이거다! 🍽️" + selectedFood);
 }
 
-const NEXON_API_KEY = "live_7a3074bd54665cadd86920528d44eac7700ae3f8853a3ff626d42db3f7b301f6efe8d04e6d233bd35cf2fabdeb93fb0d";
+var NEXON_API_KEY = "live_7a3074bd54665cadd86920528d44eac7700ae3f8853a3ff626d42db3f7b301f6efe8d04e6d233bd35cf2fabdeb93fb0d";
 
 // ==========================================
 // API 상수 & 캐릭터 목록
 // ==========================================
-const MAPLE_OCID_API_URL = "https://open.api.nexon.com/maplestory/v1/id";
-const MAPLE_INF_API_URL = "https://open.api.nexon.com/maplestory/v1/character/basic";
-const MAPLE_INF_STAT_URL = "https://open.api.nexon.com/maplestory/v1/character/stat";
+var MAPLE_OCID_API_URL = "https://open.api.nexon.com/maplestory/v1/id";
+var MAPLE_INF_API_URL = "https://open.api.nexon.com/maplestory/v1/character/basic";
+var MAPLE_INF_STAT_URL = "https://open.api.nexon.com/maplestory/v1/character/stat";
 var MAPLE_GUILD_ID_URL = "https://open.api.nexon.com/maplestory/v1/guild/id";
 var MAPLE_GUILD_BASIC_URL = "https://open.api.nexon.com/maplestory/v1/guild/basic";
 var MAPLE_ITEM_EQUIPMENT_URL = "https://open.api.nexon.com/maplestory/v1/character/item-equipment";
-const RANKING_CHARACTERS4 = [
+var RANKING_CHARACTERS4 = [
 "글자",
 "Nine",
 "태린",
@@ -663,7 +663,7 @@ const RANKING_CHARACTERS4 = [
 "만발",
 "아란진캐"
 ]
-const RANKING_CHARACTERS3 = [
+var RANKING_CHARACTERS3 = [
 "플로렌스",
 "지봉이",
 "빌콩",
@@ -673,7 +673,7 @@ const RANKING_CHARACTERS3 = [
 "브경"
 ]
 // 랭킹 대상 캐릭터 목록
-const RANKING_CHARACTERS = [
+var RANKING_CHARACTERS = [
  "덕고미콩",
 "영디",
 "아퐁",
@@ -774,7 +774,7 @@ const RANKING_CHARACTERS = [
 "보마Lia",
     
 ];
-const RANKING_CHARACTERS2 = [
+var RANKING_CHARACTERS2 = [
 "흥우양파",
 "멕시칸보이",
 "스커육싹이",
@@ -942,17 +942,17 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
 
     // ===== 메이플 캐릭터 조회 =====
     if (msg.startsWith("/ㄱㅎㅊ")) {
-        const characterName = encodeURIComponent(msg.slice(5).trim());
+        var characterName = encodeURIComponent(msg.slice(5).trim());
         getMapleOcid(characterName, replier);
     }
     if (msg.startsWith("/경험치")) {
-        const characterName1 = encodeURIComponent(msg.slice(5).trim());
+        var characterName1 = encodeURIComponent(msg.slice(5).trim());
         getMapleOcid(characterName1, replier);
     }
     if (msg.startsWith("@@ ")) {
-        const parts = msg.slice(3).trim().split(" ");
-        const characterName2 = parts[0];
-        const targetLevel = parts[1] ? parseInt(parts[1]) : null;
+        var parts = msg.slice(3).trim().split(" ");
+        var characterName2 = parts[0];
+        var targetLevel = parts[1] ? parseInt(parts[1]) : null;
         
         // 헤르메스 랭킹 명령어 체크
         if (characterName2 === "봄비") {
@@ -974,19 +974,19 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
     }
     
     if (msg.startsWith("/ㅌㄹ ")) {
-        const power1 = encodeURIComponent(msg.slice(4).trim());
+        var power1 = encodeURIComponent(msg.slice(4).trim());
         getPower(power1, replier);
     }
     if (msg.startsWith("/ㅈㅌㄹ ")) {
-        const power2 = encodeURIComponent(msg.slice(5).trim());
+        var power2 = encodeURIComponent(msg.slice(5).trim());
         getPower(power2, replier);
     }
     if (msg.startsWith("/투력 ")) {
-        const power3 = encodeURIComponent(msg.slice(4).trim());
+        var power3 = encodeURIComponent(msg.slice(4).trim());
         getPower(power3, replier);
     }
     if (msg.startsWith("@@@@ ")) {
-        const power5Text = msg.slice(5).trim();
+        var power5Text = msg.slice(5).trim();
         
         // 헤르메스 전투력 랭킹
         if (power5Text === "헤르메스") {
@@ -1005,30 +1005,30 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
         }
     }
     if (msg.startsWith("@@@ ")) {
-        const characterName3 = encodeURIComponent(msg.slice(4).trim());
+        var characterName3 = encodeURIComponent(msg.slice(4).trim());
         getMonthlyExpHistory(characterName3, replier);
     }
     if (msg.startsWith("/전투력 ")) {
-        const power4 = encodeURIComponent(msg.slice(5).trim());
+        var power4 = encodeURIComponent(msg.slice(5).trim());
         getPower(power4, replier);
     }
     if (msg.startsWith("/장비 ")) {
-        const equipParts = msg.slice(4).trim().split(" ");
-        const equipName = encodeURIComponent(equipParts[0]);
-        const equipSlot = equipParts[1] || null;
+        var equipParts = msg.slice(4).trim().split(" ");
+        var equipName = encodeURIComponent(equipParts[0]);
+        var equipSlot = equipParts[1] || null;
         getEquipment(equipName, replier, equipSlot);
     }
     if (msg.startsWith("/ㅈㅂ ")) {
-        const equipParts2 = msg.slice(4).trim().split(" ");
-        const equipName2 = encodeURIComponent(equipParts2[0]);
-        const equipSlot2 = equipParts2[1] || null;
+        var equipParts2 = msg.slice(4).trim().split(" ");
+        var equipName2 = encodeURIComponent(equipParts2[0]);
+        var equipSlot2 = equipParts2[1] || null;
         getEquipment(equipName2, replier, equipSlot2);
     }
 
     // ===== 추가 기능 (tmi/보스/확률/환산) =====
     if (msg.startsWith("/tmi ")) {
-        const characterName = encodeURIComponent(msg.slice(4).trim());
-        getTmiInfo(characterName, replier);
+        var tmiName = encodeURIComponent(msg.slice(4).trim());
+        getTmiInfo(tmiName, replier);
     }
     if (msg=="/보스")
     {
@@ -1043,9 +1043,9 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
       option(replier);
     }
     if (msg.startsWith("/확률 ")) {
-        const args = msg.slice(4).trim().split(" ");
-        const chance = parseInt(args[0]);
-        const count = args.length > 1 ? parseInt(args[1]) : 1;
+        var args = msg.slice(4).trim().split(" ");
+        var chance = parseInt(args[0]);
+        var count = args.length > 1 ? parseInt(args[1]) : 1;
 
         if (isNaN(chance) || chance < 0 || chance > 100) {
             replier.reply("확률은 0~100 사이의 정수여야 합니다.");
@@ -1059,7 +1059,7 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
     }
 
     if (msg.startsWith("/환산 ") && room != "[본메] 전국에반협회") {
-        const idlink = encodeURIComponent(msg.slice(4).trim());
+        var idlink = encodeURIComponent(msg.slice(4).trim());
         getLink(idlink, replier);
     }
 }
@@ -2224,362 +2224,362 @@ function getMonthlyRanking2(replier) {
 function getPower(power,replier)
 {
 //일주일 시간표기
-        const today11 = new Date(Date.now()-86400000*2);
-        const day_11=
+        var today11 = new Date(Date.now()-86400000*2);
+        var day_11=
           today11.getFullYear() + "-" +
           String(today11.getMonth() + 1).padStart(2, "0") + "-" +
           String(today11.getDate()).padStart(2, "0");
           
-        const today22 = new Date(Date.now()-86400000*3);
-        const day_22=
+        var today22 = new Date(Date.now()-86400000*3);
+        var day_22=
           today22.getFullYear() + "-" +
           String(today22.getMonth() + 1).padStart(2, "0") + "-" +
           String(today22.getDate()).padStart(2, "0");
           
-        const today33 = new Date(Date.now()-86400000*4);
-        const day_33=
+        var today33 = new Date(Date.now()-86400000*4);
+        var day_33=
           today33.getFullYear() + "-" +
           String(today33.getMonth() + 1).padStart(2, "0") + "-" +
           String(today33.getDate()).padStart(2, "0");
           
-        const today44 = new Date(Date.now()-86400000*5);
-        const day_44=
+        var today44 = new Date(Date.now()-86400000*5);
+        var day_44=
           today44.getFullYear() + "-" +
           String(today44.getMonth() + 1).padStart(2, "0") + "-" +
           String(today44.getDate()).padStart(2, "0");
           
-        const today55 = new Date(Date.now()-86400000*6);
-        const day_55=
+        var today55 = new Date(Date.now()-86400000*6);
+        var day_55=
           today55.getFullYear() + "-" +
           String(today55.getMonth() + 1).padStart(2, "0") + "-" +
           String(today55.getDate()).padStart(2, "0");
           
-        const today66 = new Date(Date.now()-86400000*7);
-        const day_66=
+        var today66 = new Date(Date.now()-86400000*7);
+        var day_66=
           today66.getFullYear() + "-" +
           String(today66.getMonth() + 1).padStart(2, "0") + "-" +
           String(today66.getDate()).padStart(2, "0");
           
-        const today77 = new Date(Date.now()-86400000*8);
-        const day_77=
+        var today77 = new Date(Date.now()-86400000*8);
+        var day_77=
           today77.getFullYear() + "-" +
           String(today77.getMonth() + 1).padStart(2, "0") + "-" +
           String(today77.getDate()).padStart(2, "0");
 
 //한달전 시간 표기
-        const today1 = new Date(Date.now()-86400000*30);
-        const day_1=
+        var today1 = new Date(Date.now()-86400000*30);
+        var day_1=
           today1.getFullYear() + "-" +
           String(today1.getMonth() + 1).padStart(2, "0") + "-" +
           String(today1.getDate()).padStart(2, "0");
           
-        const today2 = new Date(Date.now()-86400000*31);
-        const day_2=
+        var today2 = new Date(Date.now()-86400000*31);
+        var day_2=
           today2.getFullYear() + "-" +
           String(today2.getMonth() + 1).padStart(2, "0") + "-" +
           String(today2.getDate()).padStart(2, "0");
           
-        const today3 = new Date(Date.now()-86400000*32);
-        const day_3=
+        var today3 = new Date(Date.now()-86400000*32);
+        var day_3=
           today3.getFullYear() + "-" +
           String(today3.getMonth() + 1).padStart(2, "0") + "-" +
           String(today3.getDate()).padStart(2, "0");
           
-        const today4 = new Date(Date.now()-86400000*33);
-        const day_4=
+        var today4 = new Date(Date.now()-86400000*33);
+        var day_4=
           today4.getFullYear() + "-" +
           String(today4.getMonth() + 1).padStart(2, "0") + "-" +
           String(today4.getDate()).padStart(2, "0");
           
-        const today5 = new Date(Date.now()-86400000*34);
-        const day_5=
+        var today5 = new Date(Date.now()-86400000*34);
+        var day_5=
           today5.getFullYear() + "-" +
           String(today5.getMonth() + 1).padStart(2, "0") + "-" +
           String(today5.getDate()).padStart(2, "0");
           
-        const today6 = new Date(Date.now()-86400000*35);
-        const day_6=
+        var today6 = new Date(Date.now()-86400000*35);
+        var day_6=
           today6.getFullYear() + "-" +
           String(today6.getMonth() + 1).padStart(2, "0") + "-" +
           String(today6.getDate()).padStart(2, "0");
           
-        const today7 = new Date(Date.now()-86400000*36);
-        const day_7=
+        var today7 = new Date(Date.now()-86400000*36);
+        var day_7=
           today7.getFullYear() + "-" +
           String(today7.getMonth() + 1).padStart(2, "0") + "-" +
           String(today7.getDate()).padStart(2, "0");
             
 //---------------------------------------------------------------------
 //ocid 값을 들고와 저장
-  const requestUrl = MAPLE_OCID_API_URL + "?character_name=" + power;
-        const response = org.jsoup.Jsoup.connect(requestUrl)
+  var requestUrl = MAPLE_OCID_API_URL + "?character_name=" + power;
+        var response = org.jsoup.Jsoup.connect(requestUrl)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)            
             .ignoreContentType(true)
             .execute()
             .body();
-        const data = JSON.parse(response);
+        var data = JSON.parse(response);
 //최신 stat 저장 data2
-        const inforUrl = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid;
-        const response2 = org.jsoup.Jsoup.connect(inforUrl)
+        var inforUrl = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid;
+        var response2 = org.jsoup.Jsoup.connect(inforUrl)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        const data2 = JSON.parse(response2);
+        var data2 = JSON.parse(response2);
 //일주일 stat 저장 data10->data20까지
-        const inforUrl10 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_11;
-        const response10 = org.jsoup.Jsoup.connect(inforUrl10)
+        var inforUrl10 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_11;
+        var response10 = org.jsoup.Jsoup.connect(inforUrl10)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        const data10 = JSON.parse(response10);
+        var data10 = JSON.parse(response10);
         
-        const inforUrl11 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_22;
-        const response11 = org.jsoup.Jsoup.connect(inforUrl11)
+        var inforUrl11 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_22;
+        var response11 = org.jsoup.Jsoup.connect(inforUrl11)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        const data11 = JSON.parse(response11);
+        var data11 = JSON.parse(response11);
         
-        const inforUrl12 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_33;
-        const response12 = org.jsoup.Jsoup.connect(inforUrl12)
+        var inforUrl12 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_33;
+        var response12 = org.jsoup.Jsoup.connect(inforUrl12)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        const data12 = JSON.parse(response12);
+        var data12 = JSON.parse(response12);
         
-        const inforUrl13 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_44;
-        const response13 = org.jsoup.Jsoup.connect(inforUrl13)
+        var inforUrl13 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_44;
+        var response13 = org.jsoup.Jsoup.connect(inforUrl13)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        const data13 = JSON.parse(response13);
+        var data13 = JSON.parse(response13);
         
-        const inforUrl14 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_55;
-        const response14 = org.jsoup.Jsoup.connect(inforUrl14)
+        var inforUrl14 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_55;
+        var response14 = org.jsoup.Jsoup.connect(inforUrl14)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        const data14 = JSON.parse(response14);
+        var data14 = JSON.parse(response14);
         
-        const inforUrl15 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_66;
-        const response15 = org.jsoup.Jsoup.connect(inforUrl15)
+        var inforUrl15 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_66;
+        var response15 = org.jsoup.Jsoup.connect(inforUrl15)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        const data15 = JSON.parse(response15);
+        var data15 = JSON.parse(response15);
         
-        const inforUrl16 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_77;
-        const response16 = org.jsoup.Jsoup.connect(inforUrl16)
+        var inforUrl16 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_77;
+        var response16 = org.jsoup.Jsoup.connect(inforUrl16)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        const data16 = JSON.parse(response16);
+        var data16 = JSON.parse(response16);
 //-----------------------------------------------------------------------------------------
 
 //한달전 stat 저장 data3->data9까지
-        const inforUrl2 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_1;
-        const response3 = org.jsoup.Jsoup.connect(inforUrl2)
+        var inforUrl2 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_1;
+        var response3 = org.jsoup.Jsoup.connect(inforUrl2)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        const data3 = JSON.parse(response3);
+        var data3 = JSON.parse(response3);
         
-        const inforUrl3 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_2;
-        const response4 = org.jsoup.Jsoup.connect(inforUrl3)
+        var inforUrl3 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_2;
+        var response4 = org.jsoup.Jsoup.connect(inforUrl3)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        const data4 = JSON.parse(response4);
+        var data4 = JSON.parse(response4);
         
-        const inforUrl4 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_3;
-        const response5 = org.jsoup.Jsoup.connect(inforUrl4)
+        var inforUrl4 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_3;
+        var response5 = org.jsoup.Jsoup.connect(inforUrl4)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        const data5 = JSON.parse(response5);
+        var data5 = JSON.parse(response5);
         
-        const inforUrl5 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_4;
-        const response6 = org.jsoup.Jsoup.connect(inforUrl5)
+        var inforUrl5 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_4;
+        var response6 = org.jsoup.Jsoup.connect(inforUrl5)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        const data6 = JSON.parse(response6);
+        var data6 = JSON.parse(response6);
         
-        const inforUrl6 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_5;
-        const response7 = org.jsoup.Jsoup.connect(inforUrl6)
+        var inforUrl6 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_5;
+        var response7 = org.jsoup.Jsoup.connect(inforUrl6)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        const data7 = JSON.parse(response7);
+        var data7 = JSON.parse(response7);
         
-        const inforUrl7 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_6;
-        const response8 = org.jsoup.Jsoup.connect(inforUrl7)
+        var inforUrl7 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_6;
+        var response8 = org.jsoup.Jsoup.connect(inforUrl7)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        const data8 = JSON.parse(response8);
+        var data8 = JSON.parse(response8);
         
-        const inforUrl8 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_7;
-        const response9 = org.jsoup.Jsoup.connect(inforUrl8)
+        var inforUrl8 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_7;
+        var response9 = org.jsoup.Jsoup.connect(inforUrl8)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        const data9 = JSON.parse(response9);
+        var data9 = JSON.parse(response9);
 //-----------------------------------------------------------------------------------------
 //현재 전투력 (최신)
-  let battlePower = null;
-    for (let stat of data2.final_stat) {
+  var battlePower = null;
+    for (var stat of data2.final_stat) {
         if (stat.stat_name === "전투력") {
             battlePower = stat.stat_value;
             break;
         }
     }
 //일주일 전투력 일주일치 중 가장 높은 전투력 찾기
-    let b1 = null;
-    for (let stat of data10.final_stat) {
+    var b1 = null;
+    for (var stat of data10.final_stat) {
         if (stat.stat_name === "전투력") {
             b1= stat.stat_value;
             break;
         }
     }
-    let b2 = null;
-    for (let stat of data11.final_stat) {
+    var b2 = null;
+    for (var stat of data11.final_stat) {
         if (stat.stat_name === "전투력") {
             b2= stat.stat_value;
             break;
         }
     }
-    let b3 = null;
-    for (let stat of data12.final_stat) {
+    var b3 = null;
+    for (var stat of data12.final_stat) {
         if (stat.stat_name === "전투력") {
             b3= stat.stat_value;
             break;
         }
     }
-    let b4 = null;
-    for (let stat of data13.final_stat) {
+    var b4 = null;
+    for (var stat of data13.final_stat) {
         if (stat.stat_name === "전투력") {
             b4= stat.stat_value;
             break;
         }
     }
-    let b5 = null;
-    for (let stat of data14.final_stat) {
+    var b5 = null;
+    for (var stat of data14.final_stat) {
         if (stat.stat_name === "전투력") {
             b5= stat.stat_value;
             break;
         }
     }
-    let b6 = null;
-    for (let stat of data15.final_stat) {
+    var b6 = null;
+    for (var stat of data15.final_stat) {
         if (stat.stat_name === "전투력") {
             b6= stat.stat_value;
             break;
         }
     }
-    let b7 = null;
-    for (let stat of data16.final_stat) {
+    var b7 = null;
+    for (var stat of data16.final_stat) {
         if (stat.stat_name === "전투력") {
             b7= stat.stat_value;
             break;
         }
     }
     //일주일 중 가장 높은 전투력 저장
-let nowpower = Number(Math.max(b1, b2, b3, b4, b5, b6, b7));
+var nowpower = Number(Math.max(b1, b2, b3, b4, b5, b6, b7));
 //replier.reply (b1+"\n"+b2+"\n"+b3+"\n"+b4+"\n"+b5+"\n"+b6+"\n"+b7)
 //한달전 전투력 일주일치 중 가b1+"\n"+장 높은 전투력 찾기
-    let a1 = null;
-    for (let stat of data3.final_stat) {
+    var a1 = null;
+    for (var stat of data3.final_stat) {
         if (stat.stat_name === "전투력") {
             a1= stat.stat_value;
             break;
         }
     }
-    let a2 = null;
-    for (let stat of data4.final_stat) {
+    var a2 = null;
+    for (var stat of data4.final_stat) {
         if (stat.stat_name === "전투력") {
             a2= stat.stat_value;
             break;
         }
     }
-    let a3 = null;
-    for (let stat of data5.final_stat) {
+    var a3 = null;
+    for (var stat of data5.final_stat) {
         if (stat.stat_name === "전투력") {
             a3= stat.stat_value;
             break;
         }
     }
-    let a4 = null;
-    for (let stat of data6.final_stat) {
+    var a4 = null;
+    for (var stat of data6.final_stat) {
         if (stat.stat_name === "전투력") {
             a4= stat.stat_value;
             break;
         }
     }
-    let a5 = null;
-    for (let stat of data7.final_stat) {
+    var a5 = null;
+    for (var stat of data7.final_stat) {
         if (stat.stat_name === "전투력") {
             a5= stat.stat_value;
             break;
         }
     }
-    let a6 = null;
-    for (let stat of data8.final_stat) {
+    var a6 = null;
+    for (var stat of data8.final_stat) {
         if (stat.stat_name === "전투력") {
             a6= stat.stat_value;
             break;
         }
     }
-    let a7 = null;
-    for (let stat of data9.final_stat) {
+    var a7 = null;
+    for (var stat of data9.final_stat) {
         if (stat.stat_name === "전투력") {
             a7= stat.stat_value;
             break;
         }
     }
     //일주일 중 가장 높은 전투력 저장
-    let onepower=a1;
+    var onepower=a1;
     onepower = Number(Math.max(a1, a2, a3, a4, a5, a6, a7));
     
 //자릿수 정리
 if(Number(battlePower)>Number(nowpower)){nowpower=battlePower;}
 
-const formatted1 = formatNumber(onepower);
-const formatted2 = formatNumber(nowpower);
-const formatted3 = formatNumber(battlePower);
+var formatted1 = formatNumber(onepower);
+var formatted2 = formatNumber(nowpower);
+var formatted3 = formatNumber(battlePower);
 
-let Tag = "???";
+var Tag = "???";
 
 if (nowpower < 50000000) Tag = "노멀";
 else if (nowpower < 100000000) Tag = "레  어";
@@ -2600,12 +2600,12 @@ else Tag = "신";
 }
 //자리수
 function formatNumber(number) {
-  const units = ['', '만', '억'];
-  let result = '';
-  let unitIndex = 0;
+  var units = ['', '만', '억'];
+  var result = '';
+  var unitIndex = 0;
 
   while (number > 0) {
-    let chunk = number % 10000;
+    var chunk = number % 10000;
     if (chunk > 0) {
       result = chunk + units[unitIndex] + result;
     }
@@ -2616,31 +2616,31 @@ function formatNumber(number) {
   return result;
 }
 function getImage(characterimage, replier) {
-    const today10 = new Date(Date.now() - 86400000); // 하루 전
-    const day_10 =
+    var today10 = new Date(Date.now() - 86400000); // 하루 전
+    var day_10 =
         today10.getFullYear() + "-" +
         String(today10.getMonth() + 1).padStart(2, "0") + "-" +
         String(today10.getDate()).padStart(2, "0");
 
     // Step 1: ocid 가져오기
-    const requestUrl10 = MAPLE_OCID_API_URL + "?character_name=" + characterimage;
-    const response10 = org.jsoup.Jsoup.connect(requestUrl10)
+    var requestUrl10 = MAPLE_OCID_API_URL + "?character_name=" + characterimage;
+    var response10 = org.jsoup.Jsoup.connect(requestUrl10)
         .header("accept", "application/json")
         .header("x-nxopen-api-key", NEXON_API_KEY)
         .ignoreContentType(true)
         .execute()
         .body();
-    const data10 = JSON.parse(response10);
+    var data10 = JSON.parse(response10);
 
     // Step 2: 캐릭터 상세 정보 가져오기
-    const inforUrl11 = MAPLE_INF_API_URL + "?ocid=" + data10.ocid + "&date=" + day_10;
-    const response11 = org.jsoup.Jsoup.connect(inforUrl11)
+    var inforUrl11 = MAPLE_INF_API_URL + "?ocid=" + data10.ocid + "&date=" + day_10;
+    var response11 = org.jsoup.Jsoup.connect(inforUrl11)
         .header("accept", "application/json")
         .header("x-nxopen-api-key", NEXON_API_KEY)
         .ignoreContentType(true)
         .execute()
         .body();
-    const data11 = JSON.parse(response11);
+    var data11 = JSON.parse(response11);
 
     // Step 3: 이미지 URL 추출
      
@@ -2650,7 +2650,7 @@ function getMapleOcid(characterName, replier) {
     try {
         //
        // 기준 시간 생성
-let baseDate = new Date();
+var baseDate = new Date();
 
 // 0~4시라면 전날 23시로 맞춤
 if (baseDate.getHours() >= 0 && baseDate.getHours() < 6) {
@@ -2659,182 +2659,182 @@ if (baseDate.getHours() >= 0 && baseDate.getHours() < 6) {
 }
 
 // 이후 로직에서 baseDate를 today로 사용
-const today = new Date(baseDate);
-const formattedDate =
+var today = new Date(baseDate);
+var formattedDate =
   today.getFullYear() + "-" +
   String(today.getMonth() + 1).padStart(2, "0") + "-" +
   String(today.getDate()).padStart(2, "0");
-const dayText_1 =
+var dayText_1 =
   String(today.getMonth() + 1).padStart(2, "0") + "월 " +
   String(today.getDate()).padStart(2, "0") + "일";
 
-const today2 = new Date(today.getTime() - 86400000);
-const day_1 =
+var today2 = new Date(today.getTime() - 86400000);
+var day_1 =
   today2.getFullYear() + "-" +
   String(today2.getMonth() + 1).padStart(2, "0") + "-" +
   String(today2.getDate()).padStart(2, "0");
-const dayText_2 =
+var dayText_2 =
   String(today2.getMonth() + 1).padStart(2, "0") + "월 " +
   String(today2.getDate()).padStart(2, "0") + "일";
 
-const today3 = new Date(today.getTime() - 86400000 * 2);
-const day_2 =
+var today3 = new Date(today.getTime() - 86400000 * 2);
+var day_2 =
   today3.getFullYear() + "-" +
   String(today3.getMonth() + 1).padStart(2, "0") + "-" +
   String(today3.getDate()).padStart(2, "0");
-const dayText_3 =
+var dayText_3 =
   String(today3.getMonth() + 1).padStart(2, "0") + "월 " +
   String(today3.getDate()).padStart(2, "0") + "일";
 
-const today4 = new Date(today.getTime() - 86400000 * 3);
-const day_3 =
+var today4 = new Date(today.getTime() - 86400000 * 3);
+var day_3 =
   today4.getFullYear() + "-" +
   String(today4.getMonth() + 1).padStart(2, "0") + "-" +
   String(today4.getDate()).padStart(2, "0");
-const dayText_4 =
+var dayText_4 =
   String(today4.getMonth() + 1).padStart(2, "0") + "월 " +
   String(today4.getDate()).padStart(2, "0") + "일";
 
-const today5 = new Date(today.getTime() - 86400000 * 4);
-const day_4 =
+var today5 = new Date(today.getTime() - 86400000 * 4);
+var day_4 =
   today5.getFullYear() + "-" +
   String(today5.getMonth() + 1).padStart(2, "0") + "-" +
   String(today5.getDate()).padStart(2, "0");
-const dayText_5 =
+var dayText_5 =
   String(today5.getMonth() + 1).padStart(2, "0") + "월 " +
   String(today5.getDate()).padStart(2, "0") + "일";
 
-const today6 = new Date(today.getTime() - 86400000 * 5);
-const day_5 =
+var today6 = new Date(today.getTime() - 86400000 * 5);
+var day_5 =
   today6.getFullYear() + "-" +
   String(today6.getMonth() + 1).padStart(2, "0") + "-" +
   String(today6.getDate()).padStart(2, "0");
-const dayText_6 =
+var dayText_6 =
   String(today6.getMonth() + 1).padStart(2, "0") + "월 " +
   String(today6.getDate()).padStart(2, "0") + "일";
 
-const today7 = new Date(today.getTime() - 86400000 * 6);
-const day_6 =
+var today7 = new Date(today.getTime() - 86400000 * 6);
+var day_6 =
   today7.getFullYear() + "-" +
   String(today7.getMonth() + 1).padStart(2, "0") + "-" +
   String(today7.getDate()).padStart(2, "0");
-const dayText_7 =
+var dayText_7 =
   String(today7.getMonth() + 1).padStart(2, "0") + "월 " +
   String(today7.getDate()).padStart(2, "0") + "일";
 
-const today8 = new Date(today.getTime() - 86400000 * 7);
-const day_7 =
+var today8 = new Date(today.getTime() - 86400000 * 7);
+var day_7 =
   today8.getFullYear() + "-" +
   String(today8.getMonth() + 1).padStart(2, "0") + "-" +
   String(today8.getDate()).padStart(2, "0");
 
 // 이번 달 1일 0시 데이터를 가져오기 위해 전달 마지막날 날짜 계산
-const today9 = new Date(today.getTime());
+var today9 = new Date(today.getTime());
 today9.setDate(1); // 이번 달 1일
 today9.setDate(today9.getDate() - 1); // 하루 빼면 전달 마지막날
 
-const day_8 =
+var day_8 =
   today9.getFullYear() + "-" +
   String(today9.getMonth() + 1).padStart(2, "0") + "-" +
   String(today9.getDate()).padStart(2, "0");
        
         
         //
-        const requestUrl = MAPLE_OCID_API_URL + "?character_name=" + characterName;
-        const response = org.jsoup.Jsoup.connect(requestUrl)
+        var requestUrl = MAPLE_OCID_API_URL + "?character_name=" + characterName;
+        var response = org.jsoup.Jsoup.connect(requestUrl)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)            
             .ignoreContentType(true)
             .execute()
             .body();
-        const data = JSON.parse(response);
+        var data = JSON.parse(response);
         //
-        const inforUrl = MAPLE_INF_API_URL + "?ocid=" + data.ocid;
-        const response2 = org.jsoup.Jsoup.connect(inforUrl)
+        var inforUrl = MAPLE_INF_API_URL + "?ocid=" + data.ocid;
+        var response2 = org.jsoup.Jsoup.connect(inforUrl)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        const data2 = JSON.parse(response2);
+        var data2 = JSON.parse(response2);
         
-        const inforUrl2 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_1;
-        const response3 = org.jsoup.Jsoup.connect(inforUrl2)
+        var inforUrl2 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_1;
+        var response3 = org.jsoup.Jsoup.connect(inforUrl2)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        const data3 = JSON.parse(response3);
+        var data3 = JSON.parse(response3);
         
-        const inforUrl3 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_2;
-        const response4 = org.jsoup.Jsoup.connect(inforUrl3)
-            .header("accept", "application/json")
-            .header("x-nxopen-api-key", NEXON_API_KEY)
-            
-            .ignoreContentType(true)
-            .execute()
-            .body();
-        const data4 = JSON.parse(response4);
-        
-        const inforUrl4 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_3;
-        const response5 = org.jsoup.Jsoup.connect(inforUrl4)
+        var inforUrl3 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_2;
+        var response4 = org.jsoup.Jsoup.connect(inforUrl3)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             
             .ignoreContentType(true)
             .execute()
             .body();
-        const data5 = JSON.parse(response5);
+        var data4 = JSON.parse(response4);
         
-        const inforUrl5 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_4;
-        const response6 = org.jsoup.Jsoup.connect(inforUrl5)
+        var inforUrl4 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_3;
+        var response5 = org.jsoup.Jsoup.connect(inforUrl4)
+            .header("accept", "application/json")
+            .header("x-nxopen-api-key", NEXON_API_KEY)
+            
+            .ignoreContentType(true)
+            .execute()
+            .body();
+        var data5 = JSON.parse(response5);
+        
+        var inforUrl5 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_4;
+        var response6 = org.jsoup.Jsoup.connect(inforUrl5)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        const data6 = JSON.parse(response6);
+        var data6 = JSON.parse(response6);
         
-        const inforUrl6 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_5;
-        const response7 = org.jsoup.Jsoup.connect(inforUrl6)
+        var inforUrl6 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_5;
+        var response7 = org.jsoup.Jsoup.connect(inforUrl6)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        const data7 = JSON.parse(response7);
+        var data7 = JSON.parse(response7);
         
-        const inforUrl7 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_6;
-        const response8 = org.jsoup.Jsoup.connect(inforUrl7)
+        var inforUrl7 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_6;
+        var response8 = org.jsoup.Jsoup.connect(inforUrl7)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)            
             .ignoreContentType(true)
             .execute()
             .body();
-        const data8 = JSON.parse(response8);
+        var data8 = JSON.parse(response8);
         
-        const inforUrl8 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_7;
-        const response9 = org.jsoup.Jsoup.connect(inforUrl8)
+        var inforUrl8 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_7;
+        var response9 = org.jsoup.Jsoup.connect(inforUrl8)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)            
             .ignoreContentType(true)
             .execute()
             .body();
-        const data9 = JSON.parse(response9);
+        var data9 = JSON.parse(response9);
 
         // 이번 달 1일 데이터 가져오기
-        const inforUrl9 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_8;
-        const response10 = org.jsoup.Jsoup.connect(inforUrl9)
+        var inforUrl9 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_8;
+        var response10 = org.jsoup.Jsoup.connect(inforUrl9)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)            
             .ignoreContentType(true)
             .execute()
             .body();
-        const data10 = JSON.parse(response10);
+        var data10 = JSON.parse(response10);
 
         // 전투력 조회 (현재 - 표시용)
-        let combatPower = 0;
+        var combatPower = 0;
         try {
             var cpUrl = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid;
             var cpResp = org.jsoup.Jsoup.connect(cpUrl)
@@ -2863,7 +2863,7 @@ const day_8 =
         else if (combatPower >= 100000000) cpIcon = "🛡️";
         else cpIcon = "🗡️";
 
-const expToNext = [
+var expToNext = [
 2207026470,
 2471869646,
 2768494003,
@@ -2975,8 +2975,8 @@ const expToNext = [
 1737759854037637];
 
 // 누적 경험치 계산
-const cumExp = [0];
-for (let i = 0; i < expToNext.length; i++) {
+var cumExp = [0];
+for (var i = 0; i < expToNext.length; i++) {
   cumExp[i + 1] = cumExp[i] + expToNext[i];
 }
 
@@ -2997,23 +2997,23 @@ function calcGainedExp(prevLv, prevExp, currLv, currExp) {
     throw new Error('잘못된 레벨 입력입니다.');
   }
 
-  const prevTotalExp = cumExp[prevLv - 200] + (prevExp || 0);
-  const currTotalExp = cumExp[currLv - 200] + (currExp || 0);
+  var prevTotalExp = cumExp[prevLv - 200] + (prevExp || 0);
+  var currTotalExp = cumExp[currLv - 200] + (currExp || 0);
 
   return Math.max(0, currTotalExp - prevTotalExp);
 }
 //남은 경험치
 function getRemainingExpToNextLevel(currLv, currExp) {
   if (currLv < 1 || currLv >= 300) return 0; // 만렙이거나 이상한 값이면 0
-  const requiredForThisLevel = expToNext[currLv - 200]; // 200레벨부터 시작
+  var requiredForThisLevel = expToNext[currLv - 200]; // 200레벨부터 시작
   return Math.max(0, requiredForThisLevel - currExp);
 }
-let namexp=getRemainingExpToNextLevel(Number(data2.character_level),Number(data2.character_exp));
-let ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
+var namexp=getRemainingExpToNextLevel(Number(data2.character_level),Number(data2.character_exp));
+var ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
                               Number(data2.character_level),Number(data2.character_exp))/7
-        let namexp1=namexp;
-        let ave1=ave;                      
-        let av="-"
+        var namexp1=namexp;
+        var ave1=ave;                      
+        var av="-"
         if(ave>=1000000000000)
         {
           ave=ave/1000000000000;
@@ -3033,7 +3033,7 @@ let ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
         {
           av="-";
         }
-        let av2="-"
+        var av2="-"
         if(namexp>=1000000000000)
         {
           namexp=namexp/1000000000000;
@@ -3055,15 +3055,15 @@ let ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
         }
 
         // 이번 달 경험치 평균 계산
-        const today_date = new Date(today.getTime());
-        const monthFirstDate = new Date(today.getTime());
+        var today_date = new Date(today.getTime());
+        var monthFirstDate = new Date(today.getTime());
         monthFirstDate.setDate(1); // 이번 달 1일
 
         today_date.setHours(0, 0, 0, 0);
         monthFirstDate.setHours(0, 0, 0, 0);
-        const daysInMonth = Math.floor((today_date - monthFirstDate) / 86400000) + 1; // 1일부터 오늘까지 일수
+        var daysInMonth = Math.floor((today_date - monthFirstDate) / 86400000) + 1; // 1일부터 오늘까지 일수
 
-        let monthlyAvgExp = null;
+        var monthlyAvgExp = null;
         if (daysInMonth > 0 && data10 && data10.character_level != null && data10.character_exp != null) {
             monthlyAvgExp = calcGainedExp(
                 Number(data10.character_level),
@@ -3073,8 +3073,8 @@ let ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
             ) / daysInMonth;
         }
 
-        let monthlyAve = monthlyAvgExp;
-        let monthlyAv = "";
+        var monthlyAve = monthlyAvgExp;
+        var monthlyAv = "";
         if (monthlyAve != null) {
             if (monthlyAve >= 1000000000000) {
                 monthlyAve = monthlyAve / 1000000000000;
@@ -3088,7 +3088,7 @@ let ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
             }
         }
 
-        let Tag="헤르메스";
+        var Tag="헤르메스";
         if(decodeURIComponent(characterName)=="영디")
         {
           Tag="Empepor⚜️";
@@ -3777,7 +3777,7 @@ let ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
         }
         
         
-        let avetext=" "
+        var avetext=" "
         if(ave>=4000)
         {
           avetext="(거북이)🐢"
@@ -3949,14 +3949,14 @@ let ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
         };
         var fantasyTag = fantasyTags[decodeURIComponent(characterName)] || "";
 
-        let lvup=" ";
+        var lvup=" ";
         if(data3.character_level<data2.character_level)
         {
           lvup="\n🥳"+decodeURIComponent(characterName) +"님 레벨업 축하드립니다🎉🎉."
         }
 
-        const lvupdate= new Date(Date.now()+86400000*(namexp1/ave1));
-        const upday=
+        var lvupdate= new Date(Date.now()+86400000*(namexp1/ave1));
+        var upday=
           lvupdate.getFullYear() + "년" +
           String(lvupdate.getMonth() + 1).padStart(2, "0") + "월" +
           String(lvupdate.getDate()).padStart(2, "0")+ "일" ;
@@ -3989,7 +3989,7 @@ let ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
     level = Number(level);
     rate = Number(rate);
     if (level < 200 || level >= 300) return 0;
-    const expToNextLevel = expToNext[level - 200]; // index = level - 200
+    var expToNextLevel = expToNext[level - 200]; // index = level - 200
     return expToNextLevel * (rate / 100);
 }
     function formatExp(exp) {
@@ -4005,17 +4005,17 @@ let ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
 
 }
     function getExpDiffText(prevLevel, prevRate, currLevel, currRate) {
-    const prevExp = getRealExp(prevLevel, prevRate);
-    const currExp = getRealExp(currLevel, currRate);
+    var prevExp = getRealExp(prevLevel, prevRate);
+    var currExp = getRealExp(currLevel, currRate);
 
-    let gainedExp = 0;
+    var gainedExp = 0;
     if (currLevel === prevLevel) {
         gainedExp = currExp - prevExp;
     } else if (currLevel > prevLevel) {
         // 레벨업 경험치 계산
-        const expRemainingPrev = getRealExp(prevLevel, 100) - prevExp;
-        let midTotal = 0;
-        for (let lv = prevLevel + 1; lv < currLevel; lv++) {
+        var expRemainingPrev = getRealExp(prevLevel, 100) - prevExp;
+        var midTotal = 0;
+        for (var lv = prevLevel + 1; lv < currLevel; lv++) {
             midTotal += expToNext[lv - 200];
         }
         gainedExp = expRemainingPrev + midTotal + currExp;
@@ -4186,7 +4186,7 @@ function runScheduler() {
 // ==========================================
 function test(replier) {
     // Paste your direct image link here
-    const imageUrl = "https://i.imgur.com/FOS0bu1.jpg"; 
+    var imageUrl = "https://i.imgur.com/FOS0bu1.jpg"; 
     replier.reply(imageUrl);
 }
 function getLink(idlink, replier)
@@ -4194,11 +4194,11 @@ function getLink(idlink, replier)
   replier.reply("https://maplescouter.com/info?name="+idlink);
 }
 function starforce(chance, count, replier) {
-    let success = 0;
-    let fail = 0;
+    var success = 0;
+    var fail = 0;
 
-    for (let i = 0; i < count; i++) {
-        let num = Math.floor(Math.random() * 100);
+    for (var i = 0; i < count; i++) {
+        var num = Math.floor(Math.random() * 100);
         if (num < chance) {
             success++;
         } else {
@@ -4250,7 +4250,7 @@ function option(replier)
 // ==========================================
 function getTmiInfo(characterName, replier) {
   
-    let ment=" ";
+    var ment=" ";
     if(decodeURIComponent(characterName)=="코코섬")
     {
       ment="tmi창시자";
