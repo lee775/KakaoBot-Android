@@ -120,6 +120,11 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, ScriptEditorActivity::class.java))
         }
 
+        // 스크립트 테스트 버튼
+        binding.btnTestScript.setOnClickListener {
+            startActivity(Intent(this, ScriptTestActivity::class.java))
+        }
+
         // 로그 초기화 버튼
         binding.btnClearLog.setOnClickListener {
             logBuffer.clear()

@@ -106,6 +106,60 @@ class BotEngine private constructor(private val appContext: Context) {
         }
     }
 
+    /**
+     * 스크립트 테스트용 메시지 처리.
+     * TestReplier를 사용하여 실제 카카오톡 전송 없이 응답을 캡처한다.
+     */
+    fun testMessage(
+        room: String,
+        message: String,
+        sender: String,
+        isGroupChat: Boolean,
+        callback: (List<String>) -> Unit
+    ) {
+        if (!isLoaded || responseFunction == null) {
+            callback(listOf("[오류] 스크립트가 로드되지 않았습니다. 먼저 스크립트를 로드하세요."))
+            return
+        }
+
+        executor.execute {
+            try {
+                val rhinoContext = RhinoContext.enter()
+                rhinoContext.optimizationLevel = -1
+                rhinoContext.languageVersion = RhinoContext.VERSION_ES6
+                rhinoContext.applicationClassLoader = appContext.classLoader
+
+                val testReplier = TestReplier()
+                val jsReplierObj = RhinoContext.javaToJS(testReplier, scope)
+                val jsImageDB = rhinoContext.newObject(scope)
+
+                val args = arrayOf<Any>(
+                    room,
+                    message,
+                    sender,
+                    isGroupChat,
+                    jsReplierObj,
+                    jsImageDB,
+                    "com.kakao.talk"
+                )
+
+                responseFunction?.call(rhinoContext, scope, scope, args)
+
+                // JS 내부 Thread로 비동기 실행되는 API 호출을 위해 잠시 대기
+                Thread.sleep(3000)
+
+                callback(testReplier.replies)
+
+            } catch (e: Throwable) {
+                log("테스트 메시지 처리 오류: ${e.javaClass.simpleName}: ${e.message}")
+                Log.e(TAG, "Test message error", e)
+                callback(listOf("[오류] ${e.javaClass.simpleName}: ${e.message}"))
+            } finally {
+                try { RhinoContext.exit() } catch (_: Throwable) {}
+            }
+        }
+    }
+
     fun handleMessage(chatMessage: ChatMessage, replier: Replier) {
         if (!isLoaded || responseFunction == null) {
             log("스크립트가 로드되지 않았습니다")

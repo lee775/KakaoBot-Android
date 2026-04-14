@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#1a1a2e">
+
+    <!-- 상단 툴바 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#16213e"
+        android:padding="8dp"
+        android:layout_marginBottom="12dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBack"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="< 뒤로"
+            android:textSize="12sp"
+            android:minWidth="0dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            style="@style/Widget.Material3.Button.TextButton" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="스크립트 테스트"
+            android:textColor="#e94560"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:gravity="center" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnClearResult"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="초기화"
+            android:textSize="12sp"
+            android:minWidth="0dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            style="@style/Widget.Material3.Button.TextButton" />
+    </LinearLayout>
+
+    <!-- 입력 영역 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#16213e"
+        android:padding="12dp"
+        android:layout_marginBottom="8dp">
+
+        <!-- 방이름 / 발신자 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <EditText
+                android:id="@+id/etRoom"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:hint="방 이름"
+                android:text="테스트방"
+                android:textColor="#ffffff"
+                android:textColorHint="#606080"
+                android:textSize="13sp"
+                android:background="#0d1b36"
+                android:padding="8dp"
+                android:singleLine="true"
+                android:layout_marginEnd="4dp" />
+
+            <EditText
+                android:id="@+id/etSender"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:hint="발신자"
+                android:text="테스터"
+                android:textColor="#ffffff"
+                android:textColorHint="#606080"
+                android:textSize="13sp"
+                android:background="#0d1b36"
+                android:padding="8dp"
+                android:singleLine="true"
+                android:layout_marginStart="4dp" />
+        </LinearLayout>
+
+        <!-- 그룹채팅 체크박스 -->
+        <CheckBox
+            android:id="@+id/cbGroupChat"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="그룹 채팅"
+            android:textColor="#a0a0a0"
+            android:textSize="12sp"
+            android:checked="true"
+            android:layout_marginBottom="8dp" />
+
+        <!-- 메시지 입력 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/etMessage"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:hint="메시지를 입력하세요 (예: !도움말)"
+                android:textColor="#ffffff"
+                android:textColorHint="#606080"
+                android:textSize="14sp"
+                android:background="#0d1b36"
+                android:padding="10dp"
+                android:singleLine="true"
+                android:imeOptions="actionSend"
+                android:layout_marginEnd="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSend"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:text="전송"
+                android:textSize="14sp"
+                android:minWidth="72dp"
+                style="@style/Widget.Material3.Button.TonalButton" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 빠른 테스트 버튼 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="8dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnQuick1"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:text="!도움말"
+            android:textSize="11sp"
+            android:layout_marginEnd="2dp"
+            style="@style/Widget.Material3.Button.OutlinedButton" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnQuick2"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:text="!캐릭터"
+            android:textSize="11sp"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp"
+            style="@style/Widget.Material3.Button.OutlinedButton" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnQuick3"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:text="@@"
+            android:textSize="11sp"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp"
+            style="@style/Widget.Material3.Button.OutlinedButton" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnQuick4"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:text="!주간보스"
+            android:textSize="11sp"
+            android:layout_marginStart="2dp"
+            style="@style/Widget.Material3.Button.OutlinedButton" />
+    </LinearLayout>
+
+    <!-- 스크립트 상태 -->
+    <TextView
+        android:id="@+id/tvScriptStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="스크립트: 미로드"
+        android:textColor="#a0a0a0"
+        android:textSize="12sp"
+        android:paddingBottom="4dp" />
+
+    <!-- 응답 결과 라벨 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="응답 결과"
+        android:textColor="#e94560"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:paddingBottom="4dp" />
+
+    <!-- 응답 표시 영역 -->
+    <ScrollView
+        android:id="@+id/scrollResult"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#0f3460"
+        android:padding="10dp">
+
+        <TextView
+            android:id="@+id/tvResult"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#53ff53"
+            android:textSize="13sp"
+            android:fontFamily="monospace"
+            android:text="메시지를 입력하고 전송 버튼을 누르세요.\n봇의 응답이 여기에 표시됩니다.\n" />
+    </ScrollView>
+
+</LinearLayout>

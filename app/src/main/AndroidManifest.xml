@@ -33,6 +33,9 @@
         <!-- Script Editor Activity -->
         <activity android:name=".ui.ScriptEditorActivity" />
 
+        <!-- Script Test Activity -->
+        <activity android:name=".ui.ScriptTestActivity" />
+
         <!-- Notification Listener Service (핵심: 카카오톡 알림 감지) -->
         <service
             android:name=".service.KakaoNotificationListener"

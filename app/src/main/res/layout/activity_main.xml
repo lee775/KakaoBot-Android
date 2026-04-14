@@ -92,15 +92,33 @@
             style="@style/Widget.Material3.Button.TonalButton" />
     </LinearLayout>
 
-    <!-- 스크립트 편집 버튼 -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnEditScript"
+    <!-- 스크립트 편집 / 테스트 버튼 -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="스크립트 편집기 열기"
-        android:textSize="13sp"
-        android:layout_marginBottom="4dp"
-        style="@style/Widget.Material3.Button.TonalButton" />
+        android:orientation="horizontal"
+        android:layout_marginBottom="4dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnEditScript"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="스크립트 편집기"
+            android:textSize="12sp"
+            android:layout_marginEnd="4dp"
+            style="@style/Widget.Material3.Button.TonalButton" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTestScript"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="스크립트 테스트"
+            android:textSize="12sp"
+            android:layout_marginStart="4dp"
+            style="@style/Widget.Material3.Button.TonalButton" />
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
