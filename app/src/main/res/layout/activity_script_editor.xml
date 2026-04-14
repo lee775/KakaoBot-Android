@@ -18,7 +18,7 @@
             android:id="@+id/btnBack"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
-            android:text="< 뒤로"
+            android:text="← 뒤로"
             android:textSize="12sp"
             style="@style/Widget.Material3.Button.TextButton" />
 
