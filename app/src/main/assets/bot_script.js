@@ -1213,6 +1213,7 @@ function getLevelUpPrediction(characterName, targetLevel, replier) {
             
         } catch (error) {
             java.lang.System.out.println("[BOT ERROR] 레벨업 예측: " + error.message);
+            replier.reply("조회에 실패했습니다. 잠시 후 다시 시도해주세요.");
         }
     });
     
@@ -1354,6 +1355,7 @@ function getPowerRanking(replier, characterList) {
             
         } catch (error) {
             java.lang.System.out.println("[BOT ERROR] 전투력 랭킹: " + error.message);
+            replier.reply("조회에 실패했습니다. 잠시 후 다시 시도해주세요.");
         }
     });
     
@@ -1532,6 +1534,7 @@ function getMonthlyExpHistory(characterName, replier) {
             
         } catch (error) {
             java.lang.System.out.println("[BOT ERROR] 월별 경험치: " + error.message);
+            replier.reply("조회에 실패했습니다. 잠시 후 다시 시도해주세요.");
         }
     });
     
@@ -1704,6 +1707,7 @@ function getMonthlyRanking(replier) {
             
         } catch (error) {
             java.lang.System.out.println("[BOT ERROR] 랭킹 집계: " + error.message);
+            replier.reply("조회에 실패했습니다. 잠시 후 다시 시도해주세요.");
         }
     });
     
@@ -1874,6 +1878,7 @@ function getMonthlyRanking3(replier) {
             
         } catch (error) {
             java.lang.System.out.println("[BOT ERROR] 랭킹 집계: " + error.message);
+            replier.reply("조회에 실패했습니다. 잠시 후 다시 시도해주세요.");
         }
     });
     
@@ -2044,6 +2049,7 @@ function getMonthlyRanking4(replier) {
             
         } catch (error) {
             java.lang.System.out.println("[BOT ERROR] 랭킹 집계: " + error.message);
+            replier.reply("조회에 실패했습니다. 잠시 후 다시 시도해주세요.");
         }
     });
     
@@ -2216,6 +2222,7 @@ function getMonthlyRanking2(replier) {
             
         } catch (error) {
             java.lang.System.out.println("[BOT ERROR] 랭킹 집계: " + error.message);
+            replier.reply("조회에 실패했습니다. 잠시 후 다시 시도해주세요.");
         }
     });
     
@@ -3983,6 +3990,7 @@ var ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
         }
     } catch (error) {
         java.lang.System.out.println("[BOT ERROR] getMapleOcid: " + (error.message || error));
+        replier.reply("조회에 실패했습니다. 잠시 후 다시 시도해주세요.");
         return;
     }
     function getRealExp(level, rate) {
@@ -4160,6 +4168,7 @@ function getEquipment(characterName, replier, slotFilter) {
 
         } catch (e) {
             java.lang.System.out.println("[BOT ERROR] 장비 조회: " + e.message);
+            replier.reply("조회에 실패했습니다. 잠시 후 다시 시도해주세요.");
         }
     });
     thread.start();
