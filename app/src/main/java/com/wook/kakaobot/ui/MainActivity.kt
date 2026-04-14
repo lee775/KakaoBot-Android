@@ -65,14 +65,20 @@ class MainActivity : AppCompatActivity() {
         binding.btnLoadScript.setOnClickListener {
             appendLog("스크립트 로드 중...")
             Thread {
-                val success = botEngine.loadScript()
-                runOnUiThread {
-                    if (success) {
-                        appendLog("스크립트 로드 성공!")
-                    } else {
-                        appendLog("스크립트 로드 실패!")
+                try {
+                    val success = botEngine.loadScript()
+                    runOnUiThread {
+                        if (success) {
+                            appendLog("스크립트 로드 성공!")
+                        } else {
+                            appendLog("스크립트 로드 실패! 로그를 확인하세요.")
+                        }
+                        updateStatus()
                     }
-                    updateStatus()
+                } catch (e: Throwable) {
+                    runOnUiThread {
+                        appendLog("스크립트 로드 크래시: ${e.javaClass.simpleName}: ${e.message}")
+                    }
                 }
             }.start()
         }
@@ -81,14 +87,20 @@ class MainActivity : AppCompatActivity() {
         binding.btnReloadScript.setOnClickListener {
             appendLog("스크립트 리로드 중...")
             Thread {
-                val success = botEngine.reloadScript()
-                runOnUiThread {
-                    if (success) {
-                        appendLog("스크립트 리로드 성공!")
-                    } else {
-                        appendLog("스크립트 리로드 실패!")
+                try {
+                    val success = botEngine.reloadScript()
+                    runOnUiThread {
+                        if (success) {
+                            appendLog("스크립트 리로드 성공!")
+                        } else {
+                            appendLog("스크립트 리로드 실패!")
+                        }
+                        updateStatus()
                     }
-                    updateStatus()
+                } catch (e: Throwable) {
+                    runOnUiThread {
+                        appendLog("리로드 크래시: ${e.javaClass.simpleName}: ${e.message}")
+                    }
                 }
             }.start()
         }

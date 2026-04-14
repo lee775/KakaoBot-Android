@@ -136,12 +136,18 @@ class ScriptEditorActivity : AppCompatActivity() {
                 toast("저장 완료. 리로드 중...")
 
                 Thread {
-                    val success = botEngine.reloadScript()
-                    runOnUiThread {
-                        if (success) {
-                            toast("스크립트 리로드 성공!")
-                        } else {
-                            toast("리로드 실패! 코드를 확인하세요.")
+                    try {
+                        val success = botEngine.reloadScript()
+                        runOnUiThread {
+                            if (success) {
+                                toast("스크립트 리로드 성공!")
+                            } else {
+                                toast("리로드 실패! 코드를 확인하세요.")
+                            }
+                        }
+                    } catch (e: Throwable) {
+                        runOnUiThread {
+                            toast("리로드 크래시: ${e.message}")
                         }
                     }
                 }.start()

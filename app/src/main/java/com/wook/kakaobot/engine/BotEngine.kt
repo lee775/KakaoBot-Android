@@ -73,6 +73,8 @@ class BotEngine private constructor(private val appContext: Context) {
             val rhinoContext = RhinoContext.enter()
             rhinoContext.optimizationLevel = -1
             rhinoContext.languageVersion = RhinoContext.VERSION_ES6
+            // Android에서 앱 클래스를 찾을 수 있도록 classLoader 설정
+            rhinoContext.applicationClassLoader = appContext.classLoader
 
             scope = rhinoContext.initStandardObjects()
             ScriptBridge.inject(rhinoContext, scope!!, appContext)
@@ -95,12 +97,12 @@ class BotEngine private constructor(private val appContext: Context) {
                 log("response() 함수를 찾을 수 없습니다")
                 false
             }
-        } catch (e: Exception) {
-            log("스크립트 로드 실패: ${e.message}")
+        } catch (e: Throwable) {
+            log("스크립트 로드 실패: ${e.javaClass.simpleName}: ${e.message}")
             Log.e(TAG, "Script load error", e)
             false
         } finally {
-            RhinoContext.exit()
+            try { RhinoContext.exit() } catch (_: Throwable) {}
         }
     }
 
@@ -115,6 +117,7 @@ class BotEngine private constructor(private val appContext: Context) {
                 val rhinoContext = RhinoContext.enter()
                 rhinoContext.optimizationLevel = -1
                 rhinoContext.languageVersion = RhinoContext.VERSION_ES6
+                rhinoContext.applicationClassLoader = appContext.classLoader
 
                 val jsReplier = JsReplier(replier)
                 val jsReplierObj = RhinoContext.javaToJS(jsReplier, scope)
@@ -132,11 +135,11 @@ class BotEngine private constructor(private val appContext: Context) {
 
                 responseFunction?.call(rhinoContext, scope, scope, args)
 
-            } catch (e: Exception) {
-                log("메시지 처리 오류: ${e.message}")
+            } catch (e: Throwable) {
+                log("메시지 처리 오류: ${e.javaClass.simpleName}: ${e.message}")
                 Log.e(TAG, "Message handling error", e)
             } finally {
-                RhinoContext.exit()
+                try { RhinoContext.exit() } catch (_: Throwable) {}
             }
         }
     }
