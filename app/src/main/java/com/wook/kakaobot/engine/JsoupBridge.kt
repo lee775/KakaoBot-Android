@@ -1,5 +1,6 @@
 package com.wook.kakaobot.engine
 
+import android.util.Log
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
@@ -16,41 +17,59 @@ import java.util.concurrent.TimeUnit
  *     .execute()
  *     .body();
  *
- * 이 패턴을 OkHttp로 동일하게 구현.
+ * Rhino에서 호출 시 JS 타입 → Java 타입 변환 문제를 방지하기 위해
+ * 모든 파라미터를 Object(Any)로 받아서 내부에서 변환.
  */
 class JsoupConnection(private val url: String) {
 
+    companion object {
+        private const val TAG = "JsoupConnection"
+        private val sharedClient = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+    }
+
     private val headers = mutableMapOf<String, String>()
-    private var timeoutMs: Int = 30000
-    private var ignoreContentType: Boolean = false
-    private var ignoreHttpErrors: Boolean = false
+    private var timeoutMs: Long = 30000L
 
-    fun header(name: String, value: String): JsoupConnection {
-        headers[name] = value
+    // Rhino: JS string → Java Object. toString()으로 안전 변환
+    fun header(name: Any?, value: Any?): JsoupConnection {
+        headers[name.toString()] = value.toString()
         return this
     }
 
-    fun ignoreContentType(ignore: Boolean): JsoupConnection {
-        ignoreContentType = ignore
+    // Rhino: JS boolean true → Java Boolean 또는 Integer 1 등 다양한 타입 가능
+    fun ignoreContentType(ignore: Any?): JsoupConnection {
+        // 실제로는 사용하지 않지만 체이닝 호환을 위해 존재
         return this
     }
 
-    fun ignoreHttpErrors(ignore: Boolean): JsoupConnection {
-        ignoreHttpErrors = ignore
+    fun ignoreHttpErrors(ignore: Any?): JsoupConnection {
         return this
     }
 
-    fun timeout(millis: Int): JsoupConnection {
-        timeoutMs = millis
+    // Rhino: JS number 10000 → Java Double 10000.0 으로 전달됨
+    fun timeout(millis: Any?): JsoupConnection {
+        timeoutMs = when (millis) {
+            is Number -> millis.toLong()
+            else -> millis.toString().toLongOrNull() ?: 30000L
+        }
         return this
     }
 
     fun execute(): JsoupResponse {
-        val client = OkHttpClient.Builder()
-            .connectTimeout(timeoutMs.toLong(), TimeUnit.MILLISECONDS)
-            .readTimeout(timeoutMs.toLong(), TimeUnit.MILLISECONDS)
-            .writeTimeout(timeoutMs.toLong(), TimeUnit.MILLISECONDS)
-            .build()
+        Log.d(TAG, "HTTP GET: $url")
+
+        val client = if (timeoutMs != 30000L) {
+            sharedClient.newBuilder()
+                .connectTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                .readTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                .build()
+        } else {
+            sharedClient
+        }
 
         val requestBuilder = Request.Builder().url(url)
         headers.forEach { (name, value) ->
@@ -64,9 +83,7 @@ class JsoupConnection(private val url: String) {
         val body = response.body?.string() ?: ""
         response.close()
 
-        if (!ignoreHttpErrors && statusCode >= 400) {
-            throw RuntimeException("HTTP error $statusCode for URL: $url")
-        }
+        Log.d(TAG, "HTTP $statusCode (${body.length} chars)")
 
         return JsoupResponse(body, statusCode)
     }
@@ -82,23 +99,12 @@ class JsoupResponse(private val bodyText: String, private val code: Int) {
 }
 
 /**
- * org.jsoup.Jsoup 정적 메서드 호환.
- */
-class JsoupBridge {
-    companion object {
-        @JvmStatic
-        fun connect(url: String): JsoupConnection {
-            return JsoupConnection(url)
-        }
-    }
-}
-
-/**
  * Rhino 스코프에 주입되는 팩토리 클래스.
  * JS에서 _JsoupFactory.connect(url)로 호출.
+ * url을 Any로 받아서 Rhino 타입 변환 문제 방지.
  */
 class JsoupFactory {
-    fun connect(url: String): JsoupConnection {
-        return JsoupConnection(url)
+    fun connect(url: Any?): JsoupConnection {
+        return JsoupConnection(url.toString())
     }
 }
