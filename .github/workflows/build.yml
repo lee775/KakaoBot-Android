@@ -24,8 +24,11 @@ jobs:
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
+      - name: Rename APK
+        run: mv app/build/outputs/apk/debug/FloMessenger-debug.apk app/build/outputs/apk/debug/FloMessenger.apk
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: KakaoBot-debug
-          path: app/build/outputs/apk/debug/FloMessenger-debug.apk
+          name: FloMessenger
+          path: app/build/outputs/apk/debug/FloMessenger.apk
