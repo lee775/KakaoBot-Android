@@ -2230,6 +2230,7 @@ function getMonthlyRanking2(replier) {
 }
 function getPower(power,replier)
 {
+    try {
 //일주일 시간표기
         var today11 = new Date(Date.now()-86400000*2);
         var day_11=
@@ -2604,6 +2605,10 @@ else Tag = "신";
     } else {
         replier.reply("전투력 정보를 가져올 수 없습니다.");
     }
+    } catch (error) {
+        java.lang.System.out.println("[BOT ERROR] getPower: " + (error.message || error));
+        replier.reply("전투력 조회 중 오류: " + error.message);
+    }
 }
 //자리수
 function formatNumber(number) {
@@ -2623,35 +2628,43 @@ function formatNumber(number) {
   return result;
 }
 function getImage(characterimage, replier) {
-    var today10 = new Date(Date.now() - 86400000); // 하루 전
-    var day_10 =
-        today10.getFullYear() + "-" +
-        String(today10.getMonth() + 1).padStart(2, "0") + "-" +
-        String(today10.getDate()).padStart(2, "0");
+    try {
+        var today10 = new Date(Date.now() - 86400000); // 하루 전
+        var day_10 =
+            today10.getFullYear() + "-" +
+            String(today10.getMonth() + 1).padStart(2, "0") + "-" +
+            String(today10.getDate()).padStart(2, "0");
 
-    // Step 1: ocid 가져오기
-    var requestUrl10 = MAPLE_OCID_API_URL + "?character_name=" + characterimage;
-    var response10 = org.jsoup.Jsoup.connect(requestUrl10)
-        .header("accept", "application/json")
-        .header("x-nxopen-api-key", NEXON_API_KEY)
-        .ignoreContentType(true)
-        .execute()
-        .body();
-    var data10 = JSON.parse(response10);
+        // Step 1: ocid 가져오기
+        var requestUrl10 = MAPLE_OCID_API_URL + "?character_name=" + characterimage;
+        var response10 = org.jsoup.Jsoup.connect(requestUrl10)
+            .header("accept", "application/json")
+            .header("x-nxopen-api-key", NEXON_API_KEY)
+            .ignoreContentType(true)
+            .execute()
+            .body();
+        var data10 = JSON.parse(response10);
 
-    // Step 2: 캐릭터 상세 정보 가져오기
-    var inforUrl11 = MAPLE_INF_API_URL + "?ocid=" + data10.ocid + "&date=" + day_10;
-    var response11 = org.jsoup.Jsoup.connect(inforUrl11)
-        .header("accept", "application/json")
-        .header("x-nxopen-api-key", NEXON_API_KEY)
-        .ignoreContentType(true)
-        .execute()
-        .body();
-    var data11 = JSON.parse(response11);
+        // Step 2: 캐릭터 상세 정보 가져오기
+        var inforUrl11 = MAPLE_INF_API_URL + "?ocid=" + data10.ocid + "&date=" + day_10;
+        var response11 = org.jsoup.Jsoup.connect(inforUrl11)
+            .header("accept", "application/json")
+            .header("x-nxopen-api-key", NEXON_API_KEY)
+            .ignoreContentType(true)
+            .execute()
+            .body();
+        var data11 = JSON.parse(response11);
 
-    // Step 3: 이미지 URL 추출
-     
-      
+        // Step 3: 이미지 URL 추출
+        if (data11.character_image) {
+            replier.reply(data11.character_image);
+        } else {
+            replier.reply("캐릭터 이미지를 찾을 수 없습니다.");
+        }
+    } catch (error) {
+        java.lang.System.out.println("[BOT ERROR] getImage: " + (error.message || error));
+        replier.reply("이미지 조회 오류: " + error.message);
+    }
 }
 function getMapleOcid(characterName, replier) {
     try {
@@ -3989,8 +4002,13 @@ var ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
             replier.reply("해당 캐릭터를 찾을 수 없습니다.");
         }
     } catch (error) {
-        java.lang.System.out.println("[BOT ERROR] getMapleOcid: " + (error.message || error));
-        replier.reply("새벽점검시간 혹은 월드리프, 생성일이 일주일이 되지 않음 ");
+        var errMsg = error.message || String(error);
+        java.lang.System.out.println("[BOT ERROR] getMapleOcid: " + errMsg);
+        if (errMsg.indexOf("HTTP error") !== -1) {
+            replier.reply("API 호출 실패 (서버 점검 또는 요청 오류)\n" + errMsg);
+        } else {
+            replier.reply("새벽점검시간 혹은 월드리프, 생성일이 일주일이 되지 않음\n(상세: " + errMsg + ")");
+        }
         return;
     }
     function getRealExp(level, rate) {
