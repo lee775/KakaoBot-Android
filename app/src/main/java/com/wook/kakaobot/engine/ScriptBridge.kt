@@ -30,6 +30,11 @@ object ScriptBridge {
         val dbObj = RhinoContext.javaToJS(dbBridge, scope)
         ScriptableObject.putProperty(scope, "DataBase", dbObj)
 
+        // Jsoup 팩토리 주입 (Packages 대신 직접 주입)
+        val jsoupFactory = JsoupFactory()
+        val jsoupObj = RhinoContext.javaToJS(jsoupFactory, scope)
+        ScriptableObject.putProperty(scope, "_JsoupFactory", jsoupObj)
+
         // 브릿지 JavaScript 코드 실행
         val bridgeScript = """
             // ============================================
@@ -39,7 +44,7 @@ object ScriptBridge {
             org.jsoup = org.jsoup || {};
             org.jsoup.Jsoup = {
                 connect: function(url) {
-                    return new Packages.com.wook.kakaobot.engine.JsoupConnection(String(url));
+                    return _JsoupFactory.connect(String(url));
                 }
             };
 

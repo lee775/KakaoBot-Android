@@ -3982,7 +3982,7 @@ var ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
             replier.reply("해당 캐릭터를 찾을 수 없습니다.");
         }
     } catch (error) {
-        replier.reply("새벽점검시간 혹은 월드리프, 생성일이 일주일이 되지 않음 ");
+        replier.reply("오류: " + (error.message || error) + "\n(새벽점검/월드리프/생성일 7일미만일 수 있음)");
         return;
     }
     function getRealExp(level, rate) {

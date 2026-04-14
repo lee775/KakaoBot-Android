@@ -92,3 +92,13 @@ class JsoupBridge {
         }
     }
 }
+
+/**
+ * Rhino 스코프에 주입되는 팩토리 클래스.
+ * JS에서 _JsoupFactory.connect(url)로 호출.
+ */
+class JsoupFactory {
+    fun connect(url: String): JsoupConnection {
+        return JsoupConnection(url)
+    }
+}
