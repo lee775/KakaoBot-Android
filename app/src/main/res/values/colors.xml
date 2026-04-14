@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background_dark">#1a1a2e</color>
+    <color name="card_dark">#16213e</color>
+    <color name="accent">#e94560</color>
+    <color name="log_bg">#0f3460</color>
+    <color name="log_text">#53ff53</color>
+    <color name="white">#ffffff</color>
+    <color name="gray">#a0a0a0</color>
+</resources>

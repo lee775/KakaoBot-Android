@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#1a1a2e">
+
+    <!-- 타이틀 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="KakaoBot"
+        android:textSize="24sp"
+        android:textColor="#e94560"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:paddingBottom="12dp" />
+
+    <!-- 상태 표시 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#16213e"
+        android:padding="12dp"
+        android:layout_marginBottom="12dp">
+
+        <TextView
+            android:id="@+id/tvStatusListener"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="알림 리스너: OFF"
+            android:textColor="#a0a0a0"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tvStatusScript"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="스크립트: 미로드"
+            android:textColor="#a0a0a0"
+            android:textSize="13sp"
+            android:paddingTop="2dp" />
+
+        <TextView
+            android:id="@+id/tvStatusBot"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="봇 상태: 비활성"
+            android:textColor="#a0a0a0"
+            android:textSize="13sp"
+            android:paddingTop="2dp" />
+    </LinearLayout>
+
+    <!-- 봇 ON/OFF 토글 -->
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/switchBot"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="봇 활성화"
+        android:textColor="#ffffff"
+        android:textSize="16sp"
+        android:padding="8dp"
+        android:layout_marginBottom="8dp" />
+
+    <!-- 버튼 그리드 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="4dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnLoadScript"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="스크립트 로드"
+            android:textSize="12sp"
+            android:layout_marginEnd="4dp"
+            style="@style/Widget.Material3.Button.TonalButton" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnReloadScript"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="리로드"
+            android:textSize="12sp"
+            android:layout_marginStart="4dp"
+            style="@style/Widget.Material3.Button.TonalButton" />
+    </LinearLayout>
+
+    <!-- 스크립트 편집 버튼 -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnEditScript"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="스크립트 편집기 열기"
+        android:textSize="13sp"
+        android:layout_marginBottom="4dp"
+        style="@style/Widget.Material3.Button.TonalButton" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="8dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnNotificationPermission"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="알림 권한 설정"
+            android:textSize="11sp"
+            android:layout_marginEnd="2dp"
+            style="@style/Widget.Material3.Button.OutlinedButton" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBatteryOptimization"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="배터리 최적화 해제"
+            android:textSize="11sp"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp"
+            style="@style/Widget.Material3.Button.OutlinedButton" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnClearLog"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="로그 초기화"
+            android:textSize="11sp"
+            android:layout_marginStart="2dp"
+            style="@style/Widget.Material3.Button.OutlinedButton" />
+    </LinearLayout>
+
+    <!-- 실시간 로그 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="로그"
+        android:textColor="#e94560"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:paddingBottom="4dp" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#0f3460"
+        android:padding="8dp">
+
+        <TextView
+            android:id="@+id/tvLog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#53ff53"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:text="KakaoBot 준비 완료.\n스크립트를 로드하고 봇을 활성화하세요.\n" />
+    </ScrollView>
+
+</LinearLayout>
