@@ -4179,8 +4179,6 @@ var schedulerTasks = [
 var schedulerRunning = false;
 var schedulerLastRun = "";
 
-function runScheduler() {
-
 // ==========================================
 // 추가 기능 함수
 // ==========================================
@@ -4301,13 +4299,15 @@ function getTmiInfo(characterName, replier) {
     }
     
     replier.reply("🏅🏅  "+decodeURIComponent(characterName)+"님의 TMI"+"  🏅🏅\n"+ment+"\n(추가tmi가 있다면 알려주세요)");
+}
 
 // ==========================================
 // 스케줄러 (Android 앱에서는 비활성화)
 // ==========================================
+function runScheduler() {
     if (schedulerRunning) return;
     schedulerRunning = true;
-    
+
     var thread = new java.lang.Thread({
         run: function() {
             while (true) {
@@ -4317,7 +4317,7 @@ function getTmiInfo(characterName, replier) {
                     var hour = now.getHours();
                     var minute = now.getMinutes();
                     var currentKey = day + "-" + hour + "-" + minute;
-                    
+
                     if (currentKey !== schedulerLastRun) {
                         for (var i = 0; i < schedulerTasks.length; i++) {
                             var task = schedulerTasks[i];
@@ -4329,7 +4329,7 @@ function getTmiInfo(characterName, replier) {
                         }
                         schedulerLastRun = currentKey;
                     }
-                    
+
                     java.lang.Thread.sleep(10000); // 10초마다 체크
                 } catch (e) {
                     // 에러 무시하고 계속 실행
@@ -4339,9 +4339,5 @@ function getTmiInfo(characterName, replier) {
     });
     thread.start();
 }
-
-// 스케줄러 시작
-runScheduler();
-
 
 // runScheduler();
