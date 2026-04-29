@@ -4410,8 +4410,6 @@ function getSymbolInfo(characterName, replier) {
                 if (list.length === 0) return;
                 lines.push("");
                 lines.push("◆ " + title + " (" + list.length + "개)");
-                var groupMeso = 0;
-                var groupLevels = 0;
                 for (var j = 0; j < list.length; j++) {
                     var s = list[j];
                     var lvl = s.symbol_level || 0;
@@ -4427,15 +4425,12 @@ function getSymbolInfo(characterName, replier) {
                     if (mesoTable && growthReqTable) {
                         var upg = calcSymbolUpgrade(lvl, growthCnt, growthReqTable, mesoTable);
                         if (upg.levelsUp > 0) {
-                            lines.push("   → +" + upg.levelsUp + "Lv 강화 가능, " + formatMeso(upg.meso) + " 메소");
-                            groupMeso += upg.meso;
-                            groupLevels += upg.levelsUp;
+                            lines.push("   → +" + upg.levelsUp + "Lv, " + formatMeso(upg.meso) + " 메소");
+                            totalUpgradeMeso += upg.meso;
+                        } else {
+                            lines.push("   → 강화 불가 (성장치 부족 또는 만렙)");
                         }
                     }
-                }
-                if (groupMeso > 0) {
-                    lines.push("  [" + title + " 합계: +" + groupLevels + "Lv, " + formatMeso(groupMeso) + " 메소]");
-                    totalUpgradeMeso += groupMeso;
                 }
             }
 
