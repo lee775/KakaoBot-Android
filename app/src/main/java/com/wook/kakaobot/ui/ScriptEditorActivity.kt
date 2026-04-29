@@ -36,9 +36,14 @@ class ScriptEditorActivity : AppCompatActivity() {
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.data?.let { uri ->
                 try {
-                    val content = contentResolver.openInputStream(uri)
+                    var content = contentResolver.openInputStream(uri)
                         ?.bufferedReader(Charsets.UTF_8)
                         ?.readText() ?: ""
+
+                    // UTF-8 BOM 제거 (﻿가 스크립트 앞에 붙으면 Rhino 파싱 오류 가능)
+                    if (content.isNotEmpty() && content[0] == '﻿') {
+                        content = content.substring(1)
+                    }
 
                     if (content.isEmpty()) {
                         toast("빈 파일입니다")
