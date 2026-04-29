@@ -4375,6 +4375,25 @@ function getSymbolInfo(characterName, replier) {
                 return;
             }
 
+            // 기본 정보 조회 (레벨)
+            var charLevel = "?";
+            try {
+                var basicUrl = MAPLE_INF_API_URL + "?ocid=" + ocidData.ocid;
+                var basicResp = org.jsoup.Jsoup.connect(basicUrl)
+                    .header("accept", "application/json")
+                    .header("x-nxopen-api-key", NEXON_API_KEY)
+                    .ignoreContentType(true)
+                    .timeout(10000)
+                    .execute()
+                    .body();
+                var basicData = JSON.parse(basicResp);
+                if (basicData && basicData.character_level) {
+                    charLevel = basicData.character_level;
+                }
+            } catch (e) {
+                java.lang.System.out.println("[BOT WARN] 레벨 조회 실패: " + (e.message || e));
+            }
+
             // 심볼 정보 조회
             var symbolUrl = MAPLE_SYMBOL_URL + "?ocid=" + ocidData.ocid;
             var symbolResp = org.jsoup.Jsoup.connect(symbolUrl)
@@ -4389,7 +4408,8 @@ function getSymbolInfo(characterName, replier) {
             var charName = decodeURIComponent(characterName);
             var lines = [];
             var summaryLines = []; // 헤더용 요약 (포스/비용)
-            lines.push("[" + charName + "] 장착 심볼 정보");
+            lines.push("[" + charName + " - Lv." + charLevel + "]");
+            lines.push("장착 심볼 정보");
             lines.push("================================");
 
             if (!symbolData.symbol || symbolData.symbol.length === 0) {
@@ -4473,8 +4493,8 @@ function getSymbolInfo(characterName, replier) {
                 summaryLines.push("💰 추가 강화 비용: " + formatMeso(totalUpgradeMeso) + " 메소");
             }
             summaryLines.push("================================");
-            // 기존 헤더 "================================" (lines[1]) 다음에 삽입
-            var headerArgs = [2, 0].concat(summaryLines);
+            // 기존 헤더 "================================" (lines[2]) 다음에 삽입
+            var headerArgs = [3, 0].concat(summaryLines);
             Array.prototype.splice.apply(lines, headerArgs);
 
             replier.reply(lines.join("\n"));
