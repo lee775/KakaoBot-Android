@@ -4331,6 +4331,16 @@ function calcSymbolUpgrade(currentLevel, currentGrowth, growthReqTable, mesoTabl
     return { levelsUp: levelsUp, meso: totalMeso, leftoverGrowth: growth };
 }
 
+// 심볼 1개의 누적 납부 금액 계산 (Lv.1 → 현재 레벨까지 누적)
+function calcPaidMeso(currentLevel, mesoTable) {
+    var paid = 0;
+    var endIdx = Math.min(currentLevel - 1, mesoTable.length);
+    for (var i = 0; i < endIdx; i++) {
+        paid += (mesoTable[i] || 0);
+    }
+    return paid;
+}
+
 function formatMeso(n) {
     var s = String(Math.floor(n));
     var result = "";
@@ -4378,6 +4388,7 @@ function getSymbolInfo(characterName, replier) {
 
             var charName = decodeURIComponent(characterName);
             var lines = [];
+            var summaryLines = []; // 헤더용 요약 (포스/비용)
             lines.push("[" + charName + "] 장착 심볼 정보");
             lines.push("================================");
 
@@ -4403,6 +4414,9 @@ function getSymbolInfo(characterName, replier) {
             }
 
             var totalUpgradeMeso = 0;
+            var totalPaidMeso = 0;
+            var totalArcaneForce = 0;
+            var totalAuthenticForce = 0;
 
             function getMesoTable(category, region) {
                 if (category === "arcane") return ARCANE_MESO[region];
@@ -4417,6 +4431,9 @@ function getSymbolInfo(characterName, replier) {
                 for (var k = 0; k < list.length; k++) {
                     totalForce += parseInt(list[k].symbol_force || 0) || 0;
                 }
+                if (category === "arcane") totalArcaneForce += totalForce;
+                else if (category === "authentic" || category === "grand") totalAuthenticForce += totalForce;
+
                 lines.push("");
                 lines.push("◆ " + title + " (" + list.length + "개) | 총 포스 " + totalForce);
                 for (var j = 0; j < list.length; j++) {
@@ -4433,6 +4450,7 @@ function getSymbolInfo(characterName, replier) {
 
                     var mesoTable = getMesoTable(category, displayName);
                     if (mesoTable && growthReqTable) {
+                        totalPaidMeso += calcPaidMeso(lvl, mesoTable);
                         var upg = calcSymbolUpgrade(lvl, growthCnt, growthReqTable, mesoTable);
                         if (upg.levelsUp > 0) {
                             lines.push("   → +" + upg.levelsUp + "Lv, " + formatMeso(upg.meso) + " 메소");
@@ -4447,11 +4465,17 @@ function getSymbolInfo(characterName, replier) {
             appendGroup("그랜드 어센틱심볼", grandAuthentic, "grand", AUTHENTIC_GROWTH_REQ);
             appendGroup("기타", others, null, null);
 
+            // 헤더 요약 라인을 [캐릭터명] 바로 아래에 삽입
+            summaryLines.push("🔮 아케인 포스: " + totalArcaneForce);
+            summaryLines.push("🔮 어센틱 포스: " + totalAuthenticForce);
+            summaryLines.push("💵 누적 납부 금액: " + formatMeso(totalPaidMeso) + " 메소");
             if (totalUpgradeMeso > 0) {
-                lines.push("");
-                lines.push("================================");
-                lines.push("💰 전체 강화 비용: " + formatMeso(totalUpgradeMeso) + " 메소");
+                summaryLines.push("💰 추가 강화 비용: " + formatMeso(totalUpgradeMeso) + " 메소");
             }
+            summaryLines.push("================================");
+            // 기존 헤더 "================================" (lines[1]) 다음에 삽입
+            var headerArgs = [2, 0].concat(summaryLines);
+            Array.prototype.splice.apply(lines, headerArgs);
 
             replier.reply(lines.join("\n"));
         } catch (error) {
