@@ -4324,17 +4324,19 @@ function getSymbolInfo(characterName, replier) {
                 return;
             }
 
-            // 심볼 종류별 분류
+            // 심볼 종류별 분류 (그랜드 어센틱은 어센틱보다 먼저 체크)
             var arcane = [];
             var authentic = [];
+            var grandAuthentic = [];
             var grandis = [];
             var others = [];
 
             for (var i = 0; i < symbolData.symbol.length; i++) {
                 var s = symbolData.symbol[i];
                 var name = s.symbol_name || "";
-                if (name.indexOf("아케인") !== -1) arcane.push(s);
+                if (name.indexOf("그랜드 어센틱") !== -1) grandAuthentic.push(s);
                 else if (name.indexOf("어센틱") !== -1) authentic.push(s);
+                else if (name.indexOf("아케인") !== -1) arcane.push(s);
                 else if (name.indexOf("그란디스") !== -1) grandis.push(s);
                 else others.push(s);
             }
@@ -4347,7 +4349,11 @@ function getSymbolInfo(characterName, replier) {
                     var s = list[j];
                     var lvl = s.symbol_level || 0;
                     var growth = (s.symbol_growth_count || 0) + "/" + (s.symbol_require_growth_count || 0);
-                    var displayName = (s.symbol_name || "").replace("아케인심볼 : ", "").replace("어센틱심볼 : ", "").replace("그란디스심볼 : ", "");
+                    var displayName = (s.symbol_name || "")
+                        .replace("그랜드 어센틱심볼 : ", "")
+                        .replace("아케인심볼 : ", "")
+                        .replace("어센틱심볼 : ", "")
+                        .replace("그란디스심볼 : ", "");
                     lines.push("• Lv." + lvl + " " + displayName + " (" + growth + ")");
                     if (s.symbol_force) {
                         lines.push("    포스: " + s.symbol_force);
@@ -4357,6 +4363,7 @@ function getSymbolInfo(characterName, replier) {
 
             appendGroup("아케인심볼", arcane);
             appendGroup("어센틱심볼", authentic);
+            appendGroup("그랜드 어센틱심볼", grandAuthentic);
             appendGroup("그란디스심볼", grandis);
             appendGroup("기타", others);
 
