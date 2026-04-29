@@ -4281,6 +4281,64 @@ var schedulerRunning = false;
 var schedulerLastRun = "";
 
 // ==========================================
+// 심볼 강화 비용 테이블 (사진 기반)
+// ==========================================
+// 아케인심볼 한번 필요 성장치 (Lv.1→2 ... Lv.19→20)
+var ARCANE_GROWTH_REQ = [12,15,20,27,36,47,60,75,92,111,132,155,180,207,236,267,300,335,372];
+// 어센틱 = 그랜드 어센틱 한번 필요 성장치 (Lv.1→2 ... Lv.10→11)
+var AUTHENTIC_GROWTH_REQ = [29,76,141,224,325,444,581,746,899,1100];
+
+// 아케인 지역별 메소 비용 (행: Lv.1→2 ... Lv.19→20, 1심볼 기준)
+var ARCANE_MESO = {
+    "소멸의 여로": [970000,1230000,1660000,2260000,3060000,4040000,5220000,6600000,8180000,9990000,11950000,14260000,16740000,19450000,22420000,25700000,29100000,32830000,36820000],
+    "츄츄 아일랜드": [1210000,1540000,2060000,2800000,3790000,5000000,6420000,8100000,10030000,12210000,14430000,17360000,20460000,23560000,26660000,29760000,33680000,37820000,42190000],
+    "레헬른": [1450000,1830000,2440000,3330000,4520000,5950000,7650000,9640000,11940000,14430000,16930000,20460000,24180000,27860000,31510000,35150000,40010000,44890000,50050000],
+    "아르카나": [1690000,2130000,2830000,3860000,5260000,6910000,8890000,11180000,13860000,16650000,19420000,23560000,27870000,32160000,36380000,40540000,46340000,51960000,57910000],
+    "모라스": [1930000,2430000,3220000,4390000,5990000,7860000,10120000,12720000,15770000,18870000,21910000,26660000,31580000,36460000,41250000,45930000,52670000,59030000,65780000],
+    "에스페라": [2170000,2720000,3610000,4920000,6720000,8820000,11360000,14260000,17680000,21090000,24410000,29760000,35290000,40760000,46120000,51320000,59000000,66100000,73640000]
+};
+
+// 어센틱 지역별 메소 비용 (행: Lv.1→2 ... Lv.10→11, 1심볼 기준)
+var AUTHENTIC_MESO = {
+    "세르니움": [36500000,91200000,160700000,241900000,331500000,426200000,522900000,618200000,709000000,792000000],
+    "아르크스": [41700000,104800000,184100000,276200000,378200000,487200000,597000000,706000000,809200000,904300000],
+    "오디움": [46900000,118500000,211500000,318600000,437300000,564400000,691800000,819200000,939800000,1051600000],
+    "도원경": [52200000,132200000,237800000,360800000,496900000,642400000,786600000,933100000,1071100000,1198400000],
+    "아르테리아": [57400000,145900000,262200000,403200000,565500000,732000000,896000000,1063500000,1219800000,1364000000],
+    "카르시온": [62600000,159600000,287600000,443500000,624000000,825800000,1010400000,1207800000,1390700000,1554800000]
+};
+
+// 그랜드 어센틱심볼 메소 비용 (행: Lv.1→2 ... Lv.10→11)
+var GRAND_AUTHENTIC_MESO = {
+    "탈라하트": [113600000,293300000,535800000,837700000,1196000000,1607200000,2068300000,2576000000,3126900000,3718000000],
+    "기어드락": [139700000,361700000,662700000,1039300000,1488500000,2006800000,2591200000,3238400000,3945000000,4708000000]
+};
+
+// 심볼 1개의 강화 가능 레벨/메소 계산
+function calcSymbolUpgrade(currentLevel, currentGrowth, growthReqTable, mesoTable) {
+    var levelsUp = 0;
+    var totalMeso = 0;
+    var growth = currentGrowth;
+    while (true) {
+        var idx = currentLevel + levelsUp - 1; // 0-indexed: idx=현재레벨-1
+        if (idx < 0 || idx >= growthReqTable.length) break;
+        var need = growthReqTable[idx];
+        if (growth < need) break;
+        growth -= need;
+        totalMeso += (mesoTable[idx] || 0);
+        levelsUp++;
+    }
+    return { levelsUp: levelsUp, meso: totalMeso, leftoverGrowth: growth };
+}
+
+function formatMeso(n) {
+    if (n >= 1000000000000) return (n / 1000000000000).toFixed(2) + "조";
+    if (n >= 100000000) return (n / 100000000).toFixed(2) + "억";
+    if (n >= 10000) return Math.floor(n / 10000) + "만";
+    return String(n);
+}
+
+// ==========================================
 // 심볼 정보 조회 (장착 심볼 정보)
 // ==========================================
 function getSymbolInfo(characterName, replier) {
@@ -4339,29 +4397,58 @@ function getSymbolInfo(characterName, replier) {
                 else others.push(s);
             }
 
-            function appendGroup(title, list) {
+            var totalUpgradeMeso = 0;
+
+            function getMesoTable(category, region) {
+                if (category === "arcane") return ARCANE_MESO[region];
+                if (category === "authentic") return AUTHENTIC_MESO[region];
+                if (category === "grand") return GRAND_AUTHENTIC_MESO[region];
+                return null;
+            }
+
+            function appendGroup(title, list, category, growthReqTable) {
                 if (list.length === 0) return;
                 lines.push("");
                 lines.push("◆ " + title + " (" + list.length + "개)");
+                var groupMeso = 0;
+                var groupLevels = 0;
                 for (var j = 0; j < list.length; j++) {
                     var s = list[j];
                     var lvl = s.symbol_level || 0;
-                    var growth = (s.symbol_growth_count || 0) + "/" + (s.symbol_require_growth_count || 0);
+                    var growthCnt = s.symbol_growth_count || 0;
+                    var growthReq = s.symbol_require_growth_count || 0;
                     var displayName = (s.symbol_name || "")
                         .replace("그랜드 어센틱심볼 : ", "")
                         .replace("아케인심볼 : ", "")
                         .replace("어센틱심볼 : ", "");
-                    lines.push("• Lv." + lvl + " " + displayName + " (" + growth + ")");
-                    if (s.symbol_force) {
-                        lines.push("    포스: " + s.symbol_force);
+                    lines.push("• Lv." + lvl + " " + displayName + " (" + growthCnt + "/" + growthReq + ")");
+
+                    var mesoTable = getMesoTable(category, displayName);
+                    if (mesoTable && growthReqTable) {
+                        var upg = calcSymbolUpgrade(lvl, growthCnt, growthReqTable, mesoTable);
+                        if (upg.levelsUp > 0) {
+                            lines.push("   → +" + upg.levelsUp + "Lv 강화 가능, " + formatMeso(upg.meso) + " 메소");
+                            groupMeso += upg.meso;
+                            groupLevels += upg.levelsUp;
+                        }
                     }
+                }
+                if (groupMeso > 0) {
+                    lines.push("  [" + title + " 합계: +" + groupLevels + "Lv, " + formatMeso(groupMeso) + " 메소]");
+                    totalUpgradeMeso += groupMeso;
                 }
             }
 
-            appendGroup("아케인심볼", arcane);
-            appendGroup("어센틱심볼", authentic);
-            appendGroup("그랜드 어센틱심볼", grandAuthentic);
-            appendGroup("기타", others);
+            appendGroup("아케인심볼", arcane, "arcane", ARCANE_GROWTH_REQ);
+            appendGroup("어센틱심볼", authentic, "authentic", AUTHENTIC_GROWTH_REQ);
+            appendGroup("그랜드 어센틱심볼", grandAuthentic, "grand", AUTHENTIC_GROWTH_REQ);
+            appendGroup("기타", others, null, null);
+
+            if (totalUpgradeMeso > 0) {
+                lines.push("");
+                lines.push("================================");
+                lines.push("💰 전체 강화 비용: " + formatMeso(totalUpgradeMeso) + " 메소");
+            }
 
             replier.reply(lines.join("\n"));
         } catch (error) {
