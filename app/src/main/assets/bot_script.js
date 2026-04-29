@@ -4332,10 +4332,15 @@ function calcSymbolUpgrade(currentLevel, currentGrowth, growthReqTable, mesoTabl
 }
 
 function formatMeso(n) {
-    if (n >= 1000000000000) return (n / 1000000000000).toFixed(2) + "조";
-    if (n >= 100000000) return (n / 100000000).toFixed(2) + "억";
-    if (n >= 10000) return Math.floor(n / 10000) + "만";
-    return String(n);
+    var s = String(Math.floor(n));
+    var result = "";
+    var cnt = 0;
+    for (var i = s.length - 1; i >= 0; i--) {
+        result = s.charAt(i) + result;
+        cnt++;
+        if (cnt % 3 === 0 && i > 0) result = "," + result;
+    }
+    return result;
 }
 
 // ==========================================
@@ -4427,8 +4432,6 @@ function getSymbolInfo(characterName, replier) {
                         if (upg.levelsUp > 0) {
                             lines.push("   → +" + upg.levelsUp + "Lv, " + formatMeso(upg.meso) + " 메소");
                             totalUpgradeMeso += upg.meso;
-                        } else {
-                            lines.push("   → 강화 불가 (성장치 부족 또는 만렙)");
                         }
                     }
                 }
