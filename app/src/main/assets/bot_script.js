@@ -4413,18 +4413,23 @@ function getSymbolInfo(characterName, replier) {
 
             function appendGroup(title, list, category, growthReqTable) {
                 if (list.length === 0) return;
+                var totalForce = 0;
+                for (var k = 0; k < list.length; k++) {
+                    totalForce += parseInt(list[k].symbol_force || 0) || 0;
+                }
                 lines.push("");
-                lines.push("◆ " + title + " (" + list.length + "개)");
+                lines.push("◆ " + title + " (" + list.length + "개) | 총 포스 " + totalForce);
                 for (var j = 0; j < list.length; j++) {
                     var s = list[j];
                     var lvl = s.symbol_level || 0;
                     var growthCnt = s.symbol_growth_count || 0;
                     var growthReq = s.symbol_require_growth_count || 0;
+                    var force = s.symbol_force || "0";
                     var displayName = (s.symbol_name || "")
                         .replace("그랜드 어센틱심볼 : ", "")
                         .replace("아케인심볼 : ", "")
                         .replace("어센틱심볼 : ", "");
-                    lines.push("• Lv." + lvl + " " + displayName + " (" + growthCnt + "/" + growthReq + ")");
+                    lines.push("• Lv." + lvl + " " + displayName + " (포스 " + force + ", " + growthCnt + "/" + growthReq + ")");
 
                     var mesoTable = getMesoTable(category, displayName);
                     if (mesoTable && growthReqTable) {
