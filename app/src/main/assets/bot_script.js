@@ -461,6 +461,7 @@ var MAPLE_INF_STAT_URL = "https://open.api.nexon.com/maplestory/v1/character/sta
 var MAPLE_GUILD_ID_URL = "https://open.api.nexon.com/maplestory/v1/guild/id";
 var MAPLE_GUILD_BASIC_URL = "https://open.api.nexon.com/maplestory/v1/guild/basic";
 var MAPLE_ITEM_EQUIPMENT_URL = "https://open.api.nexon.com/maplestory/v1/character/item-equipment";
+var MAPLE_SYMBOL_URL = "https://open.api.nexon.com/maplestory/v1/character/symbol-equipment";
 var RANKING_CHARACTERS4 = [
 "글자",
 "Nine",
@@ -1117,6 +1118,23 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
     if (msg.startsWith("/환산 ") && room != "[본메] 전국에반협회") {
         var idlink = encodeURIComponent(msg.slice(4).trim());
         getLink(idlink, replier);
+    }
+
+    // ===== 심볼 정보 조회 (/심볼 /세금 /탈세 모두 동일 동작) =====
+    if (msg.startsWith("/심볼") || msg.startsWith("/세금") || msg.startsWith("/탈세")) {
+        var symbolInput = msg.slice(3).trim();
+        var symbolCharName;
+        if (symbolInput === "") {
+            var regSym = DataBase.getDataBase("char_" + sender);
+            if (!regSym || regSym === "") {
+                replier.reply("등록된 캐릭터가 없습니다.\n!캐릭터등록 캐릭터명 으로 먼저 등록해주세요.");
+                return;
+            }
+            symbolCharName = regSym;
+        } else {
+            symbolCharName = symbolInput;
+        }
+        getSymbolInfo(encodeURIComponent(symbolCharName), replier);
     }
 }
 
@@ -4261,6 +4279,95 @@ var schedulerTasks = [
 
 var schedulerRunning = false;
 var schedulerLastRun = "";
+
+// ==========================================
+// 심볼 정보 조회 (장착 심볼 정보)
+// ==========================================
+function getSymbolInfo(characterName, replier) {
+    var thread = new java.lang.Thread(function() {
+        try {
+            // OCID 조회
+            var ocidUrl = MAPLE_OCID_API_URL + "?character_name=" + characterName;
+            var ocidResp = org.jsoup.Jsoup.connect(ocidUrl)
+                .header("accept", "application/json")
+                .header("x-nxopen-api-key", NEXON_API_KEY)
+                .ignoreContentType(true)
+                .timeout(10000)
+                .execute()
+                .body();
+            var ocidData = JSON.parse(ocidResp);
+
+            if (!ocidData || !ocidData.ocid) {
+                replier.reply("해당 캐릭터를 찾을 수 없습니다.");
+                return;
+            }
+
+            // 심볼 정보 조회
+            var symbolUrl = MAPLE_SYMBOL_URL + "?ocid=" + ocidData.ocid;
+            var symbolResp = org.jsoup.Jsoup.connect(symbolUrl)
+                .header("accept", "application/json")
+                .header("x-nxopen-api-key", NEXON_API_KEY)
+                .ignoreContentType(true)
+                .timeout(10000)
+                .execute()
+                .body();
+            var symbolData = JSON.parse(symbolResp);
+
+            var charName = decodeURIComponent(characterName);
+            var lines = [];
+            lines.push("[" + charName + "] 장착 심볼 정보");
+            lines.push("================================");
+
+            if (!symbolData.symbol || symbolData.symbol.length === 0) {
+                lines.push("장착된 심볼이 없습니다.");
+                replier.reply(lines.join("\n"));
+                return;
+            }
+
+            // 심볼 종류별 분류
+            var arcane = [];
+            var authentic = [];
+            var grandis = [];
+            var others = [];
+
+            for (var i = 0; i < symbolData.symbol.length; i++) {
+                var s = symbolData.symbol[i];
+                var name = s.symbol_name || "";
+                if (name.indexOf("아케인") !== -1) arcane.push(s);
+                else if (name.indexOf("어센틱") !== -1) authentic.push(s);
+                else if (name.indexOf("그란디스") !== -1) grandis.push(s);
+                else others.push(s);
+            }
+
+            function appendGroup(title, list) {
+                if (list.length === 0) return;
+                lines.push("");
+                lines.push("◆ " + title + " (" + list.length + "개)");
+                for (var j = 0; j < list.length; j++) {
+                    var s = list[j];
+                    var lvl = s.symbol_level || 0;
+                    var growth = (s.symbol_growth_count || 0) + "/" + (s.symbol_require_growth_count || 0);
+                    var displayName = (s.symbol_name || "").replace("아케인심볼 : ", "").replace("어센틱심볼 : ", "").replace("그란디스심볼 : ", "");
+                    lines.push("• Lv." + lvl + " " + displayName + " (" + growth + ")");
+                    if (s.symbol_force) {
+                        lines.push("    포스: " + s.symbol_force);
+                    }
+                }
+            }
+
+            appendGroup("아케인심볼", arcane);
+            appendGroup("어센틱심볼", authentic);
+            appendGroup("그란디스심볼", grandis);
+            appendGroup("기타", others);
+
+            replier.reply(lines.join("\n"));
+        } catch (error) {
+            java.lang.System.out.println("[BOT ERROR] getSymbolInfo: " + (error.message || error));
+            replier.reply("심볼 정보를 가져올 수 없습니다. 캐릭터명을 확인해주세요.");
+        }
+    });
+    thread.start();
+}
 
 // ==========================================
 // 추가 기능 함수
