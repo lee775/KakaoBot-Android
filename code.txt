@@ -4230,8 +4230,8 @@ function getLink(idlink, replier) {
             replier.reply(
                 "[" + name + "] " + d.class + "\n" +
                 "전투력: " + fmt(d.combatPower) + "\n" +
-                "일반환산: " + fmt(d.boss300_stat) + "\n" +
-                "헥사환산: " + fmt(d.boss380_stat)
+                "일반환산: " + fmt(d.boss380_stat) + "\n" +
+                "헥사환산: " + fmt(d.boss380_hexaStat)
             );
         } catch (e) {
             replier.reply("환산 조회 실패: " + e);
