@@ -4340,10 +4340,8 @@ function clan(replier)
   replier.reply("https://maple-boss-site.vercel.app/");
 }
 function option(replier) {
-    var m = "📖 봇 기능 안내\n";
-    // 카톡 "전체보기" 트리거: 첫 줄 직후 보이지 않는 패딩 (zero-width)
-    var __pad = new Array(31).join("​");
-    for (var __i = 0; __i < 30; __i++) m += __pad + "\n";
+    // 카톡 "전체보기" 트리거: 첫 줄 끝에 줄바꿈 없이 보이지 않는 패딩 (zero-width)
+    var m = "📖 봇 기능 안내" + new Array(3001).join("​") + "\n";
     m += "════════════════\n\n";
 
     m += "🎯 캐릭터 등록\n";
