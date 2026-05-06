@@ -4341,6 +4341,9 @@ function clan(replier)
 }
 function option(replier) {
     var m = "📖 봇 기능 안내\n";
+    // 카톡 "전체보기" 트리거: 첫 줄 직후 보이지 않는 패딩 (zero-width)
+    var __pad = new Array(31).join("​");
+    for (var __i = 0; __i < 30; __i++) m += __pad + "\n";
     m += "════════════════\n\n";
 
     m += "🎯 캐릭터 등록\n";
@@ -4408,9 +4411,6 @@ function option(replier) {
     m += "─────────────────\n";
     m += "/기능 /ㄱㄴ /도움말\n";
     m += "════════════════";
-
-    // 카톡 "전체보기" 트리거용 패딩 (zero-width space)
-    m += "\n" + Array(801).join("​");
 
     replier.reply(m);
 }
