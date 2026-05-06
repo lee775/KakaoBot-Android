@@ -118,7 +118,72 @@ function showWall(room, replier) {
     replier.reply(message.trim());
 }
 
+// 캐릭터 등록 데이터 (sender → 닉네임 매핑)
+function getCharDb() {
+    try {
+        var data = DataBase.getDataBase("char_db");
+        if (data && data !== "") return JSON.parse(data);
+        return {};
+    } catch (e) { return {}; }
+}
+
+function saveCharDb(db) {
+    try { DataBase.setDataBase("char_db", JSON.stringify(db)); } catch (e) {}
+}
+
+function registerChar(sender, name, replier) {
+    var db = getCharDb();
+    db[sender] = name;
+    saveCharDb(db);
+    try { DataBase.setDataBase("char_" + sender, name); } catch (e) {}
+    replier.reply("[" + sender + "] 캐릭터 [" + name + "] 등록 완료");
+}
+
+function deleteCharReg(sender, replier) {
+    var db = getCharDb();
+    var hadEntry = !!db[sender];
+    if (db[sender]) { delete db[sender]; saveCharDb(db); }
+    try {
+        var legacy = DataBase.getDataBase("char_" + sender);
+        if (legacy && legacy !== "") { DataBase.setDataBase("char_" + sender, ""); hadEntry = true; }
+    } catch (e) {}
+    if (!hadEntry) replier.reply("등록된 캐릭터가 없습니다.");
+    else replier.reply("캐릭터 등록이 삭제되었습니다.");
+}
+
+function showMyChar(sender, replier) {
+    var name = lookupCharName(sender);
+    if (name) replier.reply("[" + sender + "] 등록 캐릭터: " + name);
+    else replier.reply("등록된 캐릭터가 없습니다.\n사용법: /캐릭터등록 닉네임");
+}
+
+function lookupCharName(sender) {
+    var db = getCharDb();
+    if (db[sender]) return db[sender];
+    try {
+        var legacy = DataBase.getDataBase("char_" + sender);
+        if (legacy && legacy !== "") return legacy;
+    } catch (e) {}
+    return null;
+}
+
+function resolveName(arg, sender) {
+    var n = (arg || "").trim();
+    if (n) return n;
+    return lookupCharName(sender);
+}
+
 function response(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
+    // 캐릭터 등록 기능
+    if (msg.startsWith("/캐릭터등록 ")) {
+        var charName = msg.slice(7).trim();
+        if (!charName) { replier.reply("사용법: /캐릭터등록 닉네임"); return; }
+        registerChar(sender, charName, replier);
+        return;
+    }
+    if (msg === "/캐릭터삭제") { deleteCharReg(sender, replier); return; }
+    if (msg === "/내캐릭터") { showMyChar(sender, replier); return; }
+
     // 벽지 기능
     if (msg.startsWith("/등록 ")) {
         var userContent = msg.slice(4).trim();
@@ -926,88 +991,98 @@ const RANKING_CHARACTERS2 = [
 
 function response(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
   {
-    if (msg.startsWith("/ㄱㅎㅊ")) {
-        const characterName = encodeURIComponent(msg.slice(5).trim());
-        getMapleOcid(characterName, replier);
+    if (msg === "/ㄱㅎㅊ" || msg.startsWith("/ㄱㅎㅊ ")) {
+        var __rGhc = resolveName(msg.slice(4).trim(), sender);
+        if (!__rGhc) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getMapleOcid(encodeURIComponent(__rGhc), replier);
     }
-    if (msg.startsWith("/경험치")) {
-        const characterName1 = encodeURIComponent(msg.slice(5).trim());
-        getMapleOcid(characterName1, replier);
+    if (msg === "/경험치" || msg.startsWith("/경험치 ")) {
+        var __rExp = resolveName(msg.slice(4).trim(), sender);
+        if (!__rExp) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getMapleOcid(encodeURIComponent(__rExp), replier);
     }
-    if (msg.startsWith("@@ ")) {
-        const parts = msg.slice(3).trim().split(" ");
-        const characterName2 = parts[0];
-        const targetLevel = parts[1] ? parseInt(parts[1]) : null;
-        
-        // 헤르메스 랭킹 명령어 체크
-        if (characterName2 === "봄비") {
+    if (msg === "@@" || msg.startsWith("@@ ")) {
+        var rawAt2 = msg.slice(2).trim();
+        var partsAt2 = rawAt2 ? rawAt2.split(/\s+/) : [];
+        var firstAt2 = partsAt2[0];
+        if (firstAt2 === "봄비") {
             getMonthlyRanking(replier);
-        } else if (characterName2 === "시계꽃") {
+        } else if (firstAt2 === "시계꽃") {
             getMonthlyRanking2(replier);
-        } else if (characterName2 === "랭킹") {
+        } else if (firstAt2 === "랭킹") {
             getMonthlyRanking3(replier);
-        } else if (characterName2 === "스타") {
+        } else if (firstAt2 === "스타") {
             getMonthlyRanking4(replier);
-        }
-         else if (targetLevel !== null) {
-            // 목표 레벨이 있는 경우
-            getLevelUpPrediction(encodeURIComponent(characterName2), targetLevel, replier);
         } else {
-            // 일반 경험치 조회
-            getMapleOcid(encodeURIComponent(characterName2), replier);
+            var targetLvl2 = null, nameStr2 = rawAt2;
+            if (partsAt2.length >= 2 && /^\d+$/.test(partsAt2[partsAt2.length - 1])) {
+                targetLvl2 = parseInt(partsAt2[partsAt2.length - 1]);
+                nameStr2 = partsAt2.slice(0, -1).join(" ");
+            } else if (partsAt2.length === 1 && /^\d+$/.test(partsAt2[0])) {
+                targetLvl2 = parseInt(partsAt2[0]);
+                nameStr2 = "";
+            }
+            var resAt2 = resolveName(nameStr2, sender);
+            if (!resAt2) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+            else if (targetLvl2 !== null) getLevelUpPrediction(encodeURIComponent(resAt2), targetLvl2, replier);
+            else getMapleOcid(encodeURIComponent(resAt2), replier);
         }
     }
-    
-    if (msg.startsWith("/ㅌㄹ ")) {
-        const power1 = encodeURIComponent(msg.slice(4).trim());
-        getPower(power1, replier);
+
+    if (msg === "/ㅌㄹ" || msg.startsWith("/ㅌㄹ ")) {
+        var __rTr = resolveName(msg.slice(3).trim(), sender);
+        if (!__rTr) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getPower(encodeURIComponent(__rTr), replier);
     }
-    if (msg.startsWith("/ㅈㅌㄹ ")) {
-        const power2 = encodeURIComponent(msg.slice(5).trim());
-        getPower(power2, replier);
+    if (msg === "/ㅈㅌㄹ" || msg.startsWith("/ㅈㅌㄹ ")) {
+        var __rJtr = resolveName(msg.slice(4).trim(), sender);
+        if (!__rJtr) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getPower(encodeURIComponent(__rJtr), replier);
     }
-    if (msg.startsWith("/투력 ")) {
-        const power3 = encodeURIComponent(msg.slice(4).trim());
-        getPower(power3, replier);
+    if (msg === "/투력" || msg.startsWith("/투력 ")) {
+        var __rTu = resolveName(msg.slice(3).trim(), sender);
+        if (!__rTu) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getPower(encodeURIComponent(__rTu), replier);
     }
-    if (msg.startsWith("@@@@ ")) {
-        const power5Text = msg.slice(5).trim();
-        
-        // 헤르메스 전투력 랭킹
-        if (power5Text === "헤르메스") {
+    if (msg === "@@@@" || msg.startsWith("@@@@ ")) {
+        var raw4 = msg.slice(4).trim();
+        if (raw4 === "헤르메스") {
             getPowerRanking(replier, RANKING_CHARACTERS);
-        } 
-        // 시계꽃 전투력 랭킹
-        else if (power5Text === "시계꽃") {
+        } else if (raw4 === "시계꽃") {
             getPowerRanking(replier, RANKING_CHARACTERS2);
-        }
-        else if (power5Text === "스타") {
+        } else if (raw4 === "스타") {
             getPowerRanking(replier, RANKING_CHARACTERS4);
+        } else {
+            var res4 = resolveName(raw4, sender);
+            if (!res4) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+            else getPower(encodeURIComponent(res4), replier);
         }
-        // 개별 캐릭터 전투력 조회
-        else {
-            getPower(encodeURIComponent(power5Text), replier);
-        }
     }
-    if (msg.startsWith("@@@ ")) {
-        const characterName3 = encodeURIComponent(msg.slice(4).trim());
-        getMonthlyExpHistory(characterName3, replier);
+    if (msg === "@@@" || msg.startsWith("@@@ ")) {
+        var __r3 = resolveName(msg.slice(3).trim(), sender);
+        if (!__r3) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getMonthlyExpHistory(encodeURIComponent(__r3), replier);
     }
-    if (msg.startsWith("/전투력 ")) {
-        const power4 = encodeURIComponent(msg.slice(5).trim());
-        getPower(power4, replier);
+    if (msg === "/전투력" || msg.startsWith("/전투력 ")) {
+        var __rJtl = resolveName(msg.slice(4).trim(), sender);
+        if (!__rJtl) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getPower(encodeURIComponent(__rJtl), replier);
     }
-    if (msg.startsWith("/장비 ")) {
-        const equipParts = msg.slice(4).trim().split(" ");
-        const equipName = encodeURIComponent(equipParts[0]);
-        const equipSlot = equipParts[1] || null;
-        getEquipment(equipName, replier, equipSlot);
+    if (msg === "/장비" || msg.startsWith("/장비 ")) {
+        var partsEq = msg.slice(3).trim().split(/\s+/).filter(function(s) { return s; });
+        var nameEq = partsEq[0] || "";
+        var slotEq = partsEq[1] || null;
+        var __rEq = resolveName(nameEq, sender);
+        if (!__rEq) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getEquipment(encodeURIComponent(__rEq), replier, slotEq);
     }
-    if (msg.startsWith("/ㅈㅂ ")) {
-        const equipParts2 = msg.slice(4).trim().split(" ");
-        const equipName2 = encodeURIComponent(equipParts2[0]);
-        const equipSlot2 = equipParts2[1] || null;
-        getEquipment(equipName2, replier, equipSlot2);
+    if (msg === "/ㅈㅂ" || msg.startsWith("/ㅈㅂ ")) {
+        var partsEq2 = msg.slice(3).trim().split(/\s+/).filter(function(s) { return s; });
+        var nameEq2 = partsEq2[0] || "";
+        var slotEq2 = partsEq2[1] || null;
+        var __rEq2 = resolveName(nameEq2, sender);
+        if (!__rEq2) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getEquipment(encodeURIComponent(__rEq2), replier, slotEq2);
     }
   }
 }
@@ -4163,9 +4238,10 @@ function runScheduler() {
 runScheduler();
 
 function response(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
-    if (msg.startsWith("/tmi ")) {
-        const characterName = encodeURIComponent(msg.slice(4).trim());
-        getMapleOcid(characterName, replier);
+    if (msg === "/tmi" || msg.startsWith("/tmi ")) {
+        var __rTmi = resolveName(msg.slice(4).trim(), sender);
+        if (!__rTmi) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getMapleOcid(encodeURIComponent(__rTmi), replier);
     }
     if (msg=="/보스")
     {
@@ -4175,7 +4251,7 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
     {
       test(replier);
     }
-    if(msg=="/기능" || msg=="/ㄱㄴ")
+    if(msg=="/기능" || msg=="/ㄱㄴ" || msg=="/도움말")
     {
       option(replier);
     }
@@ -4196,9 +4272,14 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
 }
     
 
-    if (msg.startsWith("/환산 ")&&room!="[본메] 전국에반협회") {
-        const idlink = encodeURIComponent(msg.slice(4).trim());
-        getLink(idlink, replier);
+    if ((msg === "/환산" || msg.startsWith("/환산 ") || msg === "&&" || msg.startsWith("&& ")) && room != "[본메] 전국에반협회") {
+        var rawArg = msg.startsWith("/환산") ? msg.slice(3).trim() : msg.slice(2).trim();
+        var resolved = resolveName(rawArg, sender);
+        if (!resolved) {
+            replier.reply("닉네임을 입력하거나 /캐릭터등록 닉네임 으로 먼저 등록해주세요.");
+        } else {
+            getLink(encodeURIComponent(resolved), replier);
+        }
     }
 }
 function test(replier) {
@@ -4258,37 +4339,80 @@ function clan(replier)
 {
   replier.reply("https://maple-boss-site.vercel.app/");
 }
-function option(replier)
-{
-    var helpMsg = "📋 [메이플 봇 기능 목록]\n\n";
-    helpMsg += "━━━ 캐릭터 조회 ━━━\n";
-    helpMsg += "/ㄱㅎㅊ, /경험치, %% [ID]\n";
-    helpMsg += "%% [ID] [목표레벨] → 레벨업 예측\n";
-    helpMsg += "%%% [ID] → 월간 경험치\n";
-    helpMsg += "/ㅌㄹ, /ㅈㅌㄹ, /투력, /전투력, %%%% [ID]\n";
-    helpMsg += "/장비, /ㅈㅂ [ID] [부위]\n";
-    helpMsg += "/환산 [ID] → 환산 사이트\n";
-    helpMsg += "/tmi [ID] → TMI 정보\n\n";
-    helpMsg += "━━━ 랭킹 조회 ━━━\n";
-    helpMsg += "%% 헤르메스/시계꽃/랭킹/스타\n";
-    helpMsg += "%%%% 헤르메스/시계꽃/스타\n\n";
-    helpMsg += "━━━ 계산/시뮬 ━━━\n";
-    helpMsg += "/6차 [시작] [끝] → 코어 재료\n";
-    helpMsg += "/스타, /샤타 [시작] [끝]\n";
-    helpMsg += "/확률 [확률] → 시뮬레이션\n";
-    helpMsg += "/확률 [확률] [횟수]\n\n";
-    helpMsg += "━━━ 길드 정보 ━━━\n";
-    helpMsg += "/수로 → 수로 점수표\n";
-    helpMsg += "/모집 → 모집 양식\n";
-    helpMsg += "/창고, 검은돈 → 길드 창고\n\n";
-    helpMsg += "━━━ 벽지 기능 ━━━\n";
-    helpMsg += "/벽지 → 벽지 보기\n";
-    helpMsg += "/등록 [내용] → 글 등록\n";
-    helpMsg += "/삭제 → 내 글 삭제\n\n";
-    helpMsg += "━━━ 기타 ━━━\n";
-    helpMsg += "/음식 → 음식 추천\n";
-    helpMsg += "/코디 → 코디 사이트";
-    replier.reply(helpMsg);
+function option(replier) {
+    var m = "📖 봇 기능 안내\n";
+    m += "════════════════\n\n";
+
+    m += "🎯 캐릭터 등록\n";
+    m += "한 번 등록하면 닉네임 생략 가능!\n";
+    m += "─────────────────\n";
+    m += "/캐릭터등록 [닉네임]\n";
+    m += "/캐릭터삭제\n";
+    m += "/내캐릭터\n\n";
+
+    m += "🔍 캐릭터 조회\n";
+    m += "─────────────────\n";
+    m += "/환산 [닉] / && [닉]\n";
+    m += " → 전투력·일반환산·헥사환산\n";
+    m += "/ㄱㅎㅊ [닉] - 종합 정보\n";
+    m += "/경험치 [닉] - 현재 경험치\n";
+    m += "/tmi [닉] - 캐릭터 TMI\n";
+    m += "@@ [닉] - 월간 경험치\n";
+    m += "@@ [닉] [목표레벨] - 레벨업 예측\n";
+    m += "@@@ [닉] - 월간 경험치 히스토리\n\n";
+
+    m += "💪 전투력\n";
+    m += "─────────────────\n";
+    m += "/전투력 [닉]\n";
+    m += "/투력 [닉]\n";
+    m += "/ㅌㄹ [닉]\n";
+    m += "/ㅈㅌㄹ [닉]\n";
+    m += "@@@@ [닉]\n";
+    m += "(모두 동일한 전투력 조회)\n\n";
+
+    m += "🛡️ 장비 조회\n";
+    m += "─────────────────\n";
+    m += "/장비 [닉] [부위]\n";
+    m += "/ㅈㅂ [닉] [부위]\n";
+    m += "부위 생략 시 전체 요약\n\n";
+
+    m += "🏆 랭킹\n";
+    m += "─────────────────\n";
+    m += "@@ 봄비 / 시계꽃 / 랭킹 / 스타\n";
+    m += " → 길드 월간 경험치 랭킹\n";
+    m += "@@@@ 헤르메스 / 시계꽃 / 스타\n";
+    m += " → 길드 전투력 랭킹\n\n";
+
+    m += "🎮 시뮬레이터 / 계산기\n";
+    m += "─────────────────\n";
+    m += "/스타 [현재] [목표] - 스타포스\n";
+    m += "/샤타 [현재] [목표] - 샤프스타포스\n";
+    m += "/6차 [현재] [목표] - 6차 코어 비용\n";
+    m += "/확률 [확률%] [횟수] - 확률 시뮬\n\n";
+
+    m += "📦 길드 / 잡학\n";
+    m += "─────────────────\n";
+    m += "/창고 또는 검은돈 - 길드 창고\n";
+    m += "/보스 - 보스 사이트\n";
+    m += "/수로 - 수로 점수표\n";
+    m += "/음식 - 점심 추천\n";
+    m += "/코디 - 코디 사이트\n\n";
+
+    m += "📝 벽지\n";
+    m += "─────────────────\n";
+    m += "/벽지 - 벽지 보기\n";
+    m += "/등록 [내용] - 벽지에 글 등록\n";
+    m += "/삭제 - 내 글 삭제\n\n";
+
+    m += "❓ 도움말\n";
+    m += "─────────────────\n";
+    m += "/기능 /ㄱㄴ /도움말\n";
+    m += "════════════════";
+
+    // 카톡 "전체보기" 트리거용 패딩 (zero-width space)
+    m += "\n" + Array(801).join("​");
+
+    replier.reply(m);
 }
 function getMapleOcid(characterName, replier) {
   
