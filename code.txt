@@ -4342,54 +4342,121 @@ function getBossRatio(idlink, replier) {
                 .execute()
                 .body();
             var data = JSON.parse(resp);
-            if (!data || !data.calculatedData) {
+            if (!data || !data.calculatedData || !data.userApiData || !data.userApiData.info) {
                 replier.reply("캐릭터 정보를 불러오지 못했습니다.");
                 return;
             }
             var stat = Number(data.calculatedData.boss380_hexaStat);
+            var info = data.userApiData.info;
+            var charLv = parseInt(info.character_level) || 0;
+            var charArc = parseInt(info.arcaneForce) || 0;
+            var charAuth = parseInt(info.authenticForce) || 0;
             var name = decodeURIComponent(idlink);
             var cls = data.calculatedData.class || "";
-            // 보스별 솔플 컷 기준 환산값 (그리즈 페이지 역산 기준)
-            var BOSS_CUTS = [
-                ["익스트림 카링",         199502],
-                ["익스 최초의 대적자",     218508],
-                ["익스트림 칼로스",       96146],
-                ["데스티니 발드릭스",     479156],
-                ["하드 발드릭스",         479156],
-                ["하드 찬란한 흉성",       306927],
-                ["데스티니 림보",         295559],
-                ["하드 림보",             295559],
-                ["데스티니 대적자",       257423],
-                ["익스트림 세렌",         215678],
-                ["하드 최초의 대적자",     204618],
-                ["하드 카링",             199502],
-                ["노멀 발드릭스",         212958],
-                ["익스 검은마법사",       169507],
-                ["데스티니 카링",         166252],
-                ["노멀 림보",             150568],
-                ["데스티니 칼로스",       133002],
-                ["카오스 칼로스",         133002],
-                ["데스티니 세렌",         86740],
-                ["노멀 카링",             70001],
-                ["노멀 찬란한 흉성",       68206],
-                ["익스트림 스우",         52045],
-                ["챔피언 칼로스",         40101],
-                ["노멀 최초의 대적자",     34103],
-                ["노멀 칼로스",           27329],
-                ["챔피언 세렌",           20674],
-                ["이지 카링",             18472],
-                ["하드 세렌",             17015],
-                ["이지 최초의 대적자",     11400],
-                ["이지 감시자 칼로스",     8436],
-                ["하드 검은마법사",       16510],
-                ["챔피언 검은마법사",     12885]
+
+            // 보스 메타 + 컷: [보스명, lv, arc, auth, isBM, cut]
+            // arc/auth 0이면 해당 포스 미적용. cut은 그리즈 페이지에서 역산한 100% 기준 환산값.
+            var BOSSES = [
+                ["익스트림 카링",          285, 0,    480, 0, 199502],
+                ["익스 최초의 대적자",      290, 0,    460, 0, 218508],
+                ["익스트림 칼로스",        285, 0,    440, 0, 96146],
+                ["데스티니 발드릭스",      290, 0,    700, 0, 479156],
+                ["하드 발드릭스",          290, 0,    700, 0, 479156],
+                ["하드 찬란한 흉성",        280, 0,    400, 0, 306927],
+                ["데스티니 림보",          285, 0,    500, 0, 295559],
+                ["하드 림보",              285, 0,    500, 0, 295559],
+                ["데스티니 대적자",        285, 0,    340, 0, 257423],
+                ["익스트림 세렌",          285, 0,    200, 0, 215678],
+                ["하드 최초의 대적자",      285, 0,    340, 0, 204618],
+                ["하드 카링",              285, 0,    350, 0, 199502],
+                ["노멀 발드릭스",          290, 0,    700, 0, 212958],
+                ["익스 검은마법사",        280, 1320, 0,   1, 169507],
+                ["데스티니 카링",          285, 0,    480, 0, 166252],
+                ["노멀 림보",              285, 0,    500, 0, 150568],
+                ["데스티니 칼로스",        285, 0,    440, 0, 133002],
+                ["카오스 칼로스",          285, 0,    330, 0, 133002],
+                ["데스티니 세렌",          285, 0,    200, 0, 86740],
+                ["노멀 카링",              285, 0,    330, 0, 70001],
+                ["노멀 찬란한 흉성",        280, 0,    400, 0, 68206],
+                ["익스트림 스우",          285, 0,    0,   0, 52045],
+                ["챔피언 칼로스",          285, 0,    330, 0, 40101],
+                ["노멀 최초의 대적자",      280, 0,    320, 0, 34103],
+                ["노멀 칼로스",            285, 0,    300, 0, 27329],
+                ["챔피언 세렌",            275, 0,    200, 0, 20674],
+                ["이지 카링",              275, 0,    230, 0, 18472],
+                ["하드 세렌",              275, 0,    200, 0, 17015],
+                ["이지 최초의 대적자",      270, 0,    220, 0, 11400],
+                ["이지 감시자 칼로스",      270, 0,    200, 0, 8436],
+                ["하드 검은마법사",        275, 1320, 0,   1, 16510],
+                ["챔피언 검은마법사",      275, 1320, 0,   1, 12885]
             ];
+
+            // 레벨 차이 → 데미지 배율 (×100, 클램프 +5/-14)
+            var LV_TBL = {
+                "5":120, "4":118, "3":116, "2":114, "1":112, "0":110,
+                "-1":105.3, "-2":100.7, "-3":96.2, "-4":91.8, "-5":87.5,
+                "-6":85, "-7":82.5, "-8":80, "-9":77.5, "-10":75,
+                "-11":72.5, "-12":70, "-13":67.5, "-14":65
+            };
+            function lvDmg(cl, bl) {
+                var g = cl - bl;
+                if (g > 5) g = 5;
+                if (g < -14) g = -14;
+                return LV_TBL[g.toString()] / 100;
+            }
+            function arcDmg(bArc, cArc) {
+                if (!bArc) return 1.0;
+                var p = cArc / bArc * 100;
+                if (p < 10) return 0.10;
+                if (p < 30) return 0.30;
+                if (p < 50) return 0.60;
+                if (p < 70) return 0.70;
+                if (p < 100) return 0.80;
+                if (p < 110) return 1.00;
+                if (p < 130) return 1.10;
+                if (p < 150) return 1.30;
+                return 1.50;
+            }
+            function authDmg(bAuth, cAuth) {
+                if (!bAuth) return 1.0;
+                var d = cAuth - bAuth;
+                if (d < -90) return 0.05;
+                if (d < -80) return 0.10;
+                if (d < -70) return 0.20;
+                if (d < -60) return 0.30;
+                if (d < -50) return 0.40;
+                if (d < -40) return 0.50;
+                if (d < -30) return 0.60;
+                if (d < -20) return 0.70;
+                if (d < -10) return 0.80;
+                if (d < 0)   return 0.90;
+                if (d < 10)  return 1.00;
+                if (d < 20)  return 1.05;
+                if (d < 30)  return 1.10;
+                if (d < 40)  return 1.15;
+                if (d < 50)  return 1.20;
+                return 1.25;
+            }
+            function factor(boss) {
+                var bLv = boss[1], bArc = boss[2], bAuth = boss[3], isBM = boss[4];
+                var R = arcDmg(bArc, charArc);
+                var D = authDmg(bAuth, charAuth);
+                var T = lvDmg(charLv, bLv);
+                var P = 1.0;
+                if (bArc) P = isBM ? 1.1 : 1.5;
+                var norm = 1.2 * P * (bAuth ? 1.25 : 1.0);
+                return (R * D * T) / norm;
+            }
+
             var msg = "[" + name + "] " + cls + "\n";
             msg += "헥사환산: " + stat + "\n\n";
             msg += "보스별 클리어 배율\n";
-            for (var i = 0; i < BOSS_CUTS.length; i++) {
-                var pct = Math.round(stat / BOSS_CUTS[i][1] * 100);
-                msg += BOSS_CUTS[i][0] + ": " + pct + "%\n";
+            for (var i = 0; i < BOSSES.length; i++) {
+                var b = BOSSES[i];
+                var f = factor(b);
+                var penaltyStat = stat * f;
+                var pct = Math.round(penaltyStat / b[5] * 100);
+                msg += b[0] + ": " + pct + "%\n";
             }
             replier.reply(msg.replace(/\n+$/, ""));
         } catch (e) {
