@@ -4281,6 +4281,11 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
             getLink(encodeURIComponent(resolved), replier);
         }
     }
+    if (msg === "/헥사순서" || msg.startsWith("/헥사순서 ")) {
+        var __rHex = resolveName(msg.slice(5).trim(), sender);
+        if (!__rHex) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getHexaOrder(encodeURIComponent(__rHex), replier);
+    }
 }
 function test(replier) {
     // Paste your direct image link here
@@ -4316,6 +4321,74 @@ function getLink(idlink, replier) {
             );
         } catch (e) {
             replier.reply("환산 조회 실패: " + e);
+        }
+    });
+    thread.start();
+}
+function getHexaOrder(idlink, replier) {
+    var thread = new java.lang.Thread(function() {
+        try {
+            var infoUrl = "https://api.maplescouter.com/api/id?name=" + idlink + "&preset=00000&region=kms";
+            var infoResp = org.jsoup.Jsoup.connect(infoUrl)
+                .header("api-key", "ff6a7ce0-c4ce-11ee-900c-df03c8ea0d4c")
+                .header("Content-Type", "application/json")
+                .ignoreContentType(true)
+                .timeout(15000)
+                .execute()
+                .body();
+            var info = JSON.parse(infoResp);
+            if (!info || !info.calculatedData || !info.userStat) {
+                replier.reply("캐릭터 정보를 불러오지 못했습니다.");
+                return;
+            }
+            var className = info.calculatedData.class || "";
+            var body = JSON.stringify({
+                myHexa: info.userStat.hexa,
+                specEff: info.calculatedData.specEfficiency,
+                sole: false,
+                suro: false,
+                cycle: "3",
+                userStat: info.userStat
+            });
+            var postUrl = "https://api.maplescouter.com/api/calc/hexa-order?class=" + encodeURIComponent(className);
+            var hexaResp = org.jsoup.Jsoup.connect(postUrl)
+                .method(org.jsoup.Connection.Method.POST)
+                .header("api-key", "ff6a7ce0-c4ce-11ee-900c-df03c8ea0d4c")
+                .header("Content-Type", "application/json")
+                .ignoreContentType(true)
+                .timeout(20000)
+                .requestBody(body)
+                .execute()
+                .body();
+            var hexa = JSON.parse(hexaResp);
+            if (!hexa || !hexa.class_hexa) {
+                replier.reply("헥사 순서 조회 실패: 응답 형식 오류");
+                return;
+            }
+            var arr = hexa.class_hexa;
+            var pos = hexa.myPosition || 0;
+            var name = decodeURIComponent(idlink);
+            if (pos >= arr.length) {
+                replier.reply("[" + name + "] " + className + "\n헥사 강화 완료!");
+                return;
+            }
+            function fmt(n) {
+                var s = String(Math.floor(Number(n)));
+                return s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            }
+            var msg = "[" + name + "] " + className + "\n";
+            msg += "헥사 진행률: " + pos + "/" + arr.length + "\n";
+            msg += "다음 강화 추천\n";
+            var shown = 0;
+            for (var i = pos; i < arr.length && shown < 7; i++) {
+                var row = arr[i];
+                shown++;
+                msg += shown + ". " + row[0] + " → Lv" + row[1]
+                     + " (조각 " + fmt(row[4]) + ", 솔 " + fmt(row[3]) + ")\n";
+            }
+            replier.reply(msg.replace(/\n+$/, ""));
+        } catch (e) {
+            replier.reply("헥사 순서 조회 실패: " + e);
         }
     });
     thread.start();
