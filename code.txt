@@ -4563,23 +4563,21 @@ function getSundayMaple(replier, room) {
                 bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, bos);
                 var base64 = android.util.Base64.encodeToString(bos.toByteArray(), android.util.Base64.NO_WRAP);
                 // 사용 가능한 이미지 전송 API 진단
-                var debug = "Api type: " + (typeof Api);
-                if (typeof Api !== 'undefined') {
-                    debug += ", replyImage: " + (typeof Api.replyImage);
-                    if (Api.replyImage) debug += ", argCount: " + Api.replyImage.length;
-                }
-                debug += ", replier methods: ";
+                // Api 메서드 목록 전부 출력
+                var apiKeys = [];
                 try {
-                    var keys = [];
-                    for (var k in replier) keys.push(k);
-                    debug += keys.join(",");
-                } catch(e2) { debug += "iter fail"; }
-                replier.reply("[디버그] " + debug);
-                try {
-                    Api.replyImage(room, base64);
-                } catch (eImg) {
-                    replier.reply("[디버그] Api.replyImage 에러: " + eImg);
-                }
+                    if (Api.getClass) {
+                        var methods = Api.getClass().getMethods();
+                        for (var i = 0; i < methods.length; i++) {
+                            var nm = methods[i].getName();
+                            if (apiKeys.indexOf(nm) < 0) apiKeys.push(nm);
+                        }
+                    } else {
+                        for (var k in Api) apiKeys.push(k);
+                    }
+                } catch(e2) { apiKeys.push("ERR:" + e2); }
+                apiKeys.sort();
+                replier.reply("[디버그] Api 메서드: " + apiKeys.join(","));
             } catch (e) {
                 replier.reply("[디버그] outer 에러: " + e + ", URL: " + imgUrl);
             }
