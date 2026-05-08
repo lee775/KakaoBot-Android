@@ -4563,21 +4563,27 @@ function getSundayMaple(replier, room) {
                 bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, bos);
                 var base64 = android.util.Base64.encodeToString(bos.toByteArray(), android.util.Base64.NO_WRAP);
                 // 사용 가능한 이미지 전송 API 진단
-                // Api 메서드 목록 전부 출력
-                var apiKeys = [];
+                // sendMessage 모든 overload 시그니처 출력
+                var sigs = [];
                 try {
-                    if (Api.getClass) {
-                        var methods = Api.getClass().getMethods();
-                        for (var i = 0; i < methods.length; i++) {
-                            var nm = methods[i].getName();
-                            if (apiKeys.indexOf(nm) < 0) apiKeys.push(nm);
+                    var methods = Api.getClass().getMethods();
+                    for (var i = 0; i < methods.length; i++) {
+                        if (methods[i].getName() === "sendMessage") {
+                            var params = methods[i].getParameterTypes();
+                            var sig = [];
+                            for (var j = 0; j < params.length; j++) {
+                                sig.push(params[j].getSimpleName());
+                            }
+                            sigs.push("sendMessage(" + sig.join(",") + ")");
                         }
-                    } else {
-                        for (var k in Api) apiKeys.push(k);
                     }
-                } catch(e2) { apiKeys.push("ERR:" + e2); }
-                apiKeys.sort();
-                replier.reply("[디버그] Api 메서드: " + apiKeys.join(","));
+                } catch(e2) { sigs.push("ERR:" + e2); }
+                replier.reply("[디버그] " + sigs.join(" | "));
+                try {
+                    Api.sendMessage(room, "[테스트]", base64);
+                } catch (e3) {
+                    replier.reply("[시도1] sendMessage(room,text,base64): " + e3);
+                }
             } catch (e) {
                 replier.reply("[디버그] outer 에러: " + e + ", URL: " + imgUrl);
             }
