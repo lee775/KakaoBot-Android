@@ -4548,45 +4548,7 @@ function getSundayMaple(replier, room) {
                 .body();
             var detail = JSON.parse(detailResp);
             var imgMatch = (detail.contents || "").match(/<img\s+src=["']([^"']+)["']/i);
-            if (!imgMatch) return;
-            var imgUrl = imgMatch[1];
-            try {
-                var conn = new java.net.URL(imgUrl).openConnection();
-                conn.setRequestProperty("User-Agent", "Mozilla/5.0");
-                conn.setDoInput(true);
-                conn.connect();
-                var input = conn.getInputStream();
-                var bitmap = android.graphics.BitmapFactory.decodeStream(input);
-                input.close();
-                if (!bitmap) { replier.reply("[디버그] bitmap null, URL: " + imgUrl); return; }
-                var bos = new java.io.ByteArrayOutputStream();
-                bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, bos);
-                var base64 = android.util.Base64.encodeToString(bos.toByteArray(), android.util.Base64.NO_WRAP);
-                // 사용 가능한 이미지 전송 API 진단
-                // sendMessage 모든 overload 시그니처 출력
-                var sigs = [];
-                try {
-                    var methods = Api.getClass().getMethods();
-                    for (var i = 0; i < methods.length; i++) {
-                        if (methods[i].getName() === "sendMessage") {
-                            var params = methods[i].getParameterTypes();
-                            var sig = [];
-                            for (var j = 0; j < params.length; j++) {
-                                sig.push(params[j].getSimpleName());
-                            }
-                            sigs.push("sendMessage(" + sig.join(",") + ")");
-                        }
-                    }
-                } catch(e2) { sigs.push("ERR:" + e2); }
-                replier.reply("[디버그] " + sigs.join(" | "));
-                try {
-                    Api.sendMessage(room, "[테스트]", base64);
-                } catch (e3) {
-                    replier.reply("[시도1] sendMessage(room,text,base64): " + e3);
-                }
-            } catch (e) {
-                replier.reply("[디버그] outer 에러: " + e + ", URL: " + imgUrl);
-            }
+            if (imgMatch) replier.reply(imgMatch[1]);
         } catch (e) {}
     });
     thread.start();
