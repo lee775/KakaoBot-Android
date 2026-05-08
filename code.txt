@@ -4286,10 +4286,21 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
         if (!__rHex) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
         else getHexaOrder(encodeURIComponent(__rHex), replier);
     }
+    if (msg === "/헥사" || msg.startsWith("/헥사 ")) {
+        var __rHex2 = resolveName(msg.slice(3).trim(), sender);
+        if (!__rHex2) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getHexaOrder(encodeURIComponent(__rHex2), replier);
+    }
     if (msg === "/배율" || msg.startsWith("/배율 ")) {
         var __rRatio = resolveName(msg.slice(3).trim(), sender);
         if (!__rRatio) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
         else getBossRatio(encodeURIComponent(__rRatio), replier);
+    }
+    if (msg === "/썬데이" || msg === "/썬데이메이플" || msg === "/ㅆㄷㅇ") {
+        getSundayMaple(replier);
+    }
+    if (msg === "/이벤트") {
+        getCurrentEvents(replier);
     }
 }
 function test(replier) {
@@ -4508,6 +4519,81 @@ function getBossRatio(idlink, replier) {
     });
     thread.start();
 }
+function getSundayMaple(replier) {
+    var thread = new java.lang.Thread(function() {
+        try {
+            var listResp = org.jsoup.Jsoup.connect("https://open.api.nexon.com/maplestory/v1/notice-event")
+                .header("x-nxopen-api-key", NEXON_API_KEY)
+                .header("accept", "application/json")
+                .ignoreContentType(true)
+                .timeout(15000)
+                .execute()
+                .body();
+            var list = JSON.parse(listResp);
+            if (!list || !list.event_notice) return;
+            var matches = [];
+            for (var i = 0; i < list.event_notice.length; i++) {
+                var n = list.event_notice[i];
+                if (n.title && n.title.indexOf("썬데이 메이플") >= 0) matches.push(n);
+            }
+            if (matches.length === 0) return;
+            matches.sort(function(a, b) { return b.date.localeCompare(a.date); });
+            var latest = matches[0];
+            var detailResp = org.jsoup.Jsoup.connect("https://open.api.nexon.com/maplestory/v1/notice-event/detail?notice_id=" + latest.notice_id)
+                .header("x-nxopen-api-key", NEXON_API_KEY)
+                .header("accept", "application/json")
+                .ignoreContentType(true)
+                .timeout(15000)
+                .execute()
+                .body();
+            var detail = JSON.parse(detailResp);
+            var imgMatch = (detail.contents || "").match(/<img\s+src=["']([^"']+)["']/i);
+            if (imgMatch) replier.reply(imgMatch[1]);
+        } catch (e) {}
+    });
+    thread.start();
+}
+function getCurrentEvents(replier) {
+    var thread = new java.lang.Thread(function() {
+        try {
+            var resp = org.jsoup.Jsoup.connect("https://open.api.nexon.com/maplestory/v1/notice-event")
+                .header("x-nxopen-api-key", NEXON_API_KEY)
+                .header("accept", "application/json")
+                .ignoreContentType(true)
+                .timeout(15000)
+                .execute()
+                .body();
+            var list = JSON.parse(resp);
+            if (!list || !list.event_notice) {
+                replier.reply("이벤트 목록 조회 실패");
+                return;
+            }
+            function ms(s) { return new Date(s.replace(/[+-]\d{2}:\d{2}$/, "")).getTime(); }
+            function fmt(s) { return s.replace("T", " ").replace(/[+-]\d{2}:\d{2}$/, ""); }
+            var now = new Date().getTime();
+            var ongoing = [];
+            for (var i = 0; i < list.event_notice.length; i++) {
+                var n = list.event_notice[i];
+                if (ms(n.date_event_start) <= now && now <= ms(n.date_event_end)) ongoing.push(n);
+            }
+            if (ongoing.length === 0) {
+                replier.reply("진행중인 이벤트가 없습니다.");
+                return;
+            }
+            ongoing.sort(function(a, b) { return ms(a.date_event_end) - ms(b.date_event_end); });
+            var msg = "📅 진행중 이벤트 (" + ongoing.length + "건)\n";
+            for (var j = 0; j < ongoing.length; j++) {
+                var ev = ongoing[j];
+                msg += "\n• " + ev.title + "\n";
+                msg += "  ~ " + fmt(ev.date_event_end);
+            }
+            replier.reply(msg);
+        } catch (e) {
+            replier.reply("이벤트 조회 실패: " + e);
+        }
+    });
+    thread.start();
+}
 function getHexaOrder(idlink, replier) {
     var thread = new java.lang.Thread(function() {
         try {
@@ -4612,13 +4698,18 @@ function option(replier) {
     m += "/환산 [닉] / && [닉]\n";
     m += " → 전투력·일반환산·헥사환산\n";
     m += "/배율 [닉] - 보스별 클리어 배율\n";
-    m += "/헥사순서 [닉] - 헥사 강화 추천\n";
+    m += "/헥사순서 /헥사 [닉] - 헥사 강화 추천\n";
     m += "/ㄱㅎㅊ [닉] - 종합 정보\n";
     m += "/경험치 [닉] - 현재 경험치\n";
     m += "/tmi [닉] - 캐릭터 TMI\n";
     m += "@@ [닉] - 월간 경험치\n";
     m += "@@ [닉] [목표레벨] - 레벨업 예측\n";
     m += "@@@ [닉] - 월간 경험치 히스토리\n\n";
+
+    m += "📅 이벤트 / 공지\n";
+    m += "─────────────────\n";
+    m += "/이벤트 - 진행중 이벤트 목록\n";
+    m += "/썬데이 /ㅆㄷㅇ - 썬데이 메이플 안내\n\n";
 
     m += "💪 전투력\n";
     m += "─────────────────\n";
