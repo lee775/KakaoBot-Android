@@ -4272,7 +4272,7 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
 }
     
 
-    if ((msg === "/환산" || msg.startsWith("/환산 ") || msg === "&&" || msg.startsWith("&& ")) && room != "[본메] 전국에반협회") {
+    if (msg === "/환산" || msg.startsWith("/환산 ") || msg === "&&" || msg.startsWith("&& ")) {
         var rawArg = msg.startsWith("/환산") ? msg.slice(3).trim() : msg.slice(2).trim();
         var resolved = resolveName(rawArg, sender);
         if (!resolved) {
@@ -4297,7 +4297,7 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
         else getBossRatio(encodeURIComponent(__rRatio), replier);
     }
     if (msg === "/썬데이" || msg === "/썬데이메이플" || msg === "/ㅆㄷㅇ") {
-        getSundayMaple(replier);
+        getSundayMaple(replier, room);
     }
     if (msg === "/이벤트") {
         getCurrentEvents(replier);
@@ -4519,7 +4519,7 @@ function getBossRatio(idlink, replier) {
     });
     thread.start();
 }
-function getSundayMaple(replier) {
+function getSundayMaple(replier, room) {
     var thread = new java.lang.Thread(function() {
         try {
             var listResp = org.jsoup.Jsoup.connect("https://open.api.nexon.com/maplestory/v1/notice-event")
@@ -4558,7 +4558,11 @@ function getSundayMaple(replier) {
                 var input = conn.getInputStream();
                 var bitmap = android.graphics.BitmapFactory.decodeStream(input);
                 input.close();
-                replier.reply(bitmap);
+                if (!bitmap) { replier.reply(imgUrl); return; }
+                var bos = new java.io.ByteArrayOutputStream();
+                bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, bos);
+                var base64 = android.util.Base64.encodeToString(bos.toByteArray(), android.util.Base64.NO_WRAP);
+                Api.replyImage(room, base64);
             } catch (e) {
                 replier.reply(imgUrl);
             }
