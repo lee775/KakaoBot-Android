@@ -4548,7 +4548,20 @@ function getSundayMaple(replier) {
                 .body();
             var detail = JSON.parse(detailResp);
             var imgMatch = (detail.contents || "").match(/<img\s+src=["']([^"']+)["']/i);
-            if (imgMatch) replier.reply(imgMatch[1]);
+            if (!imgMatch) return;
+            var imgUrl = imgMatch[1];
+            try {
+                var conn = new java.net.URL(imgUrl).openConnection();
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+                conn.setDoInput(true);
+                conn.connect();
+                var input = conn.getInputStream();
+                var bitmap = android.graphics.BitmapFactory.decodeStream(input);
+                input.close();
+                replier.reply(bitmap);
+            } catch (e) {
+                replier.reply(imgUrl);
+            }
         } catch (e) {}
     });
     thread.start();
