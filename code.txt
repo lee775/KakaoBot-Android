@@ -4558,13 +4558,30 @@ function getSundayMaple(replier, room) {
                 var input = conn.getInputStream();
                 var bitmap = android.graphics.BitmapFactory.decodeStream(input);
                 input.close();
-                if (!bitmap) { replier.reply(imgUrl); return; }
+                if (!bitmap) { replier.reply("[디버그] bitmap null, URL: " + imgUrl); return; }
                 var bos = new java.io.ByteArrayOutputStream();
                 bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, bos);
                 var base64 = android.util.Base64.encodeToString(bos.toByteArray(), android.util.Base64.NO_WRAP);
-                Api.replyImage(room, base64);
+                // 사용 가능한 이미지 전송 API 진단
+                var debug = "Api type: " + (typeof Api);
+                if (typeof Api !== 'undefined') {
+                    debug += ", replyImage: " + (typeof Api.replyImage);
+                    if (Api.replyImage) debug += ", argCount: " + Api.replyImage.length;
+                }
+                debug += ", replier methods: ";
+                try {
+                    var keys = [];
+                    for (var k in replier) keys.push(k);
+                    debug += keys.join(",");
+                } catch(e2) { debug += "iter fail"; }
+                replier.reply("[디버그] " + debug);
+                try {
+                    Api.replyImage(room, base64);
+                } catch (eImg) {
+                    replier.reply("[디버그] Api.replyImage 에러: " + eImg);
+                }
             } catch (e) {
-                replier.reply(imgUrl);
+                replier.reply("[디버그] outer 에러: " + e + ", URL: " + imgUrl);
             }
         } catch (e) {}
     });
