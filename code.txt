@@ -2667,6 +2667,12 @@ function getImage(characterimage, replier) {
       
 }
 function getMapleOcid(characterName, replier) {
+    // 빈 닉/잘못된 닉으로 호출되면 캐릭터 등록 안내 (등록 안 한 사람 보호)
+    var __cn = (characterName == null) ? "" : String(characterName).trim();
+    if (__cn === "" || __cn === "undefined" || __cn === "null" || __cn === "%20") {
+        replier.reply("등록된 캐릭터가 없습니다.\n사용법: /캐릭터등록 닉네임\n등록 후엔 @@ 만 입력해도 자동 조회됩니다.");
+        return;
+    }
     try {
         //
        // 기준 시간 생성
