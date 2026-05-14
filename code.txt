@@ -4570,9 +4570,38 @@ function test(replier) {
     var imageUrl = "https://i.imgur.com/FOS0bu1.jpg"; 
     replier.reply(imageUrl);
 }
-function getLink(idlink, replier)
-{
-  replier.reply("https://maplescouter.com/info?name="+idlink);
+function getLink(idlink, replier) {
+    var thread = new java.lang.Thread(function() {
+        try {
+            var url = "https://api.maplescouter.com/api/id?name=" + idlink + "&preset=00000&region=kms";
+            var resp = org.jsoup.Jsoup.connect(url)
+                .header("api-key", "ff6a7ce0-c4ce-11ee-900c-df03c8ea0d4c")
+                .header("Content-Type", "application/json")
+                .ignoreContentType(true)
+                .execute()
+                .body();
+            var data = JSON.parse(resp);
+            if (!data || !data.calculatedData) {
+                replier.reply("캐릭터 정보를 불러오지 못했습니다.");
+                return;
+            }
+            var d = data.calculatedData;
+            function fmt(n) {
+                var s = String(Math.floor(Number(n)));
+                return s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            }
+            var name = decodeURIComponent(idlink);
+            replier.reply(
+                "[" + name + "] " + d.class + "\n" +
+                "전투력: " + fmt(d.combatPower) + "\n" +
+                "일반환산: " + fmt(d.boss380_stat) + "\n" +
+                "헥사환산: " + fmt(d.boss380_hexaStat)
+            );
+        } catch (e) {
+            replier.reply("환산 조회 실패: " + e);
+        }
+    });
+    thread.start();
 }
 function starforce(chance, count, replier) {
     var success = 0;
