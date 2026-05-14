@@ -4253,11 +4253,13 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
             replier.reply("BotUpdate 미주입 (앱 재빌드/재설치 필요)");
             return;
         }
-        replier.reply("⏳ 깃에서 최신 스크립트 가져오는 중...");
+        replier.reply("⏳ 최신 스크립트 가져오는 중...");
         new java.lang.Thread(function() {
             try {
-                var result = BotUpdate.applyRemote("https://raw.githubusercontent.com/lee775/KakaoBot-Android/master/code.txt");
-                replier.reply(String(result));
+                var result = String(BotUpdate.applyRemote("https://raw.githubusercontent.com/lee775/KakaoBot-Android/master/code.txt"));
+                // "(XXXXX chars)" 같은 용량 표기 제거
+                result = result.replace(/\s*\(\d+\s*chars\)\s*$/, "");
+                replier.reply(result);
             } catch (e) {
                 replier.reply("/업데이트 오류: " + e);
             }
