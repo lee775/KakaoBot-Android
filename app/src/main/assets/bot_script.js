@@ -4608,10 +4608,16 @@ function getCurrentEvents(replier) {
                 .header("x-nxopen-api-key", NEXON_API_KEY)
                 .header("accept", "application/json")
                 .ignoreContentType(true)
+                .ignoreHttpErrors(true)
                 .timeout(15000)
                 .execute()
                 .body();
             var list = JSON.parse(resp);
+            // NEXON 점검 등 에러 응답
+            if (list && list.error) {
+                replier.reply("⚠️ NEXON 게임 점검 중입니다.\n(" + (list.error.message || list.error.name) + ")");
+                return;
+            }
             if (!list || !list.event_notice) {
                 replier.reply("이벤트 목록 조회 실패");
                 return;
