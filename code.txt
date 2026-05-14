@@ -1,7 +1,3 @@
-// ==========================================
-// KakaoBot 통합 스크립트 (code.txt 병합)
-// ==========================================
-
 // 관리자 목록
 var ADMINS = ["덕고미콩","페에멜라","늘귤","아퐁","영디","좋냥","화령작","이렐프리데","코코섬/그리즈","별희연","키보입니다만","코코섬","루나지봉이"];
 
@@ -122,10 +118,182 @@ function showWall(room, replier) {
     replier.reply(message.trim());
 }
 
+// 캐릭터 등록 데이터 (sender → 닉네임 매핑)
+function getCharDb() {
+    try {
+        var data = DataBase.getDataBase("char_db");
+        if (data && data !== "") return JSON.parse(data);
+        return {};
+    } catch (e) { return {}; }
+}
 
-// ==========================================
-// 유틸리티 함수
-// ==========================================
+function saveCharDb(db) {
+    try { DataBase.setDataBase("char_db", JSON.stringify(db)); } catch (e) {}
+}
+
+function registerChar(sender, name, replier) {
+    var db = getCharDb();
+    db[sender] = name;
+    saveCharDb(db);
+    try { DataBase.setDataBase("char_" + sender, name); } catch (e) {}
+    replier.reply("[" + sender + "] 캐릭터 [" + name + "] 등록 완료");
+}
+
+function deleteCharReg(sender, replier) {
+    var db = getCharDb();
+    var hadEntry = !!db[sender];
+    if (db[sender]) { delete db[sender]; saveCharDb(db); }
+    try {
+        var legacy = DataBase.getDataBase("char_" + sender);
+        if (legacy && legacy !== "") { DataBase.setDataBase("char_" + sender, ""); hadEntry = true; }
+    } catch (e) {}
+    if (!hadEntry) replier.reply("등록된 캐릭터가 없습니다.");
+    else replier.reply("캐릭터 등록이 삭제되었습니다.");
+}
+
+function showMyChar(sender, replier) {
+    var name = lookupCharName(sender);
+    if (name) replier.reply("[" + sender + "] 등록 캐릭터: " + name);
+    else replier.reply("등록된 캐릭터가 없습니다.\n사용법: /캐릭터등록 닉네임");
+}
+
+function lookupCharName(sender) {
+    var db = getCharDb();
+    if (db[sender]) return db[sender];
+    try {
+        var legacy = DataBase.getDataBase("char_" + sender);
+        if (legacy && legacy !== "") return legacy;
+    } catch (e) {}
+    return null;
+}
+
+function resolveName(arg, sender) {
+    var n = (arg || "").trim();
+    if (n) return n;
+    return lookupCharName(sender);
+}
+
+function responsePart1(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
+    // 캐릭터 등록 기능
+    if (msg.startsWith("/캐릭터등록 ")) {
+        var charName = msg.slice(7).trim();
+        if (!charName) { replier.reply("사용법: /캐릭터등록 닉네임"); return; }
+        registerChar(sender, charName, replier);
+        return;
+    }
+    if (msg === "/캐릭터삭제") { deleteCharReg(sender, replier); return; }
+    if (msg === "/내캐릭터") { showMyChar(sender, replier); return; }
+
+    // 벽지 기능
+    if (msg.startsWith("/등록 ")) {
+        var userContent = msg.slice(4).trim();
+        if (userContent === "") {
+            replier.reply("등록할 내용을 입력해주세요.\n사용법: /등록 내용");
+            return;
+        }
+        registerWall(room, sender, userContent, replier);
+        return;
+    }
+    
+    if (msg === "/삭제") {
+        deleteWall(room, sender, replier);
+        return;
+    }
+    
+    if (msg === "/벽지") {
+        showWall(room, replier);
+        return;
+    }
+    
+    if (msg.startsWith("/관리등록 ")) {
+        var adminParts = msg.slice(7).trim().split(" ");
+        if (adminParts.length < 2) {
+            replier.reply("사용법: /관리등록 사용자명 내용");
+            return;
+        }
+        var adminTargetUser = adminParts[0];
+        var adminWallContent = adminParts.slice(1).join(" ");
+        adminRegisterWall(room, sender, adminTargetUser, adminWallContent, replier);
+        return;
+    }
+    
+    if (msg.startsWith("/관리삭제 ")) {
+        var deleteTargetUser = msg.slice(7).trim();
+        if (deleteTargetUser === "") {
+            replier.reply("사용법: /관리삭제 사용자명");
+            return;
+        }
+        adminDeleteWall(room, sender, deleteTargetUser, replier);
+        return;
+    }
+    
+    if (msg === "/벽지초기화") {
+        clearAllWall(room, sender, replier);
+        return;
+    }
+    
+    if (msg === "/관리도움말" || msg === "/관리명령어") {
+        if (!isAdmin(sender)) {
+            replier.reply("⛔ 관리자만 사용할 수 있는 명령어입니다.");
+            return;
+        }
+        replier.reply(
+            "👑 관리자 전용 명령어\n\n" +
+            "/관리등록 사용자명 내용\n→ 특정 사용자 이름으로 글 등록\n\n" +
+            "/관리삭제 사용자명\n→ 특정 사용자의 글 삭제\n\n" +
+            "/벽지초기화\n→ 모든 벽지 내용 삭제\n\n" +
+            "/관리도움말\n→ 이 도움말 보기"
+        );
+        return;
+    }
+    
+    // 기존 기능들
+    if (msg == "/음식") {
+        foodchoice(replier);
+    }
+    if (msg == "/코디") {
+        cody(replier);
+    }
+    if (msg == "/수로") {
+        suro(replier);
+    }
+    
+    if (msg.indexOf("검은돈") !== -1 || msg.indexOf("/창고") !== -1) {
+        money(replier);
+    }
+    
+    if (msg.startsWith("/6차")) {
+        var matches = msg.match(/\/6차\s+(\d+)\s+(\d+)/);
+        if (matches) {
+            var num1 = parseInt(matches[1]);
+            var num2 = parseInt(matches[2]);
+            calc(num1, num2, replier);
+        } else {
+            replier.reply("형식이 잘못되었습니다. 예: /6차 15 16");
+        }
+    }
+    if (msg.startsWith("/스타")) {
+        var matches1 = msg.match(/\/스타\s+(\d+)\s+(\d+)/);
+        if (matches1) {
+            var num11 = parseInt(matches1[1]);
+            var num21 = parseInt(matches1[2]);
+            starf(num11, num21, replier);
+        } else {
+            replier.reply("형식이 잘못되었습니다. 예: /스타 15 16");
+        }
+    }
+    if (msg.startsWith("/샤타")) {
+        var matches11 = msg.match(/\/샤타\s+(\d+)\s+(\d+)/);
+        if (matches11) {
+            var num111 = parseInt(matches11[1]);
+            var num211 = parseInt(matches11[2]);
+            starff(num111, num211, replier);
+        } else {
+            replier.reply("형식이 잘못되었습니다. 예: /샤타 15 16");
+        }
+    }
+}
+
 // 나머지 함수들
 function starf(num1, num2, replier) {
     var steps = [
@@ -450,19 +618,15 @@ function foodchoice(replier) {
     replier.reply("오늘은 이거다! 🍽️" + selectedFood);
 }
 
-var NEXON_API_KEY = "live_7a3074bd54665cadd86920528d44eac7700ae3f8853a3ff626d42db3f7b301f6efe8d04e6d233bd35cf2fabdeb93fb0d";
-
-// ==========================================
-// API 상수 & 캐릭터 목록
-// ==========================================
-var MAPLE_OCID_API_URL = "https://open.api.nexon.com/maplestory/v1/id";
-var MAPLE_INF_API_URL = "https://open.api.nexon.com/maplestory/v1/character/basic";
-var MAPLE_INF_STAT_URL = "https://open.api.nexon.com/maplestory/v1/character/stat";
+const NEXON_API_KEY = "live_7a3074bd54665cadd86920528d44eac7700ae3f8853a3ff626d42db3f7b301f6efe8d04e6d233bd35cf2fabdeb93fb0d";
+const MAPLE_OCID_API_URL = "https://open.api.nexon.com/maplestory/v1/id";
+var MAPLE_SYMBOL_URL = "https://open.api.nexon.com/maplestory/v1/character/symbol-equipment";
+const MAPLE_INF_API_URL = "https://open.api.nexon.com/maplestory/v1/character/basic";
+const MAPLE_INF_STAT_URL = "https://open.api.nexon.com/maplestory/v1/character/stat";
 var MAPLE_GUILD_ID_URL = "https://open.api.nexon.com/maplestory/v1/guild/id";
 var MAPLE_GUILD_BASIC_URL = "https://open.api.nexon.com/maplestory/v1/guild/basic";
 var MAPLE_ITEM_EQUIPMENT_URL = "https://open.api.nexon.com/maplestory/v1/character/item-equipment";
-var MAPLE_SYMBOL_URL = "https://open.api.nexon.com/maplestory/v1/character/symbol-equipment";
-var RANKING_CHARACTERS4 = [
+const RANKING_CHARACTERS4 = [
 "글자",
 "Nine",
 "태린",
@@ -664,7 +828,7 @@ var RANKING_CHARACTERS4 = [
 "만발",
 "아란진캐"
 ]
-var RANKING_CHARACTERS3 = [
+const RANKING_CHARACTERS3 = [
 "플로렌스",
 "지봉이",
 "빌콩",
@@ -674,7 +838,7 @@ var RANKING_CHARACTERS3 = [
 "브경"
 ]
 // 랭킹 대상 캐릭터 목록
-var RANKING_CHARACTERS = [
+const RANKING_CHARACTERS = [
  "덕고미콩",
 "영디",
 "아퐁",
@@ -775,7 +939,7 @@ var RANKING_CHARACTERS = [
 "보마Lia",
     
 ];
-var RANKING_CHARACTERS2 = [
+const RANKING_CHARACTERS2 = [
 "흥우양파",
 "멕시칸보이",
 "스커육싹이",
@@ -826,375 +990,103 @@ var RANKING_CHARACTERS2 = [
 
 ]
 
-
-// ==========================================
-// 캐릭터 자동 fallback 헬퍼
-// ----------
-// input  : 사용자가 명령어 뒤에 입력한 닉네임 (없으면 빈 문자열)
-// sender : 카톡 sender (등록 검색 키)
-// replier: 등록 안 됐을 때 안내 메시지 발송용
-// 반환: 사용할 닉네임 문자열 / null(=등록도 없고 입력도 없음, 호출자는 즉시 return)
-// ==========================================
-function resolveCharacter(input, sender, replier) {
-    var trimmed = (input || "").trim();
-    if (trimmed) return trimmed;
-    try {
-        var reg = DataBase.getDataBase("char_" + sender);
-        if (reg && reg !== "") return reg;
-    } catch (e) {}
-    replier.reply("등록된 캐릭터가 없습니다.\n사용법: /캐릭터등록 닉네임\n등록 후엔 명령어만 입력해도 자동 조회됩니다.");
-    return null;
-}
-
-// ==========================================
-// 통합 response() 함수
-// ==========================================
-function response(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
-    // ===== 벽지/유틸 기능 =====
-    // 벽지 기능
-    if (msg.startsWith("/등록 ")) {
-        var userContent = msg.slice(4).trim();
-        if (userContent === "") {
-            replier.reply("등록할 내용을 입력해주세요.\n사용법: /등록 내용");
-            return;
-        }
-        registerWall(room, sender, userContent, replier);
-        return;
-    }
-    
-    if (msg === "/삭제") {
-        deleteWall(room, sender, replier);
-        return;
-    }
-    
-    if (msg === "/벽지") {
-        showWall(room, replier);
-        return;
-    }
-    
-    if (msg.startsWith("/관리등록 ")) {
-        var adminParts = msg.slice(7).trim().split(" ");
-        if (adminParts.length < 2) {
-            replier.reply("사용법: /관리등록 사용자명 내용");
-            return;
-        }
-        var adminTargetUser = adminParts[0];
-        var adminWallContent = adminParts.slice(1).join(" ");
-        adminRegisterWall(room, sender, adminTargetUser, adminWallContent, replier);
-        return;
-    }
-    
-    if (msg.startsWith("/관리삭제 ")) {
-        var deleteTargetUser = msg.slice(7).trim();
-        if (deleteTargetUser === "") {
-            replier.reply("사용법: /관리삭제 사용자명");
-            return;
-        }
-        adminDeleteWall(room, sender, deleteTargetUser, replier);
-        return;
-    }
-    
-    if (msg === "/벽지초기화") {
-        clearAllWall(room, sender, replier);
-        return;
-    }
-    
-    if (msg === "/관리도움말" || msg === "/관리명령어") {
-        if (!isAdmin(sender)) {
-            replier.reply("⛔ 관리자만 사용할 수 있는 명령어입니다.");
-            return;
-        }
-        replier.reply(
-            "👑 관리자 전용 명령어\n\n" +
-            "/관리등록 사용자명 내용\n→ 특정 사용자 이름으로 글 등록\n\n" +
-            "/관리삭제 사용자명\n→ 특정 사용자의 글 삭제\n\n" +
-            "/벽지초기화\n→ 모든 벽지 내용 삭제\n\n" +
-            "/관리도움말\n→ 이 도움말 보기"
-        );
-        return;
-    }
-    
-    // ===== /업데이트 (관리자 전용) =====
-    if (msg === "/업데이트") {
-        if (ADMINS.indexOf(sender) === -1) {
-            replier.reply("권한이 없습니다. 관리자만 사용 가능합니다.");
-            return;
-        }
-        if (typeof BotUpdate === "undefined") {
-            replier.reply("BotUpdate 미주입 (앱 재빌드/재설치 필요)");
-            return;
-        }
-        replier.reply("⏳ 깃에서 최신 스크립트 가져오는 중...");
-        new java.lang.Thread(function() {
-            try {
-                var url = "https://raw.githubusercontent.com/lee775/KakaoBot-Android/master/code.txt";
-                var result = BotUpdate.applyRemote(url);
-                replier.reply(String(result));
-            } catch (e) {
-                replier.reply("/업데이트 오류: " + e);
-            }
-        }).start();
-        return;
-    }
-
-    // ===== 캐릭터 등록/조회 =====
-    if (msg.startsWith("!캐릭터등록 ") || msg.startsWith("/캐릭터등록 ")) {
-        var charToRegister = msg.slice(7).trim();
-        if (charToRegister === "") {
-            replier.reply("사용법: /캐릭터등록 닉네임");
-            return;
-        }
-        DataBase.setDataBase("char_" + sender, charToRegister);
-        replier.reply("캐릭터 [" + charToRegister + "] 등록 완료!\n이제 @@ 만 입력하면 자동으로 조회됩니다.");
-        return;
-    }
-
-    if (msg === "!캐릭터삭제" || msg === "/캐릭터삭제") {
-        DataBase.setDataBase("char_" + sender, "");
-        replier.reply("등록된 캐릭터가 삭제되었습니다.");
-        return;
-    }
-
-    if (msg === "!캐릭터" || msg === "/캐릭터" || msg === "/내캐릭터") {
-        var myChar = DataBase.getDataBase("char_" + sender);
-        if (myChar && myChar !== "") {
-            replier.reply("등록된 캐릭터: " + myChar);
-        } else {
-            replier.reply("등록된 캐릭터가 없습니다.\n사용법: /캐릭터등록 닉네임");
-        }
-        return;
-    }
-
-    // 기존 기능들
-    if (msg == "/음식") {
-        foodchoice(replier);
-    }
-    if (msg == "/코디") {
-        cody(replier);
-    }
-    if (msg == "/수로") {
-        suro(replier);
-    }
-    
-    if (msg.indexOf("검은돈") !== -1 || msg.indexOf("/창고") !== -1) {
-        money(replier);
-    }
-    
-    if (msg.startsWith("/6차")) {
-        var matches = msg.match(/\/6차\s+(\d+)\s+(\d+)/);
-        if (matches) {
-            var num1 = parseInt(matches[1]);
-            var num2 = parseInt(matches[2]);
-            calc(num1, num2, replier);
-        } else {
-            replier.reply("형식이 잘못되었습니다. 예: /6차 15 16");
-        }
-    }
-    if (msg.startsWith("/스타")) {
-        var matches1 = msg.match(/\/스타\s+(\d+)\s+(\d+)/);
-        if (matches1) {
-            var num11 = parseInt(matches1[1]);
-            var num21 = parseInt(matches1[2]);
-            starf(num11, num21, replier);
-        } else {
-            replier.reply("형식이 잘못되었습니다. 예: /스타 15 16");
-        }
-    }
-    if (msg.startsWith("/샤타")) {
-        var matches11 = msg.match(/\/샤타\s+(\d+)\s+(\d+)/);
-        if (matches11) {
-            var num111 = parseInt(matches11[1]);
-            var num211 = parseInt(matches11[2]);
-            starff(num111, num211, replier);
-        } else {
-            replier.reply("형식이 잘못되었습니다. 예: /샤타 15 16");
-        }
-    }
-
-    // ===== 메이플 캐릭터 조회 =====
+function responsePart2(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
+  {
     if (msg === "/ㄱㅎㅊ" || msg.startsWith("/ㄱㅎㅊ ")) {
-        var ghc = resolveCharacter(msg.slice(5), sender, replier);
-        if (ghc) getMapleOcid(encodeURIComponent(ghc), replier);
+        var __rGhc = resolveName(msg.slice(4).trim(), sender);
+        if (!__rGhc) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getMapleOcid(encodeURIComponent(__rGhc), replier);
     }
     if (msg === "/경험치" || msg.startsWith("/경험치 ")) {
-        var ge = resolveCharacter(msg.slice(5), sender, replier);
-        if (ge) getMapleOcid(encodeURIComponent(ge), replier);
+        var __rExp = resolveName(msg.slice(4).trim(), sender);
+        if (!__rExp) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getMapleOcid(encodeURIComponent(__rExp), replier);
     }
     if (msg === "@@" || msg.startsWith("@@ ")) {
-        var aaInput = msg.slice(2).trim();
-        var characterName2;
-        var targetLevel = null;
-
-        if (aaInput === "") {
-            // @@ 만 입력 → 등록된 캐릭터 사용
-            var registered = DataBase.getDataBase("char_" + sender);
-            if (!registered || registered === "") {
-                replier.reply("등록된 캐릭터가 없습니다.\n사용법: /캐릭터등록 닉네임\n등록 후엔 @@ 만 입력해도 자동 조회됩니다.");
-                return;
-            }
-            characterName2 = registered;
-        } else {
-            var parts = aaInput.split(" ");
-            characterName2 = parts[0];
-            targetLevel = parts[1] ? parseInt(parts[1]) : null;
-        }
-
-        // 헤르메스 랭킹 명령어 체크
-        if (characterName2 === "봄비") {
+        var rawAt2 = msg.slice(2).trim();
+        var partsAt2 = rawAt2 ? rawAt2.split(/\s+/) : [];
+        var firstAt2 = partsAt2[0];
+        if (firstAt2 === "봄비") {
             getMonthlyRanking(replier);
-        } else if (characterName2 === "시계꽃") {
+        } else if (firstAt2 === "시계꽃") {
             getMonthlyRanking2(replier);
-        } else if (characterName2 === "랭킹") {
+        } else if (firstAt2 === "랭킹") {
             getMonthlyRanking3(replier);
-        } else if (characterName2 === "스타") {
+        } else if (firstAt2 === "스타") {
             getMonthlyRanking4(replier);
-        } else if (targetLevel !== null) {
-            getLevelUpPrediction(encodeURIComponent(characterName2), targetLevel, replier);
         } else {
-            getMapleOcid(encodeURIComponent(characterName2), replier);
+            var targetLvl2 = null, nameStr2 = rawAt2;
+            if (partsAt2.length >= 2 && /^\d+$/.test(partsAt2[partsAt2.length - 1])) {
+                targetLvl2 = parseInt(partsAt2[partsAt2.length - 1]);
+                nameStr2 = partsAt2.slice(0, -1).join(" ");
+            } else if (partsAt2.length === 1 && /^\d+$/.test(partsAt2[0])) {
+                targetLvl2 = parseInt(partsAt2[0]);
+                nameStr2 = "";
+            }
+            var resAt2 = resolveName(nameStr2, sender);
+            if (!resAt2) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+            else if (targetLvl2 !== null) getLevelUpPrediction(encodeURIComponent(resAt2), targetLvl2, replier);
+            else getMapleOcid(encodeURIComponent(resAt2), replier);
         }
     }
-    
+
     if (msg === "/ㅌㄹ" || msg.startsWith("/ㅌㄹ ")) {
-        var trl = resolveCharacter(msg.slice(4), sender, replier);
-        if (trl) getPower(encodeURIComponent(trl), replier);
+        var __rTr = resolveName(msg.slice(3).trim(), sender);
+        if (!__rTr) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getPower(encodeURIComponent(__rTr), replier);
     }
     if (msg === "/ㅈㅌㄹ" || msg.startsWith("/ㅈㅌㄹ ")) {
-        var jtrl = resolveCharacter(msg.slice(5), sender, replier);
-        if (jtrl) getPower(encodeURIComponent(jtrl), replier);
+        var __rJtr = resolveName(msg.slice(4).trim(), sender);
+        if (!__rJtr) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getPower(encodeURIComponent(__rJtr), replier);
     }
     if (msg === "/투력" || msg.startsWith("/투력 ")) {
-        var tul = resolveCharacter(msg.slice(4), sender, replier);
-        if (tul) getPower(encodeURIComponent(tul), replier);
+        var __rTu = resolveName(msg.slice(3).trim(), sender);
+        if (!__rTu) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getPower(encodeURIComponent(__rTu), replier);
     }
     if (msg === "@@@@" || msg.startsWith("@@@@ ")) {
-        var power5Text = msg.slice(4).trim();
-
-        if (power5Text === "") {
-            var reg4 = DataBase.getDataBase("char_" + sender);
-            if (!reg4 || reg4 === "") {
-                replier.reply("등록된 캐릭터가 없습니다.\n사용법: /캐릭터등록 닉네임\n등록 후엔 @@ 만 입력해도 자동 조회됩니다.");
-                return;
-            }
-            getPower(encodeURIComponent(reg4), replier);
-        }
-        // 헤르메스 전투력 랭킹
-        else if (power5Text === "헤르메스") {
+        var raw4 = msg.slice(4).trim();
+        if (raw4 === "헤르메스") {
             getPowerRanking(replier, RANKING_CHARACTERS);
-        }
-        // 시계꽃 전투력 랭킹
-        else if (power5Text === "시계꽃") {
+        } else if (raw4 === "시계꽃") {
             getPowerRanking(replier, RANKING_CHARACTERS2);
-        }
-        else if (power5Text === "스타") {
+        } else if (raw4 === "스타") {
             getPowerRanking(replier, RANKING_CHARACTERS4);
-        }
-        // 개별 캐릭터 전투력 조회
-        else {
-            getPower(encodeURIComponent(power5Text), replier);
+        } else {
+            var res4 = resolveName(raw4, sender);
+            if (!res4) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+            else getPower(encodeURIComponent(res4), replier);
         }
     }
     if (msg === "@@@" || msg.startsWith("@@@ ")) {
-        var aaaInput = msg.slice(3).trim();
-        if (aaaInput === "") {
-            var reg3 = DataBase.getDataBase("char_" + sender);
-            if (!reg3 || reg3 === "") {
-                replier.reply("등록된 캐릭터가 없습니다.\n사용법: /캐릭터등록 닉네임\n등록 후엔 @@ 만 입력해도 자동 조회됩니다.");
-                return;
-            }
-            getMonthlyExpHistory(encodeURIComponent(reg3), replier);
-        } else {
-            getMonthlyExpHistory(encodeURIComponent(aaaInput), replier);
-        }
+        var __r3 = resolveName(msg.slice(3).trim(), sender);
+        if (!__r3) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getMonthlyExpHistory(encodeURIComponent(__r3), replier);
     }
     if (msg === "/전투력" || msg.startsWith("/전투력 ")) {
-        var jpw = resolveCharacter(msg.slice(5), sender, replier);
-        if (jpw) getPower(encodeURIComponent(jpw), replier);
+        var __rJtl = resolveName(msg.slice(4).trim(), sender);
+        if (!__rJtl) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getPower(encodeURIComponent(__rJtl), replier);
     }
     if (msg === "/장비" || msg.startsWith("/장비 ")) {
-        // 형식: /장비 [닉네임] [슬롯]  닉네임 자리 비면 등록된 캐릭터 사용
-        var equipRaw = msg.slice(4).trim();
-        var equipParts = equipRaw ? equipRaw.split(" ") : [];
-        var firstTok = equipParts[0] || "";
-        // 첫 토큰이 슬롯 키워드일 가능성도 있으나 안전하게 닉네임으로 시도
-        var equipName = resolveCharacter(firstTok, sender, replier);
-        if (equipName) {
-            var equipSlot = equipParts.length > 1 ? equipParts.slice(1).join(" ") : (firstTok === equipName ? null : null);
-            // 입력이 비어 있어서 자동 fallback 된 경우 슬롯은 입력 전체에서 가져옴
-            if (!firstTok) equipSlot = null;
-            getEquipment(encodeURIComponent(equipName), replier, equipSlot);
-        }
+        var partsEq = msg.slice(3).trim().split(/\s+/).filter(function(s) { return s; });
+        var nameEq = partsEq[0] || "";
+        var slotEq = partsEq[1] || null;
+        var __rEq = resolveName(nameEq, sender);
+        if (!__rEq) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getEquipment(encodeURIComponent(__rEq), replier, slotEq);
     }
     if (msg === "/ㅈㅂ" || msg.startsWith("/ㅈㅂ ")) {
-        var equipRaw2 = msg.slice(4).trim();
-        var equipParts2 = equipRaw2 ? equipRaw2.split(" ") : [];
-        var firstTok2 = equipParts2[0] || "";
-        var equipName2 = resolveCharacter(firstTok2, sender, replier);
-        if (equipName2) {
-            var equipSlot2 = equipParts2.length > 1 ? equipParts2.slice(1).join(" ") : null;
-            getEquipment(encodeURIComponent(equipName2), replier, equipSlot2);
-        }
+        var partsEq2 = msg.slice(3).trim().split(/\s+/).filter(function(s) { return s; });
+        var nameEq2 = partsEq2[0] || "";
+        var slotEq2 = partsEq2[1] || null;
+        var __rEq2 = resolveName(nameEq2, sender);
+        if (!__rEq2) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getEquipment(encodeURIComponent(__rEq2), replier, slotEq2);
     }
-
-    // ===== 추가 기능 (tmi/보스/확률/환산) =====
-    if (msg === "/tmi" || msg.startsWith("/tmi ")) {
-        var tmi = resolveCharacter(msg.slice(5), sender, replier);
-        if (tmi) getTmiInfo(encodeURIComponent(tmi), replier);
-    }
-    if (msg=="/보스")
-    {
-      clan(replier);
-    }
-    if (msg=="/테")
-    {
-      test(replier);
-    }
-    if(msg=="/기능" || msg=="/ㄱㄴ")
-    {
-      option(replier);
-    }
-    if (msg.startsWith("/확률 ")) {
-        var args = msg.slice(4).trim().split(" ");
-        var chance = parseInt(args[0]);
-        var count = args.length > 1 ? parseInt(args[1]) : 1;
-
-        if (isNaN(chance) || chance < 0 || chance > 100) {
-            replier.reply("확률은 0~100 사이의 정수여야 합니다.");
-        } else if (isNaN(count) || count <= 0) {
-            replier.reply("시도 횟수는 1 이상의 정수여야 합니다.");
-        } else if (count > 999999999999) {
-            replier.reply("시도 횟수는 999999999999 이하로 설정해주세요.");
-        } else {
-            starforce(chance, count, replier);
-        }
-    }
-
-    if ((msg === "/환산" || msg.startsWith("/환산 ")) && room != "[본메] 전국에반협회") {
-        var hs = resolveCharacter(msg.slice(4), sender, replier);
-        if (hs) getLink(encodeURIComponent(hs), replier);
-    }
-
-    // ===== 심볼 정보 조회 (/심볼 /세금 /탈세 모두 동일 동작) =====
-    if (msg.startsWith("/심볼") || msg.startsWith("/세금") || msg.startsWith("/탈세")) {
-        var symbolInput = msg.slice(3).trim();
-        var symbolCharName;
-        if (symbolInput === "") {
-            var regSym = DataBase.getDataBase("char_" + sender);
-            if (!regSym || regSym === "") {
-                replier.reply("등록된 캐릭터가 없습니다.\n사용법: /캐릭터등록 닉네임\n등록 후엔 @@ 만 입력해도 자동 조회됩니다.");
-                return;
-            }
-            symbolCharName = regSym;
-        } else {
-            symbolCharName = symbolInput;
-        }
-        getSymbolInfo(encodeURIComponent(symbolCharName), replier);
-    }
+  }
 }
-
-// ==========================================
-// 메이플 API 함수
-// ==========================================
 
 
 // 목표 레벨까지 레벨업 예상 날짜 계산 함수
@@ -1340,7 +1232,6 @@ function getLevelUpPrediction(characterName, targetLevel, replier) {
             replier.reply(result);
             
         } catch (error) {
-            java.lang.System.out.println("[BOT ERROR] 레벨업 예측: " + error.message);
             replier.reply("레벨업 예측 중 오류가 발생했습니다: " + error.message);
         }
     });
@@ -1482,7 +1373,6 @@ function getPowerRanking(replier, characterList) {
             replier.reply(result);
             
         } catch (error) {
-            java.lang.System.out.println("[BOT ERROR] 전투력 랭킹: " + error.message);
             replier.reply("전투력 랭킹 집계 중 오류가 발생했습니다: " + error.message);
         }
     });
@@ -1661,7 +1551,6 @@ function getMonthlyExpHistory(characterName, replier) {
             replier.reply(result);
             
         } catch (error) {
-            java.lang.System.out.println("[BOT ERROR] 월별 경험치: " + error.message);
             replier.reply("월별 경험치 집계 중 오류가 발생했습니다: " + error.message);
         }
     });
@@ -1834,7 +1723,6 @@ function getMonthlyRanking(replier) {
             replier.reply(result);
             
         } catch (error) {
-            java.lang.System.out.println("[BOT ERROR] 랭킹 집계: " + error.message);
             replier.reply("랭킹 집계 중 오류가 발생했습니다.");
         }
     });
@@ -2005,7 +1893,6 @@ function getMonthlyRanking3(replier) {
             replier.reply(result);
             
         } catch (error) {
-            java.lang.System.out.println("[BOT ERROR] 랭킹 집계: " + error.message);
             replier.reply("랭킹 집계 중 오류가 발생했습니다.");
         }
     });
@@ -2176,7 +2063,6 @@ function getMonthlyRanking4(replier) {
             replier.reply(result);
             
         } catch (error) {
-            java.lang.System.out.println("[BOT ERROR] 랭킹 집계: " + error.message);
             replier.reply("랭킹 집계 중 오류가 발생했습니다.");
         }
     });
@@ -2349,7 +2235,6 @@ function getMonthlyRanking2(replier) {
             replier.reply(result);
             
         } catch (error) {
-            java.lang.System.out.println("[BOT ERROR] 랭킹 집계: " + error.message);
             replier.reply("랭킹 집계 중 오류가 발생했습니다.");
         }
     });
@@ -2358,364 +2243,363 @@ function getMonthlyRanking2(replier) {
 }
 function getPower(power,replier)
 {
-    try {
 //일주일 시간표기
-        var today11 = new Date(Date.now()-86400000*2);
-        var day_11=
+        const today11 = new Date(Date.now()-86400000*2);
+        const day_11=
           today11.getFullYear() + "-" +
           String(today11.getMonth() + 1).padStart(2, "0") + "-" +
           String(today11.getDate()).padStart(2, "0");
           
-        var today22 = new Date(Date.now()-86400000*3);
-        var day_22=
+        const today22 = new Date(Date.now()-86400000*3);
+        const day_22=
           today22.getFullYear() + "-" +
           String(today22.getMonth() + 1).padStart(2, "0") + "-" +
           String(today22.getDate()).padStart(2, "0");
           
-        var today33 = new Date(Date.now()-86400000*4);
-        var day_33=
+        const today33 = new Date(Date.now()-86400000*4);
+        const day_33=
           today33.getFullYear() + "-" +
           String(today33.getMonth() + 1).padStart(2, "0") + "-" +
           String(today33.getDate()).padStart(2, "0");
           
-        var today44 = new Date(Date.now()-86400000*5);
-        var day_44=
+        const today44 = new Date(Date.now()-86400000*5);
+        const day_44=
           today44.getFullYear() + "-" +
           String(today44.getMonth() + 1).padStart(2, "0") + "-" +
           String(today44.getDate()).padStart(2, "0");
           
-        var today55 = new Date(Date.now()-86400000*6);
-        var day_55=
+        const today55 = new Date(Date.now()-86400000*6);
+        const day_55=
           today55.getFullYear() + "-" +
           String(today55.getMonth() + 1).padStart(2, "0") + "-" +
           String(today55.getDate()).padStart(2, "0");
           
-        var today66 = new Date(Date.now()-86400000*7);
-        var day_66=
+        const today66 = new Date(Date.now()-86400000*7);
+        const day_66=
           today66.getFullYear() + "-" +
           String(today66.getMonth() + 1).padStart(2, "0") + "-" +
           String(today66.getDate()).padStart(2, "0");
           
-        var today77 = new Date(Date.now()-86400000*8);
-        var day_77=
+        const today77 = new Date(Date.now()-86400000*8);
+        const day_77=
           today77.getFullYear() + "-" +
           String(today77.getMonth() + 1).padStart(2, "0") + "-" +
           String(today77.getDate()).padStart(2, "0");
 
 //한달전 시간 표기
-        var today1 = new Date(Date.now()-86400000*30);
-        var day_1=
+        const today1 = new Date(Date.now()-86400000*30);
+        const day_1=
           today1.getFullYear() + "-" +
           String(today1.getMonth() + 1).padStart(2, "0") + "-" +
           String(today1.getDate()).padStart(2, "0");
           
-        var today2 = new Date(Date.now()-86400000*31);
-        var day_2=
+        const today2 = new Date(Date.now()-86400000*31);
+        const day_2=
           today2.getFullYear() + "-" +
           String(today2.getMonth() + 1).padStart(2, "0") + "-" +
           String(today2.getDate()).padStart(2, "0");
           
-        var today3 = new Date(Date.now()-86400000*32);
-        var day_3=
+        const today3 = new Date(Date.now()-86400000*32);
+        const day_3=
           today3.getFullYear() + "-" +
           String(today3.getMonth() + 1).padStart(2, "0") + "-" +
           String(today3.getDate()).padStart(2, "0");
           
-        var today4 = new Date(Date.now()-86400000*33);
-        var day_4=
+        const today4 = new Date(Date.now()-86400000*33);
+        const day_4=
           today4.getFullYear() + "-" +
           String(today4.getMonth() + 1).padStart(2, "0") + "-" +
           String(today4.getDate()).padStart(2, "0");
           
-        var today5 = new Date(Date.now()-86400000*34);
-        var day_5=
+        const today5 = new Date(Date.now()-86400000*34);
+        const day_5=
           today5.getFullYear() + "-" +
           String(today5.getMonth() + 1).padStart(2, "0") + "-" +
           String(today5.getDate()).padStart(2, "0");
           
-        var today6 = new Date(Date.now()-86400000*35);
-        var day_6=
+        const today6 = new Date(Date.now()-86400000*35);
+        const day_6=
           today6.getFullYear() + "-" +
           String(today6.getMonth() + 1).padStart(2, "0") + "-" +
           String(today6.getDate()).padStart(2, "0");
           
-        var today7 = new Date(Date.now()-86400000*36);
-        var day_7=
+        const today7 = new Date(Date.now()-86400000*36);
+        const day_7=
           today7.getFullYear() + "-" +
           String(today7.getMonth() + 1).padStart(2, "0") + "-" +
           String(today7.getDate()).padStart(2, "0");
             
 //---------------------------------------------------------------------
 //ocid 값을 들고와 저장
-  var requestUrl = MAPLE_OCID_API_URL + "?character_name=" + power;
-        var response = org.jsoup.Jsoup.connect(requestUrl)
+  const requestUrl = MAPLE_OCID_API_URL + "?character_name=" + power;
+        const response = org.jsoup.Jsoup.connect(requestUrl)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)            
             .ignoreContentType(true)
             .execute()
             .body();
-        var data = JSON.parse(response);
+        const data = JSON.parse(response);
 //최신 stat 저장 data2
-        var inforUrl = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid;
-        var response2 = org.jsoup.Jsoup.connect(inforUrl)
+        const inforUrl = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid;
+        const response2 = org.jsoup.Jsoup.connect(inforUrl)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        var data2 = JSON.parse(response2);
+        const data2 = JSON.parse(response2);
 //일주일 stat 저장 data10->data20까지
-        var inforUrl10 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_11;
-        var response10 = org.jsoup.Jsoup.connect(inforUrl10)
+        const inforUrl10 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_11;
+        const response10 = org.jsoup.Jsoup.connect(inforUrl10)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        var data10 = JSON.parse(response10);
+        const data10 = JSON.parse(response10);
         
-        var inforUrl11 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_22;
-        var response11 = org.jsoup.Jsoup.connect(inforUrl11)
+        const inforUrl11 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_22;
+        const response11 = org.jsoup.Jsoup.connect(inforUrl11)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        var data11 = JSON.parse(response11);
+        const data11 = JSON.parse(response11);
         
-        var inforUrl12 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_33;
-        var response12 = org.jsoup.Jsoup.connect(inforUrl12)
+        const inforUrl12 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_33;
+        const response12 = org.jsoup.Jsoup.connect(inforUrl12)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        var data12 = JSON.parse(response12);
+        const data12 = JSON.parse(response12);
         
-        var inforUrl13 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_44;
-        var response13 = org.jsoup.Jsoup.connect(inforUrl13)
+        const inforUrl13 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_44;
+        const response13 = org.jsoup.Jsoup.connect(inforUrl13)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        var data13 = JSON.parse(response13);
+        const data13 = JSON.parse(response13);
         
-        var inforUrl14 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_55;
-        var response14 = org.jsoup.Jsoup.connect(inforUrl14)
+        const inforUrl14 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_55;
+        const response14 = org.jsoup.Jsoup.connect(inforUrl14)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        var data14 = JSON.parse(response14);
+        const data14 = JSON.parse(response14);
         
-        var inforUrl15 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_66;
-        var response15 = org.jsoup.Jsoup.connect(inforUrl15)
+        const inforUrl15 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_66;
+        const response15 = org.jsoup.Jsoup.connect(inforUrl15)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        var data15 = JSON.parse(response15);
+        const data15 = JSON.parse(response15);
         
-        var inforUrl16 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_77;
-        var response16 = org.jsoup.Jsoup.connect(inforUrl16)
+        const inforUrl16 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_77;
+        const response16 = org.jsoup.Jsoup.connect(inforUrl16)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        var data16 = JSON.parse(response16);
+        const data16 = JSON.parse(response16);
 //-----------------------------------------------------------------------------------------
 
 //한달전 stat 저장 data3->data9까지
-        var inforUrl2 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_1;
-        var response3 = org.jsoup.Jsoup.connect(inforUrl2)
+        const inforUrl2 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_1;
+        const response3 = org.jsoup.Jsoup.connect(inforUrl2)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        var data3 = JSON.parse(response3);
+        const data3 = JSON.parse(response3);
         
-        var inforUrl3 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_2;
-        var response4 = org.jsoup.Jsoup.connect(inforUrl3)
+        const inforUrl3 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_2;
+        const response4 = org.jsoup.Jsoup.connect(inforUrl3)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        var data4 = JSON.parse(response4);
+        const data4 = JSON.parse(response4);
         
-        var inforUrl4 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_3;
-        var response5 = org.jsoup.Jsoup.connect(inforUrl4)
+        const inforUrl4 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_3;
+        const response5 = org.jsoup.Jsoup.connect(inforUrl4)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        var data5 = JSON.parse(response5);
+        const data5 = JSON.parse(response5);
         
-        var inforUrl5 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_4;
-        var response6 = org.jsoup.Jsoup.connect(inforUrl5)
+        const inforUrl5 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_4;
+        const response6 = org.jsoup.Jsoup.connect(inforUrl5)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        var data6 = JSON.parse(response6);
+        const data6 = JSON.parse(response6);
         
-        var inforUrl6 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_5;
-        var response7 = org.jsoup.Jsoup.connect(inforUrl6)
+        const inforUrl6 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_5;
+        const response7 = org.jsoup.Jsoup.connect(inforUrl6)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        var data7 = JSON.parse(response7);
+        const data7 = JSON.parse(response7);
         
-        var inforUrl7 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_6;
-        var response8 = org.jsoup.Jsoup.connect(inforUrl7)
+        const inforUrl7 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_6;
+        const response8 = org.jsoup.Jsoup.connect(inforUrl7)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        var data8 = JSON.parse(response8);
+        const data8 = JSON.parse(response8);
         
-        var inforUrl8 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_7;
-        var response9 = org.jsoup.Jsoup.connect(inforUrl8)
+        const inforUrl8 = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid+"&date="+day_7;
+        const response9 = org.jsoup.Jsoup.connect(inforUrl8)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        var data9 = JSON.parse(response9);
+        const data9 = JSON.parse(response9);
 //-----------------------------------------------------------------------------------------
 //현재 전투력 (최신)
-  var battlePower = null;
-    for (var stat of data2.final_stat) {
+  let battlePower = null;
+    for (let stat of data2.final_stat) {
         if (stat.stat_name === "전투력") {
             battlePower = stat.stat_value;
             break;
         }
     }
 //일주일 전투력 일주일치 중 가장 높은 전투력 찾기
-    var b1 = null;
-    for (var stat of data10.final_stat) {
+    let b1 = null;
+    for (let stat of data10.final_stat) {
         if (stat.stat_name === "전투력") {
             b1= stat.stat_value;
             break;
         }
     }
-    var b2 = null;
-    for (var stat of data11.final_stat) {
+    let b2 = null;
+    for (let stat of data11.final_stat) {
         if (stat.stat_name === "전투력") {
             b2= stat.stat_value;
             break;
         }
     }
-    var b3 = null;
-    for (var stat of data12.final_stat) {
+    let b3 = null;
+    for (let stat of data12.final_stat) {
         if (stat.stat_name === "전투력") {
             b3= stat.stat_value;
             break;
         }
     }
-    var b4 = null;
-    for (var stat of data13.final_stat) {
+    let b4 = null;
+    for (let stat of data13.final_stat) {
         if (stat.stat_name === "전투력") {
             b4= stat.stat_value;
             break;
         }
     }
-    var b5 = null;
-    for (var stat of data14.final_stat) {
+    let b5 = null;
+    for (let stat of data14.final_stat) {
         if (stat.stat_name === "전투력") {
             b5= stat.stat_value;
             break;
         }
     }
-    var b6 = null;
-    for (var stat of data15.final_stat) {
+    let b6 = null;
+    for (let stat of data15.final_stat) {
         if (stat.stat_name === "전투력") {
             b6= stat.stat_value;
             break;
         }
     }
-    var b7 = null;
-    for (var stat of data16.final_stat) {
+    let b7 = null;
+    for (let stat of data16.final_stat) {
         if (stat.stat_name === "전투력") {
             b7= stat.stat_value;
             break;
         }
     }
     //일주일 중 가장 높은 전투력 저장
-var nowpower = Number(Math.max(b1, b2, b3, b4, b5, b6, b7));
+let nowpower = Number(Math.max(b1, b2, b3, b4, b5, b6, b7));
 //replier.reply (b1+"\n"+b2+"\n"+b3+"\n"+b4+"\n"+b5+"\n"+b6+"\n"+b7)
 //한달전 전투력 일주일치 중 가b1+"\n"+장 높은 전투력 찾기
-    var a1 = null;
-    for (var stat of data3.final_stat) {
+    let a1 = null;
+    for (let stat of data3.final_stat) {
         if (stat.stat_name === "전투력") {
             a1= stat.stat_value;
             break;
         }
     }
-    var a2 = null;
-    for (var stat of data4.final_stat) {
+    let a2 = null;
+    for (let stat of data4.final_stat) {
         if (stat.stat_name === "전투력") {
             a2= stat.stat_value;
             break;
         }
     }
-    var a3 = null;
-    for (var stat of data5.final_stat) {
+    let a3 = null;
+    for (let stat of data5.final_stat) {
         if (stat.stat_name === "전투력") {
             a3= stat.stat_value;
             break;
         }
     }
-    var a4 = null;
-    for (var stat of data6.final_stat) {
+    let a4 = null;
+    for (let stat of data6.final_stat) {
         if (stat.stat_name === "전투력") {
             a4= stat.stat_value;
             break;
         }
     }
-    var a5 = null;
-    for (var stat of data7.final_stat) {
+    let a5 = null;
+    for (let stat of data7.final_stat) {
         if (stat.stat_name === "전투력") {
             a5= stat.stat_value;
             break;
         }
     }
-    var a6 = null;
-    for (var stat of data8.final_stat) {
+    let a6 = null;
+    for (let stat of data8.final_stat) {
         if (stat.stat_name === "전투력") {
             a6= stat.stat_value;
             break;
         }
     }
-    var a7 = null;
-    for (var stat of data9.final_stat) {
+    let a7 = null;
+    for (let stat of data9.final_stat) {
         if (stat.stat_name === "전투력") {
             a7= stat.stat_value;
             break;
         }
     }
     //일주일 중 가장 높은 전투력 저장
-    var onepower=a1;
+    let onepower=a1;
     onepower = Number(Math.max(a1, a2, a3, a4, a5, a6, a7));
     
 //자릿수 정리
 if(Number(battlePower)>Number(nowpower)){nowpower=battlePower;}
 
-var formatted1 = formatNumber(onepower);
-var formatted2 = formatNumber(nowpower);
-var formatted3 = formatNumber(battlePower);
+const formatted1 = formatNumber(onepower);
+const formatted2 = formatNumber(nowpower);
+const formatted3 = formatNumber(battlePower);
 
-var Tag = "???";
+let Tag = "???";
 
 if (nowpower < 50000000) Tag = "노멀";
 else if (nowpower < 100000000) Tag = "레  어";
@@ -2733,19 +2617,15 @@ else Tag = "신";
     } else {
         replier.reply("전투력 정보를 가져올 수 없습니다.");
     }
-    } catch (error) {
-        java.lang.System.out.println("[BOT ERROR] getPower: " + (error.message || error));
-        replier.reply("전투력 조회 중 오류: " + error.message);
-    }
 }
 //자리수
 function formatNumber(number) {
-  var units = ['', '만', '억'];
-  var result = '';
-  var unitIndex = 0;
+  const units = ['', '만', '억'];
+  let result = '';
+  let unitIndex = 0;
 
   while (number > 0) {
-    var chunk = number % 10000;
+    let chunk = number % 10000;
     if (chunk > 0) {
       result = chunk + units[unitIndex] + result;
     }
@@ -2756,49 +2636,41 @@ function formatNumber(number) {
   return result;
 }
 function getImage(characterimage, replier) {
-    try {
-        var today10 = new Date(Date.now() - 86400000); // 하루 전
-        var day_10 =
-            today10.getFullYear() + "-" +
-            String(today10.getMonth() + 1).padStart(2, "0") + "-" +
-            String(today10.getDate()).padStart(2, "0");
+    const today10 = new Date(Date.now() - 86400000); // 하루 전
+    const day_10 =
+        today10.getFullYear() + "-" +
+        String(today10.getMonth() + 1).padStart(2, "0") + "-" +
+        String(today10.getDate()).padStart(2, "0");
 
-        // Step 1: ocid 가져오기
-        var requestUrl10 = MAPLE_OCID_API_URL + "?character_name=" + characterimage;
-        var response10 = org.jsoup.Jsoup.connect(requestUrl10)
-            .header("accept", "application/json")
-            .header("x-nxopen-api-key", NEXON_API_KEY)
-            .ignoreContentType(true)
-            .execute()
-            .body();
-        var data10 = JSON.parse(response10);
+    // Step 1: ocid 가져오기
+    const requestUrl10 = MAPLE_OCID_API_URL + "?character_name=" + characterimage;
+    const response10 = org.jsoup.Jsoup.connect(requestUrl10)
+        .header("accept", "application/json")
+        .header("x-nxopen-api-key", NEXON_API_KEY)
+        .ignoreContentType(true)
+        .execute()
+        .body();
+    const data10 = JSON.parse(response10);
 
-        // Step 2: 캐릭터 상세 정보 가져오기
-        var inforUrl11 = MAPLE_INF_API_URL + "?ocid=" + data10.ocid + "&date=" + day_10;
-        var response11 = org.jsoup.Jsoup.connect(inforUrl11)
-            .header("accept", "application/json")
-            .header("x-nxopen-api-key", NEXON_API_KEY)
-            .ignoreContentType(true)
-            .execute()
-            .body();
-        var data11 = JSON.parse(response11);
+    // Step 2: 캐릭터 상세 정보 가져오기
+    const inforUrl11 = MAPLE_INF_API_URL + "?ocid=" + data10.ocid + "&date=" + day_10;
+    const response11 = org.jsoup.Jsoup.connect(inforUrl11)
+        .header("accept", "application/json")
+        .header("x-nxopen-api-key", NEXON_API_KEY)
+        .ignoreContentType(true)
+        .execute()
+        .body();
+    const data11 = JSON.parse(response11);
 
-        // Step 3: 이미지 URL 추출
-        if (data11.character_image) {
-            replier.reply(data11.character_image);
-        } else {
-            replier.reply("캐릭터 이미지를 찾을 수 없습니다.");
-        }
-    } catch (error) {
-        java.lang.System.out.println("[BOT ERROR] getImage: " + (error.message || error));
-        replier.reply("이미지 조회 오류: " + error.message);
-    }
+    // Step 3: 이미지 URL 추출
+     
+      
 }
 function getMapleOcid(characterName, replier) {
     try {
         //
        // 기준 시간 생성
-var baseDate = new Date();
+let baseDate = new Date();
 
 // 0~4시라면 전날 23시로 맞춤
 if (baseDate.getHours() >= 0 && baseDate.getHours() < 6) {
@@ -2807,182 +2679,182 @@ if (baseDate.getHours() >= 0 && baseDate.getHours() < 6) {
 }
 
 // 이후 로직에서 baseDate를 today로 사용
-var today = new Date(baseDate);
-var formattedDate =
+const today = new Date(baseDate);
+const formattedDate =
   today.getFullYear() + "-" +
   String(today.getMonth() + 1).padStart(2, "0") + "-" +
   String(today.getDate()).padStart(2, "0");
-var dayText_1 =
+const dayText_1 =
   String(today.getMonth() + 1).padStart(2, "0") + "월 " +
   String(today.getDate()).padStart(2, "0") + "일";
 
-var today2 = new Date(today.getTime() - 86400000);
-var day_1 =
+const today2 = new Date(today.getTime() - 86400000);
+const day_1 =
   today2.getFullYear() + "-" +
   String(today2.getMonth() + 1).padStart(2, "0") + "-" +
   String(today2.getDate()).padStart(2, "0");
-var dayText_2 =
+const dayText_2 =
   String(today2.getMonth() + 1).padStart(2, "0") + "월 " +
   String(today2.getDate()).padStart(2, "0") + "일";
 
-var today3 = new Date(today.getTime() - 86400000 * 2);
-var day_2 =
+const today3 = new Date(today.getTime() - 86400000 * 2);
+const day_2 =
   today3.getFullYear() + "-" +
   String(today3.getMonth() + 1).padStart(2, "0") + "-" +
   String(today3.getDate()).padStart(2, "0");
-var dayText_3 =
+const dayText_3 =
   String(today3.getMonth() + 1).padStart(2, "0") + "월 " +
   String(today3.getDate()).padStart(2, "0") + "일";
 
-var today4 = new Date(today.getTime() - 86400000 * 3);
-var day_3 =
+const today4 = new Date(today.getTime() - 86400000 * 3);
+const day_3 =
   today4.getFullYear() + "-" +
   String(today4.getMonth() + 1).padStart(2, "0") + "-" +
   String(today4.getDate()).padStart(2, "0");
-var dayText_4 =
+const dayText_4 =
   String(today4.getMonth() + 1).padStart(2, "0") + "월 " +
   String(today4.getDate()).padStart(2, "0") + "일";
 
-var today5 = new Date(today.getTime() - 86400000 * 4);
-var day_4 =
+const today5 = new Date(today.getTime() - 86400000 * 4);
+const day_4 =
   today5.getFullYear() + "-" +
   String(today5.getMonth() + 1).padStart(2, "0") + "-" +
   String(today5.getDate()).padStart(2, "0");
-var dayText_5 =
+const dayText_5 =
   String(today5.getMonth() + 1).padStart(2, "0") + "월 " +
   String(today5.getDate()).padStart(2, "0") + "일";
 
-var today6 = new Date(today.getTime() - 86400000 * 5);
-var day_5 =
+const today6 = new Date(today.getTime() - 86400000 * 5);
+const day_5 =
   today6.getFullYear() + "-" +
   String(today6.getMonth() + 1).padStart(2, "0") + "-" +
   String(today6.getDate()).padStart(2, "0");
-var dayText_6 =
+const dayText_6 =
   String(today6.getMonth() + 1).padStart(2, "0") + "월 " +
   String(today6.getDate()).padStart(2, "0") + "일";
 
-var today7 = new Date(today.getTime() - 86400000 * 6);
-var day_6 =
+const today7 = new Date(today.getTime() - 86400000 * 6);
+const day_6 =
   today7.getFullYear() + "-" +
   String(today7.getMonth() + 1).padStart(2, "0") + "-" +
   String(today7.getDate()).padStart(2, "0");
-var dayText_7 =
+const dayText_7 =
   String(today7.getMonth() + 1).padStart(2, "0") + "월 " +
   String(today7.getDate()).padStart(2, "0") + "일";
 
-var today8 = new Date(today.getTime() - 86400000 * 7);
-var day_7 =
+const today8 = new Date(today.getTime() - 86400000 * 7);
+const day_7 =
   today8.getFullYear() + "-" +
   String(today8.getMonth() + 1).padStart(2, "0") + "-" +
   String(today8.getDate()).padStart(2, "0");
 
 // 이번 달 1일 0시 데이터를 가져오기 위해 전달 마지막날 날짜 계산
-var today9 = new Date(today.getTime());
+const today9 = new Date(today.getTime());
 today9.setDate(1); // 이번 달 1일
 today9.setDate(today9.getDate() - 1); // 하루 빼면 전달 마지막날
 
-var day_8 =
+const day_8 =
   today9.getFullYear() + "-" +
   String(today9.getMonth() + 1).padStart(2, "0") + "-" +
   String(today9.getDate()).padStart(2, "0");
        
         
         //
-        var requestUrl = MAPLE_OCID_API_URL + "?character_name=" + characterName;
-        var response = org.jsoup.Jsoup.connect(requestUrl)
+        const requestUrl = MAPLE_OCID_API_URL + "?character_name=" + characterName;
+        const response = org.jsoup.Jsoup.connect(requestUrl)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)            
             .ignoreContentType(true)
             .execute()
             .body();
-        var data = JSON.parse(response);
+        const data = JSON.parse(response);
         //
-        var inforUrl = MAPLE_INF_API_URL + "?ocid=" + data.ocid;
-        var response2 = org.jsoup.Jsoup.connect(inforUrl)
+        const inforUrl = MAPLE_INF_API_URL + "?ocid=" + data.ocid;
+        const response2 = org.jsoup.Jsoup.connect(inforUrl)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        var data2 = JSON.parse(response2);
+        const data2 = JSON.parse(response2);
         
-        var inforUrl2 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_1;
-        var response3 = org.jsoup.Jsoup.connect(inforUrl2)
+        const inforUrl2 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_1;
+        const response3 = org.jsoup.Jsoup.connect(inforUrl2)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        var data3 = JSON.parse(response3);
+        const data3 = JSON.parse(response3);
         
-        var inforUrl3 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_2;
-        var response4 = org.jsoup.Jsoup.connect(inforUrl3)
-            .header("accept", "application/json")
-            .header("x-nxopen-api-key", NEXON_API_KEY)
-            
-            .ignoreContentType(true)
-            .execute()
-            .body();
-        var data4 = JSON.parse(response4);
-        
-        var inforUrl4 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_3;
-        var response5 = org.jsoup.Jsoup.connect(inforUrl4)
+        const inforUrl3 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_2;
+        const response4 = org.jsoup.Jsoup.connect(inforUrl3)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             
             .ignoreContentType(true)
             .execute()
             .body();
-        var data5 = JSON.parse(response5);
+        const data4 = JSON.parse(response4);
         
-        var inforUrl5 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_4;
-        var response6 = org.jsoup.Jsoup.connect(inforUrl5)
+        const inforUrl4 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_3;
+        const response5 = org.jsoup.Jsoup.connect(inforUrl4)
+            .header("accept", "application/json")
+            .header("x-nxopen-api-key", NEXON_API_KEY)
+            
+            .ignoreContentType(true)
+            .execute()
+            .body();
+        const data5 = JSON.parse(response5);
+        
+        const inforUrl5 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_4;
+        const response6 = org.jsoup.Jsoup.connect(inforUrl5)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        var data6 = JSON.parse(response6);
+        const data6 = JSON.parse(response6);
         
-        var inforUrl6 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_5;
-        var response7 = org.jsoup.Jsoup.connect(inforUrl6)
+        const inforUrl6 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_5;
+        const response7 = org.jsoup.Jsoup.connect(inforUrl6)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)
             .ignoreContentType(true)
             .execute()
             .body();
-        var data7 = JSON.parse(response7);
+        const data7 = JSON.parse(response7);
         
-        var inforUrl7 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_6;
-        var response8 = org.jsoup.Jsoup.connect(inforUrl7)
+        const inforUrl7 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_6;
+        const response8 = org.jsoup.Jsoup.connect(inforUrl7)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)            
             .ignoreContentType(true)
             .execute()
             .body();
-        var data8 = JSON.parse(response8);
+        const data8 = JSON.parse(response8);
         
-        var inforUrl8 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_7;
-        var response9 = org.jsoup.Jsoup.connect(inforUrl8)
+        const inforUrl8 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_7;
+        const response9 = org.jsoup.Jsoup.connect(inforUrl8)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)            
             .ignoreContentType(true)
             .execute()
             .body();
-        var data9 = JSON.parse(response9);
+        const data9 = JSON.parse(response9);
 
         // 이번 달 1일 데이터 가져오기
-        var inforUrl9 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_8;
-        var response10 = org.jsoup.Jsoup.connect(inforUrl9)
+        const inforUrl9 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_8;
+        const response10 = org.jsoup.Jsoup.connect(inforUrl9)
             .header("accept", "application/json")
             .header("x-nxopen-api-key", NEXON_API_KEY)            
             .ignoreContentType(true)
             .execute()
             .body();
-        var data10 = JSON.parse(response10);
+        const data10 = JSON.parse(response10);
 
         // 전투력 조회 (현재 - 표시용)
-        var combatPower = 0;
+        let combatPower = 0;
         try {
             var cpUrl = MAPLE_INF_STAT_URL + "?ocid=" + data.ocid;
             var cpResp = org.jsoup.Jsoup.connect(cpUrl)
@@ -3011,7 +2883,7 @@ var day_8 =
         else if (combatPower >= 100000000) cpIcon = "🛡️";
         else cpIcon = "🗡️";
 
-var expToNext = [
+const expToNext = [
 2207026470,
 2471869646,
 2768494003,
@@ -3123,8 +2995,8 @@ var expToNext = [
 1737759854037637];
 
 // 누적 경험치 계산
-var cumExp = [0];
-for (var i = 0; i < expToNext.length; i++) {
+const cumExp = [0];
+for (let i = 0; i < expToNext.length; i++) {
   cumExp[i + 1] = cumExp[i] + expToNext[i];
 }
 
@@ -3145,23 +3017,23 @@ function calcGainedExp(prevLv, prevExp, currLv, currExp) {
     throw new Error('잘못된 레벨 입력입니다.');
   }
 
-  var prevTotalExp = cumExp[prevLv - 200] + (prevExp || 0);
-  var currTotalExp = cumExp[currLv - 200] + (currExp || 0);
+  const prevTotalExp = cumExp[prevLv - 200] + (prevExp || 0);
+  const currTotalExp = cumExp[currLv - 200] + (currExp || 0);
 
   return Math.max(0, currTotalExp - prevTotalExp);
 }
 //남은 경험치
 function getRemainingExpToNextLevel(currLv, currExp) {
   if (currLv < 1 || currLv >= 300) return 0; // 만렙이거나 이상한 값이면 0
-  var requiredForThisLevel = expToNext[currLv - 200]; // 200레벨부터 시작
+  const requiredForThisLevel = expToNext[currLv - 200]; // 200레벨부터 시작
   return Math.max(0, requiredForThisLevel - currExp);
 }
-var namexp=getRemainingExpToNextLevel(Number(data2.character_level),Number(data2.character_exp));
-var ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
+let namexp=getRemainingExpToNextLevel(Number(data2.character_level),Number(data2.character_exp));
+let ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
                               Number(data2.character_level),Number(data2.character_exp))/7
-        var namexp1=namexp;
-        var ave1=ave;                      
-        var av="-"
+        let namexp1=namexp;
+        let ave1=ave;                      
+        let av="-"
         if(ave>=1000000000000)
         {
           ave=ave/1000000000000;
@@ -3181,7 +3053,7 @@ var ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
         {
           av="-";
         }
-        var av2="-"
+        let av2="-"
         if(namexp>=1000000000000)
         {
           namexp=namexp/1000000000000;
@@ -3203,15 +3075,15 @@ var ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
         }
 
         // 이번 달 경험치 평균 계산
-        var today_date = new Date(today.getTime());
-        var monthFirstDate = new Date(today.getTime());
+        const today_date = new Date(today.getTime());
+        const monthFirstDate = new Date(today.getTime());
         monthFirstDate.setDate(1); // 이번 달 1일
 
         today_date.setHours(0, 0, 0, 0);
         monthFirstDate.setHours(0, 0, 0, 0);
-        var daysInMonth = Math.floor((today_date - monthFirstDate) / 86400000) + 1; // 1일부터 오늘까지 일수
+        const daysInMonth = Math.floor((today_date - monthFirstDate) / 86400000) + 1; // 1일부터 오늘까지 일수
 
-        var monthlyAvgExp = null;
+        let monthlyAvgExp = null;
         if (daysInMonth > 0 && data10 && data10.character_level != null && data10.character_exp != null) {
             monthlyAvgExp = calcGainedExp(
                 Number(data10.character_level),
@@ -3221,8 +3093,8 @@ var ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
             ) / daysInMonth;
         }
 
-        var monthlyAve = monthlyAvgExp;
-        var monthlyAv = "";
+        let monthlyAve = monthlyAvgExp;
+        let monthlyAv = "";
         if (monthlyAve != null) {
             if (monthlyAve >= 1000000000000) {
                 monthlyAve = monthlyAve / 1000000000000;
@@ -3236,7 +3108,7 @@ var ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
             }
         }
 
-        var Tag="헤르메스";
+        let Tag="헤르메스";
         if(decodeURIComponent(characterName)=="영디")
         {
           Tag="Empepor⚜️";
@@ -3925,7 +3797,7 @@ var ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
         }
         
         
-        var avetext=" "
+        let avetext=" "
         if(ave>=4000)
         {
           avetext="(거북이)🐢"
@@ -4097,14 +3969,14 @@ var ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
         };
         var fantasyTag = fantasyTags[decodeURIComponent(characterName)] || "";
 
-        var lvup=" ";
+        let lvup=" ";
         if(data3.character_level<data2.character_level)
         {
           lvup="\n🥳"+decodeURIComponent(characterName) +"님 레벨업 축하드립니다🎉🎉."
         }
 
-        var lvupdate= new Date(Date.now()+86400000*(namexp1/ave1));
-        var upday=
+        const lvupdate= new Date(Date.now()+86400000*(namexp1/ave1));
+        const upday=
           lvupdate.getFullYear() + "년" +
           String(lvupdate.getMonth() + 1).padStart(2, "0") + "월" +
           String(lvupdate.getDate()).padStart(2, "0")+ "일" ;
@@ -4130,20 +4002,14 @@ var ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
             replier.reply("해당 캐릭터를 찾을 수 없습니다.");
         }
     } catch (error) {
-        var errMsg = error.message || String(error);
-        java.lang.System.out.println("[BOT ERROR] getMapleOcid: " + errMsg);
-        if (errMsg.indexOf("HTTP error") !== -1) {
-            replier.reply("API 호출 실패 (서버 점검 또는 요청 오류)\n" + errMsg);
-        } else {
-            replier.reply("새벽점검시간 혹은 월드리프, 생성일이 일주일이 되지 않음\n(상세: " + errMsg + ")");
-        }
+        replier.reply("새벽점검시간 혹은 월드리프, 생성일이 일주일이 되지 않음 ");
         return;
     }
     function getRealExp(level, rate) {
     level = Number(level);
     rate = Number(rate);
     if (level < 200 || level >= 300) return 0;
-    var expToNextLevel = expToNext[level - 200]; // index = level - 200
+    const expToNextLevel = expToNext[level - 200]; // index = level - 200
     return expToNextLevel * (rate / 100);
 }
     function formatExp(exp) {
@@ -4159,17 +4025,17 @@ var ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
 
 }
     function getExpDiffText(prevLevel, prevRate, currLevel, currRate) {
-    var prevExp = getRealExp(prevLevel, prevRate);
-    var currExp = getRealExp(currLevel, currRate);
+    const prevExp = getRealExp(prevLevel, prevRate);
+    const currExp = getRealExp(currLevel, currRate);
 
-    var gainedExp = 0;
+    let gainedExp = 0;
     if (currLevel === prevLevel) {
         gainedExp = currExp - prevExp;
     } else if (currLevel > prevLevel) {
         // 레벨업 경험치 계산
-        var expRemainingPrev = getRealExp(prevLevel, 100) - prevExp;
-        var midTotal = 0;
-        for (var lv = prevLevel + 1; lv < currLevel; lv++) {
+        const expRemainingPrev = getRealExp(prevLevel, 100) - prevExp;
+        let midTotal = 0;
+        for (let lv = prevLevel + 1; lv < currLevel; lv++) {
             midTotal += expToNext[lv - 200];
         }
         gainedExp = expRemainingPrev + midTotal + currExp;
@@ -4313,7 +4179,6 @@ function getEquipment(characterName, replier, slotFilter) {
             replier.reply(result.join("\n"));
 
         } catch (e) {
-            java.lang.System.out.println("[BOT ERROR] 장비 조회: " + e.message);
             replier.reply("장비 조회 오류: " + e.message);
         }
     });
@@ -4334,41 +4199,662 @@ var schedulerTasks = [
 var schedulerRunning = false;
 var schedulerLastRun = "";
 
-// ==========================================
-// 심볼 강화 비용 테이블 (사진 기반)
-// ==========================================
-// 아케인심볼 한번 필요 성장치 (Lv.1→2 ... Lv.19→20)
-var ARCANE_GROWTH_REQ = [12,15,20,27,36,47,60,75,92,111,132,155,180,207,236,267,300,335,372];
-// 어센틱 = 그랜드 어센틱 한번 필요 성장치 (Lv.1→2 ... Lv.10→11)
-var AUTHENTIC_GROWTH_REQ = [29,76,141,224,325,444,581,736,909,1100];
+function runScheduler() {
+    if (schedulerRunning) return;
+    schedulerRunning = true;
+    
+    var thread = new java.lang.Thread({
+        run: function() {
+            while (true) {
+                try {
+                    var now = new Date();
+                    var day = now.getDay();
+                    var hour = now.getHours();
+                    var minute = now.getMinutes();
+                    var currentKey = day + "-" + hour + "-" + minute;
+                    
+                    if (currentKey !== schedulerLastRun) {
+                        for (var i = 0; i < schedulerTasks.length; i++) {
+                            var task = schedulerTasks[i];
+                            if (task.days.indexOf(day) !== -1 &&
+                                task.hour === hour &&
+                                task.minute === minute) {
+                                Api.sendMessage(task.room, task.message);
+                            }
+                        }
+                        schedulerLastRun = currentKey;
+                    }
+                    
+                    java.lang.Thread.sleep(10000); // 10초마다 체크
+                } catch (e) {
+                    // 에러 무시하고 계속 실행
+                }
+            }
+        }
+    });
+    thread.start();
+}
 
-// 아케인 지역별 메소 비용 (행: Lv.1→2 ... Lv.19→20, 1심볼 기준)
-var ARCANE_MESO = {
-    "소멸의 여로": [970000,1230000,1660000,2260000,3060000,4040000,5220000,6600000,8180000,9990000,12010000,14260000,16740000,19450000,22420000,25630000,29100000,32830000,36820000],
-    "츄츄 아일랜드": [1210000,1530000,2060000,2800000,3780000,4980000,6420000,8100000,10020000,12210000,14650000,17360000,20340000,23590000,27140000,30970000,35100000,39530000,44260000],
-    "레헬른": [1450000,1830000,2460000,3340000,4500000,5920000,7620000,9600000,11860000,14430000,17290000,20460000,23940000,27730000,31860000,36310000,41100000,46230000,51700000],
-    "아르카나": [1690000,2130000,2860000,3880000,5220000,6860000,8820000,11100000,13700000,16650000,19930000,23560000,27540000,31870000,36580000,41650000,47100000,52930000,59140000],
-    "모라스": [1930000,2430000,3260000,4420000,5940000,7800000,10020000,12600000,15540000,18870000,22570000,26660000,31140000,36010000,41300000,46990000,53100000,59630000,66580000],
-    "에스페라": [2170000,2730000,3660000,4960000,6660000,8740000,11220000,14100000,17380000,21090000,25210000,29760000,34740000,40150000,46020000,52330000,59100000,66330000,74020000]
-};
+// 스케줄러 시작
+runScheduler();
 
-// 어센틱 지역별 메소 비용 (행: Lv.1→2 ... Lv.10→11, 1심볼 기준)
-var AUTHENTIC_MESO = {
-    "세르니움": [36500000,91200000,160700000,241900000,331500000,426200000,522900000,618200000,709000000,792000000],
-    "아르크스": [41700000,104800000,186100000,282200000,390000000,506100000,627400000,750700000,872600000,990000000],
-    "오디움": [46900000,118500000,211500000,322500000,448500000,586000000,732000000,883200000,1036200000,1188000000],
-    "도원경": [52200000,132200000,236800000,362800000,507000000,666000000,836600000,1015600000,1199800000,1386000000],
-    "아르테리아": [57400000,145900000,262200000,403200000,565500000,745900000,941200000,1148100000,1363500000,1584000000],
-    "카르시온": [62600000,159600000,287600000,443500000,624000000,825800000,1045800000,1280600000,1527100000,1782000000]
-};
+function response(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
+    // 분리된 part 호출
+    try { responsePart1(room, msg, sender, isGroupChat, replier, imageDB, packageName); } catch(e){}
+    try { responsePart2(room, msg, sender, isGroupChat, replier, imageDB, packageName); } catch(e){}
 
-// 그랜드 어센틱심볼 메소 비용 (행: Lv.1→2 ... Lv.10→11)
-var GRAND_AUTHENTIC_MESO = {
-    "탈라하트": [113600000,293300000,535800000,837700000,1196000000,1607200000,2068300000,2576000000,3126900000,3718000000],
-    "기어드락": [139700000,361700000,662700000,1039300000,1488500000,2006800000,2591200000,3238400000,3945000000,4708000000]
-};
+    // ===== /업데이트 (관리자 전용) =====
+    if (msg === "/업데이트") {
+        if (typeof ADMINS !== "undefined" && ADMINS.indexOf(sender) === -1) {
+            replier.reply("권한이 없습니다. 관리자만 사용 가능합니다.");
+            return;
+        }
+        if (typeof BotUpdate === "undefined") {
+            replier.reply("BotUpdate 미주입 (앱 재빌드/재설치 필요)");
+            return;
+        }
+        replier.reply("⏳ 깃에서 최신 스크립트 가져오는 중...");
+        new java.lang.Thread(function() {
+            try {
+                var result = BotUpdate.applyRemote("https://raw.githubusercontent.com/lee775/KakaoBot-Android/master/code.txt");
+                replier.reply(String(result));
+            } catch (e) {
+                replier.reply("/업데이트 오류: " + e);
+            }
+        }).start();
+        return;
+    }
 
-// 심볼 1개의 강화 가능 레벨/메소 계산
+    if (msg === "/tmi" || msg.startsWith("/tmi ")) {
+        var __rTmi = resolveName(msg.slice(4).trim(), sender);
+        if (!__rTmi) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getTMI(encodeURIComponent(__rTmi), replier);
+    }
+    if (msg=="/보스")
+    {
+      clan(replier);
+    }
+    if (msg=="/테")
+    {
+      test(replier);
+    }
+    if(msg=="/기능" || msg=="/ㄱㄴ" || msg=="/도움말")
+    {
+      option(replier);
+    }
+    if (msg.startsWith("/확률 ")) {
+    const args = msg.slice(4).trim().split(" ");
+    const chance = parseInt(args[0]);
+    const count = args.length > 1 ? parseInt(args[1]) : 1;
+
+    if (isNaN(chance) || chance < 0 || chance > 100) {
+        replier.reply("확률은 0~100 사이의 정수여야 합니다.");
+    } else if (isNaN(count) || count <= 0) {
+        replier.reply("시도 횟수는 1 이상의 정수여야 합니다.");
+    } else if (count > 999999999999) {
+        replier.reply("시도 횟수는 999999999999 이하로 설정해주세요.");
+    } else {
+        starforce(chance, count, replier);
+    }
+}
+    
+
+    if (msg === "/환산" || msg.startsWith("/환산 ") || msg === "&&" || msg.startsWith("&& ")) {
+        var rawArg = msg.startsWith("/환산") ? msg.slice(3).trim() : msg.slice(2).trim();
+        var resolved = resolveName(rawArg, sender);
+        if (!resolved) {
+            replier.reply("닉네임을 입력하거나 /캐릭터등록 닉네임 으로 먼저 등록해주세요.");
+        } else {
+            getLink(encodeURIComponent(resolved), replier);
+        }
+    }
+    if (msg === "/헥사순서" || msg.startsWith("/헥사순서 ")) {
+        var __rHex = resolveName(msg.slice(5).trim(), sender);
+        if (!__rHex) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getHexaOrder(encodeURIComponent(__rHex), replier);
+    }
+    if (msg === "/헥사" || msg.startsWith("/헥사 ")) {
+        var __rHex2 = resolveName(msg.slice(3).trim(), sender);
+        if (!__rHex2) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getHexaOrder(encodeURIComponent(__rHex2), replier);
+    }
+    if (msg === "/배율" || msg.startsWith("/배율 ")) {
+        var __rRatio = resolveName(msg.slice(3).trim(), sender);
+        if (!__rRatio) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getBossRatio(encodeURIComponent(__rRatio), replier);
+    }
+    if (msg === "/썬데이" || msg === "/썬데이메이플" || msg === "/ㅆㄷㅇ") {
+        getSundayMaple(replier, room);
+    }
+    if (msg === "/이벤트") {
+        getCurrentEvents(replier);
+    }
+    // ===== /심볼 /세금 /탈세 =====
+    if (msg === "/심볼" || msg.startsWith("/심볼 ") ||
+        msg === "/세금" || msg.startsWith("/세금 ") ||
+        msg === "/탈세" || msg.startsWith("/탈세 ")) {
+        var symbolInput = msg.slice(3).trim();
+        var symbolCharName = resolveName(symbolInput, sender);
+        if (!symbolCharName) {
+            replier.reply("등록된 캐릭터가 없습니다.\n사용법: /캐릭터등록 닉네임\n등록 후엔 명령어만 입력해도 자동 조회됩니다.");
+            return;
+        }
+        getSymbolInfo(encodeURIComponent(symbolCharName), replier);
+    }
+}
+function test(replier) {
+    // Paste your direct image link here
+    const imageUrl = "https://i.imgur.com/FOS0bu1.jpg"; 
+    replier.reply(imageUrl);
+}
+function getLink(idlink, replier) {
+    var thread = new java.lang.Thread(function() {
+        try {
+            var url = "https://api.maplescouter.com/api/id?name=" + idlink + "&preset=00000&region=kms";
+            var resp = org.jsoup.Jsoup.connect(url)
+                .header("api-key", "ff6a7ce0-c4ce-11ee-900c-df03c8ea0d4c")
+                .header("Content-Type", "application/json")
+                .ignoreContentType(true)
+                .execute()
+                .body();
+            var data = JSON.parse(resp);
+            if (!data || !data.calculatedData) {
+                replier.reply("캐릭터 정보를 불러오지 못했습니다.");
+                return;
+            }
+            var d = data.calculatedData;
+            function fmt(n) {
+                var s = String(Math.floor(Number(n)));
+                return s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            }
+            var name = decodeURIComponent(idlink);
+            replier.reply(
+                "[" + name + "] " + d.class + "\n" +
+                "전투력: " + fmt(d.combatPower) + "\n" +
+                "일반환산: " + fmt(d.boss380_stat) + "\n" +
+                "헥사환산: " + fmt(d.boss380_hexaStat)
+            );
+        } catch (e) {
+            replier.reply("환산 조회 실패: " + e);
+        }
+    });
+    thread.start();
+}
+function getBossRatio(idlink, replier) {
+    var thread = new java.lang.Thread(function() {
+        try {
+            var url = "https://api.maplescouter.com/api/id?name=" + idlink + "&preset=00000&region=kms";
+            var resp = org.jsoup.Jsoup.connect(url)
+                .header("api-key", "ff6a7ce0-c4ce-11ee-900c-df03c8ea0d4c")
+                .header("Content-Type", "application/json")
+                .ignoreContentType(true)
+                .timeout(15000)
+                .execute()
+                .body();
+            var data = JSON.parse(resp);
+            if (!data || !data.calculatedData || !data.userApiData || !data.userApiData.info) {
+                replier.reply("캐릭터 정보를 불러오지 못했습니다.");
+                return;
+            }
+            var cd = data.calculatedData;
+            var info = data.userApiData.info;
+            var charLv = parseInt(info.character_level) || 0;
+            var charArc = parseInt(info.arcaneForce) || 0;
+            var charAuth = parseInt(info.authenticForce) || 0;
+            var name = decodeURIComponent(idlink);
+            var cls = cd.class || "";
+            var displayStat = Number(cd.boss380_hexaStat);
+            var dmg300 = Number(cd.calculatedHexaDamage_300);
+            var dmg380 = Number(cd.calculatedHexaDamage_380);
+            var sp300 = cd.spline_300;
+            var sp380 = cd.spline_380;
+
+            // 보스 메타: [보스명, lv, arc, auth, isBM, cut, guard]
+            var BOSSES = [
+                ["익스트림 카링",          285, 0,    480, 0, 199502, 380],
+                ["익스 최초의 대적자",      290, 0,    460, 0, 218508, 380],
+                ["익스트림 칼로스",        285, 0,    440, 0, 96146,  380],
+                ["데스티니 발드릭스",      290, 0,    700, 0, 479156, 380],
+                ["하드 발드릭스",          290, 0,    700, 0, 479156, 380],
+                ["하드 찬란한 흉성",        280, 0,    400, 0, 306927, 380],
+                ["데스티니 림보",          285, 0,    500, 0, 295559, 380],
+                ["하드 림보",              285, 0,    500, 0, 295559, 380],
+                ["데스티니 대적자",        285, 0,    340, 0, 257423, 380],
+                ["익스트림 세렌",          285, 0,    200, 0, 215678, 380],
+                ["하드 최초의 대적자",      285, 0,    340, 0, 204618, 380],
+                ["하드 카링",              285, 0,    350, 0, 199502, 380],
+                ["노멀 발드릭스",          290, 0,    700, 0, 212958, 380],
+                ["익스 검은마법사",        280, 1320, 0,   1, 169507, 300],
+                ["데스티니 카링",          285, 0,    480, 0, 166252, 380],
+                ["노멀 림보",              285, 0,    500, 0, 150568, 380],
+                ["데스티니 칼로스",        285, 0,    440, 0, 133002, 380],
+                ["카오스 칼로스",          285, 0,    330, 0, 133002, 380],
+                ["데스티니 세렌",          285, 0,    200, 0, 86740,  380],
+                ["노멀 카링",              285, 0,    330, 0, 70001,  380],
+                ["노멀 찬란한 흉성",        280, 0,    400, 0, 68206,  380],
+                ["익스트림 스우",          285, 0,    0,   0, 52045,  380],
+                ["챔피언 칼로스",          285, 0,    330, 0, 40101,  380],
+                ["노멀 최초의 대적자",      280, 0,    320, 0, 34103,  380],
+                ["노멀 칼로스",            285, 0,    300, 0, 27329,  380],
+                ["챔피언 세렌",            275, 0,    200, 0, 20674,  380],
+                ["이지 카링",              275, 0,    230, 0, 18472,  380],
+                ["하드 세렌",              275, 0,    200, 0, 17015,  380],
+                ["이지 최초의 대적자",      270, 0,    220, 0, 11400,  380],
+                ["이지 감시자 칼로스",      270, 0,    200, 0, 8436,   380],
+                ["하드 검은마법사",        275, 1320, 0,   1, 16510,  300],
+                ["챔피언 검은마법사",      275, 1320, 0,   1, 12885,  300]
+            ];
+
+            // 레벨 차이 → 데미지 배율 (×100, 클램프 +5/-14)
+            var LV_TBL = {
+                "5":120, "4":118, "3":116, "2":114, "1":112, "0":110,
+                "-1":105.3, "-2":100.7, "-3":96.2, "-4":91.8, "-5":87.5,
+                "-6":85, "-7":82.5, "-8":80, "-9":77.5, "-10":75,
+                "-11":72.5, "-12":70, "-13":67.5, "-14":65
+            };
+            function lvDmg(cl, bl) {
+                var g = cl - bl;
+                if (g > 5) g = 5;
+                if (g < -14) g = -14;
+                return LV_TBL[g.toString()] / 100;
+            }
+            function arcDmg(bArc, cArc) {
+                if (!bArc) return 1.0;
+                var p = cArc / bArc * 100;
+                if (p < 10) return 0.10;
+                if (p < 30) return 0.30;
+                if (p < 50) return 0.60;
+                if (p < 70) return 0.70;
+                if (p < 100) return 0.80;
+                if (p < 110) return 1.00;
+                if (p < 130) return 1.10;
+                if (p < 150) return 1.30;
+                return 1.50;
+            }
+            function authDmg(bAuth, cAuth) {
+                if (!bAuth) return 1.0;
+                var d = cAuth - bAuth;
+                if (d < -90) return 0.05;
+                if (d < -80) return 0.10;
+                if (d < -70) return 0.20;
+                if (d < -60) return 0.30;
+                if (d < -50) return 0.40;
+                if (d < -40) return 0.50;
+                if (d < -30) return 0.60;
+                if (d < -20) return 0.70;
+                if (d < -10) return 0.80;
+                if (d < 0)   return 0.90;
+                if (d < 10)  return 1.00;
+                if (d < 20)  return 1.05;
+                if (d < 30)  return 1.10;
+                if (d < 40)  return 1.15;
+                if (d < 50)  return 1.20;
+                return 1.25;
+            }
+            function factor(boss) {
+                var bLv = boss[1], bArc = boss[2], bAuth = boss[3], isBM = boss[4];
+                var R = arcDmg(bArc, charArc);
+                var D = authDmg(bAuth, charAuth);
+                var T = lvDmg(charLv, bLv);
+                var P = 1.0;
+                if (bArc) P = isBM ? 1.1 : 1.5;
+                var norm = 1.2 * P * (bAuth ? 1.25 : 1.0);
+                return (R * D * T) / norm;
+            }
+
+            // cubic Hermite spline 역함수: y(데미지) → x(환산값)
+            function inverseSpline(spline, target) {
+                var x = spline.x, y = spline.y, m = spline.m, n = x.length;
+                if (target <= y[0]) return x[0];
+                if (target >= y[n-1]) return x[n-1];
+                var lo = 0, hi = n - 1;
+                while (lo + 1 < hi) {
+                    var mid = (lo + hi) >> 1;
+                    if (y[mid] <= target) lo = mid; else hi = mid;
+                }
+                var x0 = x[lo], x1 = x[lo+1];
+                var y0 = y[lo], y1 = y[lo+1];
+                var m0 = m[lo], m1 = m[lo+1];
+                var dx = x1 - x0;
+                var t = (target - y0) / (y1 - y0);
+                for (var it = 0; it < 30; it++) {
+                    var t2 = t*t, t3 = t2*t;
+                    var h00 = 2*t3 - 3*t2 + 1;
+                    var h10 = t3 - 2*t2 + t;
+                    var h01 = -2*t3 + 3*t2;
+                    var h11 = t3 - t2;
+                    var yT = h00*y0 + h10*dx*m0 + h01*y1 + h11*dx*m1;
+                    var dh00 = 6*t2 - 6*t;
+                    var dh10 = 3*t2 - 4*t + 1;
+                    var dh01 = -6*t2 + 6*t;
+                    var dh11 = 3*t2 - 2*t;
+                    var dyT = dh00*y0 + dh10*dx*m0 + dh01*y1 + dh11*dx*m1;
+                    if (Math.abs(yT - target) < 0.5) break;
+                    if (dyT === 0) break;
+                    t -= (yT - target) / dyT;
+                    if (t < 0) t = 0;
+                    if (t > 1) t = 1;
+                }
+                return x0 + t * dx;
+            }
+
+            var msg = "[" + name + "] " + cls + "\n";
+            msg += "헥사환산: " + displayStat + "\n\n";
+            msg += "보스별 클리어 배율\n";
+            for (var i = 0; i < BOSSES.length; i++) {
+                var b = BOSSES[i];
+                var f = factor(b);
+                var guard = b[6];
+                var baseDmg = (guard === 300) ? dmg300 : dmg380;
+                var spline = (guard === 300) ? sp300 : sp380;
+                var penaltyStat = inverseSpline(spline, baseDmg * f);
+                var pct = Math.round(penaltyStat / b[5] * 100);
+                msg += b[0] + ": " + pct + "%\n";
+            }
+            replier.reply(msg.replace(/\n+$/, ""));
+        } catch (e) {
+            replier.reply("배율 조회 실패: " + e);
+        }
+    });
+    thread.start();
+}
+function getSundayMaple(replier, room) {
+    var thread = new java.lang.Thread(function() {
+        try {
+            var listResp = org.jsoup.Jsoup.connect("https://open.api.nexon.com/maplestory/v1/notice-event")
+                .header("x-nxopen-api-key", NEXON_API_KEY)
+                .header("accept", "application/json")
+                .ignoreContentType(true)
+                .timeout(15000)
+                .execute()
+                .body();
+            var list = JSON.parse(listResp);
+            if (!list || !list.event_notice) return;
+            var matches = [];
+            for (var i = 0; i < list.event_notice.length; i++) {
+                var n = list.event_notice[i];
+                if (n.title && n.title.indexOf("썬데이 메이플") >= 0) matches.push(n);
+            }
+            if (matches.length === 0) return;
+            matches.sort(function(a, b) { return b.date.localeCompare(a.date); });
+            var latest = matches[0];
+            var detailResp = org.jsoup.Jsoup.connect("https://open.api.nexon.com/maplestory/v1/notice-event/detail?notice_id=" + latest.notice_id)
+                .header("x-nxopen-api-key", NEXON_API_KEY)
+                .header("accept", "application/json")
+                .ignoreContentType(true)
+                .timeout(15000)
+                .execute()
+                .body();
+            var detail = JSON.parse(detailResp);
+            var imgMatch = (detail.contents || "").match(/<img\s+src=["']([^"']+)["']/i);
+            if (imgMatch) replier.reply(imgMatch[1]);
+        } catch (e) {}
+    });
+    thread.start();
+}
+function getCurrentEvents(replier) {
+    var thread = new java.lang.Thread(function() {
+        try {
+            var resp = org.jsoup.Jsoup.connect("https://open.api.nexon.com/maplestory/v1/notice-event")
+                .header("x-nxopen-api-key", NEXON_API_KEY)
+                .header("accept", "application/json")
+                .ignoreContentType(true)
+                .timeout(15000)
+                .execute()
+                .body();
+            var list = JSON.parse(resp);
+            if (!list || !list.event_notice) {
+                replier.reply("이벤트 목록 조회 실패");
+                return;
+            }
+            function ms(s) { return new Date(s.replace(/[+-]\d{2}:\d{2}$/, "")).getTime(); }
+            function fmt(s) { return s.replace("T", " ").replace(/[+-]\d{2}:\d{2}$/, ""); }
+            var now = new Date().getTime();
+            var ongoing = [];
+            for (var i = 0; i < list.event_notice.length; i++) {
+                var n = list.event_notice[i];
+                if (ms(n.date_event_start) <= now && now <= ms(n.date_event_end)) ongoing.push(n);
+            }
+            if (ongoing.length === 0) {
+                replier.reply("진행중인 이벤트가 없습니다.");
+                return;
+            }
+            ongoing.sort(function(a, b) { return ms(a.date_event_end) - ms(b.date_event_end); });
+            var msg = "📅 진행중 이벤트 (" + ongoing.length + "건)\n";
+            for (var j = 0; j < ongoing.length; j++) {
+                var ev = ongoing[j];
+                msg += "\n• " + ev.title + "\n";
+                msg += "  ~ " + fmt(ev.date_event_end);
+            }
+            replier.reply(msg);
+        } catch (e) {
+            replier.reply("이벤트 조회 실패: " + e);
+        }
+    });
+    thread.start();
+}
+function getHexaOrder(idlink, replier) {
+    var thread = new java.lang.Thread(function() {
+        try {
+            var infoUrl = "https://api.maplescouter.com/api/id?name=" + idlink + "&preset=00000&region=kms";
+            var infoResp = org.jsoup.Jsoup.connect(infoUrl)
+                .header("api-key", "ff6a7ce0-c4ce-11ee-900c-df03c8ea0d4c")
+                .header("Content-Type", "application/json")
+                .ignoreContentType(true)
+                .timeout(15000)
+                .execute()
+                .body();
+            var info = JSON.parse(infoResp);
+            if (!info || !info.calculatedData || !info.userStat) {
+                replier.reply("캐릭터 정보를 불러오지 못했습니다.");
+                return;
+            }
+            var className = info.calculatedData.class || "";
+            var body = JSON.stringify({
+                myHexa: info.userStat.hexa,
+                specEff: info.calculatedData.specEfficiency,
+                sole: false,
+                suro: false,
+                cycle: "3",
+                userStat: info.userStat
+            });
+            var postUrl = "https://api.maplescouter.com/api/calc/hexa-order?class=" + encodeURIComponent(className);
+            var hexaResp = org.jsoup.Jsoup.connect(postUrl)
+                .method(org.jsoup.Connection.Method.POST)
+                .header("api-key", "ff6a7ce0-c4ce-11ee-900c-df03c8ea0d4c")
+                .header("Content-Type", "application/json")
+                .ignoreContentType(true)
+                .timeout(20000)
+                .requestBody(body)
+                .execute()
+                .body();
+            var hexa = JSON.parse(hexaResp);
+            if (!hexa || !hexa.class_hexa) {
+                replier.reply("헥사 순서 조회 실패: 응답 형식 오류");
+                return;
+            }
+            var arr = hexa.class_hexa;
+            var pos = hexa.myPosition || 0;
+            var name = decodeURIComponent(idlink);
+            if (pos >= arr.length) {
+                replier.reply("[" + name + "] " + className + "\n헥사 강화 완료!");
+                return;
+            }
+            function fmt(n) {
+                var s = String(Math.floor(Number(n)));
+                return s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            }
+            var msg = "[" + name + "] " + className + "\n";
+            msg += "헥사 진행률: " + pos + "/" + arr.length + "\n";
+            msg += "다음 강화 추천\n";
+            var shown = 0;
+            for (var i = pos; i < arr.length && shown < 7; i++) {
+                var row = arr[i];
+                shown++;
+                msg += shown + ". " + row[0] + " → Lv" + row[1]
+                     + " (조각 " + fmt(row[4]) + ", 솔 " + fmt(row[3]) + ")\n";
+            }
+            replier.reply(msg.replace(/\n+$/, ""));
+        } catch (e) {
+            replier.reply("헥사 순서 조회 실패: " + e);
+        }
+    });
+    thread.start();
+}
+function starforce(chance, count, replier) {
+    let success = 0;
+    let fail = 0;
+
+    for (let i = 0; i < count; i++) {
+        let num = Math.floor(Math.random() * 100);
+        if (num < chance) {
+            success++;
+        } else {
+            fail++;
+        }
+    }
+
+    replier.reply("성공 : "+success+"회\n실패 : "+fail+"회");
+}
+function clan(replier)
+{
+  replier.reply("https://maple-boss-site.vercel.app/");
+}
+function option(replier) {
+    // 카톡 "전체보기" 트리거: 첫 줄 끝에 줄바꿈 없이 보이지 않는 패딩 (zero-width)
+    var m = "📖 봇 기능 안내" + new Array(3001).join("​") + "\n";
+    m += "════════════════\n\n";
+
+    m += "🎯 캐릭터 등록\n";
+    m += "한 번 등록하면 닉네임 생략 가능!\n";
+    m += "─────────────────\n";
+    m += "/캐릭터등록 [닉네임]\n";
+    m += "/캐릭터삭제\n";
+    m += "/내캐릭터\n\n";
+
+    m += "🔍 캐릭터 조회\n";
+    m += "─────────────────\n";
+    m += "/환산 [닉] / && [닉]\n";
+    m += " → 전투력·일반환산·헥사환산\n";
+    m += "/배율 [닉] - 보스별 클리어 배율\n";
+    m += "/헥사순서 /헥사 [닉] - 헥사 강화 추천\n";
+    m += "/ㄱㅎㅊ [닉] - 종합 정보\n";
+    m += "/경험치 [닉] - 현재 경험치\n";
+    m += "/tmi [닉] - 캐릭터 TMI\n";
+    m += "@@ [닉] - 월간 경험치\n";
+    m += "@@ [닉] [목표레벨] - 레벨업 예측\n";
+    m += "@@@ [닉] - 월간 경험치 히스토리\n\n";
+
+    m += "📅 이벤트 / 공지\n";
+    m += "─────────────────\n";
+    m += "/이벤트 - 진행중 이벤트 목록\n";
+    m += "/썬데이 /ㅆㄷㅇ - 썬데이 메이플 안내\n\n";
+
+    m += "💪 전투력\n";
+    m += "─────────────────\n";
+    m += "/전투력 [닉]\n";
+    m += "/투력 [닉]\n";
+    m += "/ㅌㄹ [닉]\n";
+    m += "/ㅈㅌㄹ [닉]\n";
+    m += "@@@@ [닉]\n";
+    m += "(모두 동일한 전투력 조회)\n\n";
+
+    m += "🛡️ 장비 조회\n";
+    m += "─────────────────\n";
+    m += "/장비 [닉] [부위]\n";
+    m += "/ㅈㅂ [닉] [부위]\n";
+    m += "부위 생략 시 전체 요약\n\n";
+
+    m += "🏆 랭킹\n";
+    m += "─────────────────\n";
+    m += "@@ 봄비 / 시계꽃 / 랭킹 / 스타\n";
+    m += " → 길드 월간 경험치 랭킹\n";
+    m += "@@@@ 헤르메스 / 시계꽃 / 스타\n";
+    m += " → 길드 전투력 랭킹\n\n";
+
+    m += "🎮 시뮬레이터 / 계산기\n";
+    m += "─────────────────\n";
+    m += "/스타 [현재] [목표] - 스타포스\n";
+    m += "/샤타 [현재] [목표] - 샤프스타포스\n";
+    m += "/6차 [현재] [목표] - 6차 코어 비용\n";
+    m += "/확률 [확률%] [횟수] - 확률 시뮬\n\n";
+
+    m += "📦 길드 / 잡학\n";
+    m += "─────────────────\n";
+    m += "/창고 또는 검은돈 - 길드 창고\n";
+    m += "/보스 - 보스 사이트\n";
+    m += "/수로 - 수로 점수표\n";
+    m += "/음식 - 점심 추천\n";
+    m += "/코디 - 코디 사이트\n\n";
+
+    m += "📝 벽지\n";
+    m += "─────────────────\n";
+    m += "/벽지 - 벽지 보기\n";
+    m += "/등록 [내용] - 벽지에 글 등록\n";
+    m += "/삭제 - 내 글 삭제\n\n";
+
+    m += "❓ 도움말\n";
+    m += "─────────────────\n";
+    m += "/기능 /ㄱㄴ /도움말\n";
+    m += "════════════════";
+
+    replier.reply(m);
+}
+function getTMI(characterName, replier) {
+
+    let ment=" ";
+    if(decodeURIComponent(characterName)=="코코섬")
+    {
+      ment="tmi창시자";
+    }
+    else if(decodeURIComponent(characterName)=="덕고미콩")
+    {
+      ment="길드 마스터\n환산9만대 소마 \n확성기 대량 사용자\n클래식 애청자\n도자기 그림 수집가";
+    }
+    else if(decodeURIComponent(characterName)=="꿍색")
+    {
+      ment="보스관련 관리자\n환산9만대 나로 \n수로10만";
+    }
+    else if(decodeURIComponent(characterName)=="플로렌스")
+    {
+      ment="재획단 수장\n잠들지 않는자 \n블랙마켓 상인\n플로봇 개발자";
+    }
+    else if(decodeURIComponent(characterName)=="늘귤")
+    {
+      ment="길드 창립멤버\n환산9만대 나워 \n수로10만";
+    }
+    else if(decodeURIComponent(characterName)=="아스티핀")
+    {
+      ment="36퍼 잠재를 좋아한다\n11월부뒤 군인 \n검은돈 vip";
+    }
+    else if(decodeURIComponent(characterName)=="렌영v")
+    {
+      ment="렌1위\n재획단 간부";
+    }
+    else if(decodeURIComponent(characterName)=="뭘해도우냥")
+    {
+      ment="수로10만\n9만대 듀블이다";
+    }
+    else if(decodeURIComponent(characterName)=="영디")
+    {
+      ment="레벨 1위\n수로10만\n9만대 카인이다.";
+    }
+    else if(decodeURIComponent(characterName)=="아퐁")
+    {
+      ment="291렙 비숍\n인사단 수장";
+    }
+     else if(decodeURIComponent(characterName)=="높푸")
+    {
+      ment="최초의 재획단\n허리 재활로 장기 휴식중";
+    }
+     else if(decodeURIComponent(characterName)=="가람님")
+    {
+      ment="과거 레벨1위 오래유지\n술을 좋아한다";
+    }
+    
+    replier.reply("🏅🏅  "+decodeURIComponent(characterName)+"님의 TMI"+"  🏅🏅\n"+ment+"\n(추가tmi가 있다면 알려주세요)");
+}
+// ===== /탈세 /심볼 /세금 관련 함수 (NEXON 심볼 API) =====
 function calcSymbolUpgrade(currentLevel, currentGrowth, growthReqTable, mesoTable) {
     var levelsUp = 0;
     var totalMeso = 0;
@@ -4561,195 +5047,3 @@ function getSymbolInfo(characterName, replier) {
     });
     thread.start();
 }
-
-// ==========================================
-// 추가 기능 함수
-// ==========================================
-function test(replier) {
-    // Paste your direct image link here
-    var imageUrl = "https://i.imgur.com/FOS0bu1.jpg"; 
-    replier.reply(imageUrl);
-}
-function getLink(idlink, replier) {
-    var thread = new java.lang.Thread(function() {
-        try {
-            var url = "https://api.maplescouter.com/api/id?name=" + idlink + "&preset=00000&region=kms";
-            var resp = org.jsoup.Jsoup.connect(url)
-                .header("api-key", "ff6a7ce0-c4ce-11ee-900c-df03c8ea0d4c")
-                .header("Content-Type", "application/json")
-                .ignoreContentType(true)
-                .execute()
-                .body();
-            var data = JSON.parse(resp);
-            if (!data || !data.calculatedData) {
-                replier.reply("캐릭터 정보를 불러오지 못했습니다.");
-                return;
-            }
-            var d = data.calculatedData;
-            function fmt(n) {
-                var s = String(Math.floor(Number(n)));
-                return s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-            }
-            var name = decodeURIComponent(idlink);
-            replier.reply(
-                "[" + name + "] " + d.class + "\n" +
-                "전투력: " + fmt(d.combatPower) + "\n" +
-                "일반환산: " + fmt(d.boss380_stat) + "\n" +
-                "헥사환산: " + fmt(d.boss380_hexaStat)
-            );
-        } catch (e) {
-            replier.reply("환산 조회 실패: " + e);
-        }
-    });
-    thread.start();
-}
-function starforce(chance, count, replier) {
-    var success = 0;
-    var fail = 0;
-
-    for (var i = 0; i < count; i++) {
-        var num = Math.floor(Math.random() * 100);
-        if (num < chance) {
-            success++;
-        } else {
-            fail++;
-        }
-    }
-
-    replier.reply("성공 : "+success+"회\n실패 : "+fail+"회");
-}
-function clan(replier)
-{
-  replier.reply("https://maple-boss-site.vercel.app/");
-}
-function option(replier)
-{
-    var helpMsg = "📋 [메이플 봇 기능 목록]\n\n";
-    helpMsg += "━━━ 캐릭터 조회 ━━━\n";
-    helpMsg += "/ㄱㅎㅊ, /경험치, %% [ID]\n";
-    helpMsg += "%% [ID] [목표레벨] → 레벨업 예측\n";
-    helpMsg += "%%% [ID] → 월간 경험치\n";
-    helpMsg += "/ㅌㄹ, /ㅈㅌㄹ, /투력, /전투력, %%%% [ID]\n";
-    helpMsg += "/장비, /ㅈㅂ [ID] [부위]\n";
-    helpMsg += "/환산 [ID] → 환산 사이트\n";
-    helpMsg += "/tmi [ID] → TMI 정보\n\n";
-    helpMsg += "━━━ 랭킹 조회 ━━━\n";
-    helpMsg += "%% 헤르메스/시계꽃/랭킹/스타\n";
-    helpMsg += "%%%% 헤르메스/시계꽃/스타\n\n";
-    helpMsg += "━━━ 계산/시뮬 ━━━\n";
-    helpMsg += "/6차 [시작] [끝] → 코어 재료\n";
-    helpMsg += "/스타, /샤타 [시작] [끝]\n";
-    helpMsg += "/확률 [확률] → 시뮬레이션\n";
-    helpMsg += "/확률 [확률] [횟수]\n\n";
-    helpMsg += "━━━ 길드 정보 ━━━\n";
-    helpMsg += "/수로 → 수로 점수표\n";
-    helpMsg += "/모집 → 모집 양식\n";
-    helpMsg += "/창고, 검은돈 → 길드 창고\n\n";
-    helpMsg += "━━━ 벽지 기능 ━━━\n";
-    helpMsg += "/벽지 → 벽지 보기\n";
-    helpMsg += "/등록 [내용] → 글 등록\n";
-    helpMsg += "/삭제 → 내 글 삭제\n\n";
-    helpMsg += "━━━ 기타 ━━━\n";
-    helpMsg += "/음식 → 음식 추천\n";
-    helpMsg += "/코디 → 코디 사이트";
-    replier.reply(helpMsg);
-}
-
-// ==========================================
-// TMI 정보 함수
-// ==========================================
-function getTmiInfo(characterName, replier) {
-  
-    var ment=" ";
-    if(decodeURIComponent(characterName)=="코코섬")
-    {
-      ment="tmi창시자";
-    }
-    else if(decodeURIComponent(characterName)=="덕고미콩")
-    {
-      ment="길드 마스터\n환산9만대 소마 \n확성기 대량 사용자\n클래식 애청자\n도자기 그림 수집가";
-    }
-    else if(decodeURIComponent(characterName)=="꿍색")
-    {
-      ment="보스관련 관리자\n환산9만대 나로 \n수로10만";
-    }
-    else if(decodeURIComponent(characterName)=="플로렌스")
-    {
-      ment="재획단 수장\n잠들지 않는자 \n블랙마켓 상인\n플로봇 개발자";
-    }
-    else if(decodeURIComponent(characterName)=="늘귤")
-    {
-      ment="길드 창립멤버\n환산9만대 나워 \n수로10만";
-    }
-    else if(decodeURIComponent(characterName)=="아스티핀")
-    {
-      ment="36퍼 잠재를 좋아한다\n11월부뒤 군인 \n검은돈 vip";
-    }
-    else if(decodeURIComponent(characterName)=="렌영v")
-    {
-      ment="렌1위\n재획단 간부";
-    }
-    else if(decodeURIComponent(characterName)=="뭘해도우냥")
-    {
-      ment="수로10만\n9만대 듀블이다";
-    }
-    else if(decodeURIComponent(characterName)=="영디")
-    {
-      ment="레벨 1위\n수로10만\n9만대 카인이다.";
-    }
-    else if(decodeURIComponent(characterName)=="아퐁")
-    {
-      ment="291렙 비숍\n인사단 수장";
-    }
-     else if(decodeURIComponent(characterName)=="높푸")
-    {
-      ment="최초의 재획단\n허리 재활로 장기 휴식중";
-    }
-     else if(decodeURIComponent(characterName)=="가람님")
-    {
-      ment="과거 레벨1위 오래유지\n술을 좋아한다";
-    }
-    
-    replier.reply("🏅🏅  "+decodeURIComponent(characterName)+"님의 TMI"+"  🏅🏅\n"+ment+"\n(추가tmi가 있다면 알려주세요)");
-}
-
-// ==========================================
-// 스케줄러 (Android 앱에서는 비활성화)
-// ==========================================
-function runScheduler() {
-    if (schedulerRunning) return;
-    schedulerRunning = true;
-
-    var thread = new java.lang.Thread({
-        run: function() {
-            while (true) {
-                try {
-                    var now = new Date();
-                    var day = now.getDay();
-                    var hour = now.getHours();
-                    var minute = now.getMinutes();
-                    var currentKey = day + "-" + hour + "-" + minute;
-
-                    if (currentKey !== schedulerLastRun) {
-                        for (var i = 0; i < schedulerTasks.length; i++) {
-                            var task = schedulerTasks[i];
-                            if (task.days.indexOf(day) !== -1 &&
-                                task.hour === hour &&
-                                task.minute === minute) {
-                                Api.sendMessage(task.room, task.message);
-                            }
-                        }
-                        schedulerLastRun = currentKey;
-                    }
-
-                    java.lang.Thread.sleep(10000); // 10초마다 체크
-                } catch (e) {
-                    // 에러 무시하고 계속 실행
-                }
-            }
-        }
-    });
-    thread.start();
-}
-
-// runScheduler();
