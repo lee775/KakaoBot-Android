@@ -4351,17 +4351,24 @@ function test(replier) {
 }
 function getLink(idlink, replier) {
     var thread = new java.lang.Thread(function() {
+        var siteUrl = "https://maplescouter.com/info?name=" + idlink;
         try {
             var url = "https://api.maplescouter.com/api/id?name=" + idlink + "&preset=00000&region=kms";
             var resp = org.jsoup.Jsoup.connect(url)
                 .header("api-key", "ff6a7ce0-c4ce-11ee-900c-df03c8ea0d4c")
                 .header("Content-Type", "application/json")
                 .ignoreContentType(true)
+                .ignoreHttpErrors(true)
                 .execute()
                 .body();
             var data = JSON.parse(resp);
+            // maplescouter 점검 중 등 서버 측 에러 응답
+            if (data && data.code && data.code !== 200 && data.message) {
+                replier.reply("⚠️ " + data.message + "\n사이트: " + siteUrl);
+                return;
+            }
             if (!data || !data.calculatedData) {
-                replier.reply("캐릭터 정보를 불러오지 못했습니다.");
+                replier.reply("캐릭터 정보를 불러오지 못했습니다.\n사이트: " + siteUrl);
                 return;
             }
             var d = data.calculatedData;
@@ -4377,7 +4384,7 @@ function getLink(idlink, replier) {
                 "헥사환산: " + fmt(d.boss380_hexaStat)
             );
         } catch (e) {
-            replier.reply("환산 조회 실패: " + e);
+            replier.reply("환산 조회 실패\n사이트: " + siteUrl);
         }
     });
     thread.start();
