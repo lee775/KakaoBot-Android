@@ -5116,7 +5116,8 @@ function getSymbolInfo(characterName, replier) {
             replier.reply(lines.join("\n"));
         } catch (error) {
             java.lang.System.out.println("[BOT ERROR] getSymbolInfo: " + (error.message || error));
-            replier.reply("심볼 정보를 가져올 수 없습니다. 캐릭터명을 확인해주세요.");
+            // [임시 진단] 실제 에러 표시
+            replier.reply("[심볼 진단] " + (error.name || "Error") + ": " + (error.message || error) + "\nline: " + (error.lineNumber || "?"));
         }
     });
     thread.start();
