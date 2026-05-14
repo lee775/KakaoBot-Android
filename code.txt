@@ -4340,9 +4340,9 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
             }
             var arg = msg.indexOf(" ") !== -1 ? msg.substring(msg.indexOf(" ") + 1).trim() : "";
             var imageUrl = arg.length > 0 ? arg : "https://i.imgur.com/FOS0bu1.jpg";
-            var cid = (replier.getChannelId && replier.getChannelId()) || 0;
-            var cidStr = String(cid);
-            if (cid === 0 || cidStr === "0") {
+            // getChannelId()는 String 반환 (JS number 정밀도 손실 방지)
+            var cidStr = (replier.getChannelId && replier.getChannelId()) || "0";
+            if (!cidStr || cidStr === "0") {
                 replier.reply("[실험] channelId 추출 실패 (=0)");
                 return;
             }

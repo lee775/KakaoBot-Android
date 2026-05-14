@@ -24,6 +24,10 @@ class JsReplier(private val replier: Replier) {
         return replier.reply(message)
     }
 
-    /** 현재 채팅방 channelId (Long). MediaSender.send()에 전달. */
-    fun getChannelId(): Long = replier.channelId
+    /**
+     * 현재 채팅방 channelId를 String으로 반환.
+     * Long을 그대로 JS number로 넘기면 2^53 초과 값(카톡 channelId)에서
+     * 정밀도가 깨지므로 반드시 문자열로 전달한다.
+     */
+    fun getChannelId(): String = replier.channelId.toString()
 }
