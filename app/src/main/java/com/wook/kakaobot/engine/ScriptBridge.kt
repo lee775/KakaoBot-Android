@@ -35,6 +35,12 @@ object ScriptBridge {
         val jsoupObj = RhinoContext.javaToJS(jsoupFactory, scope)
         ScriptableObject.putProperty(scope, "_JsoupFactory", jsoupObj)
 
+        // BotUpdate 주입 (/업데이트 명령어에서 사용)
+        // JS: BotUpdate.applyRemote(url) → 결과 메시지 문자열 반환
+        val updater = BotUpdater(appContext)
+        val updaterObj = RhinoContext.javaToJS(updater, scope)
+        ScriptableObject.putProperty(scope, "BotUpdate", updaterObj)
+
         // 브릿지 JavaScript 코드 실행
         val bridgeScript = """
             // ============================================

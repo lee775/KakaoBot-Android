@@ -828,6 +828,25 @@ var RANKING_CHARACTERS2 = [
 
 
 // ==========================================
+// 캐릭터 자동 fallback 헬퍼
+// ----------
+// input  : 사용자가 명령어 뒤에 입력한 닉네임 (없으면 빈 문자열)
+// sender : 카톡 sender (등록 검색 키)
+// replier: 등록 안 됐을 때 안내 메시지 발송용
+// 반환: 사용할 닉네임 문자열 / null(=등록도 없고 입력도 없음, 호출자는 즉시 return)
+// ==========================================
+function resolveCharacter(input, sender, replier) {
+    var trimmed = (input || "").trim();
+    if (trimmed) return trimmed;
+    try {
+        var reg = DataBase.getDataBase("char_" + sender);
+        if (reg && reg !== "") return reg;
+    } catch (e) {}
+    replier.reply("등록된 캐릭터가 없습니다.\n사용법: /캐릭터등록 닉네임\n등록 후엔 명령어만 입력해도 자동 조회됩니다.");
+    return null;
+}
+
+// ==========================================
 // 통합 response() 함수
 // ==========================================
 function response(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
@@ -895,11 +914,34 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
         return;
     }
     
+    // ===== /업데이트 (관리자 전용) =====
+    if (msg === "/업데이트") {
+        if (ADMINS.indexOf(sender) === -1) {
+            replier.reply("권한이 없습니다. 관리자만 사용 가능합니다.");
+            return;
+        }
+        if (typeof BotUpdate === "undefined") {
+            replier.reply("BotUpdate 미주입 (앱 재빌드/재설치 필요)");
+            return;
+        }
+        replier.reply("⏳ 깃에서 최신 스크립트 가져오는 중...");
+        new java.lang.Thread(function() {
+            try {
+                var url = "https://raw.githubusercontent.com/lee775/KakaoBot-Android/master/code.txt";
+                var result = BotUpdate.applyRemote(url);
+                replier.reply(String(result));
+            } catch (e) {
+                replier.reply("/업데이트 오류: " + e);
+            }
+        }).start();
+        return;
+    }
+
     // ===== 캐릭터 등록/조회 =====
-    if (msg.startsWith("!캐릭터등록 ")) {
+    if (msg.startsWith("!캐릭터등록 ") || msg.startsWith("/캐릭터등록 ")) {
         var charToRegister = msg.slice(7).trim();
         if (charToRegister === "") {
-            replier.reply("사용법: !캐릭터등록 캐릭터명");
+            replier.reply("사용법: /캐릭터등록 닉네임");
             return;
         }
         DataBase.setDataBase("char_" + sender, charToRegister);
@@ -907,18 +949,18 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
         return;
     }
 
-    if (msg === "!캐릭터삭제") {
+    if (msg === "!캐릭터삭제" || msg === "/캐릭터삭제") {
         DataBase.setDataBase("char_" + sender, "");
         replier.reply("등록된 캐릭터가 삭제되었습니다.");
         return;
     }
 
-    if (msg === "!캐릭터") {
+    if (msg === "!캐릭터" || msg === "/캐릭터" || msg === "/내캐릭터") {
         var myChar = DataBase.getDataBase("char_" + sender);
         if (myChar && myChar !== "") {
             replier.reply("등록된 캐릭터: " + myChar);
         } else {
-            replier.reply("등록된 캐릭터가 없습니다.\n사용법: !캐릭터등록 캐릭터명");
+            replier.reply("등록된 캐릭터가 없습니다.\n사용법: /캐릭터등록 닉네임");
         }
         return;
     }
@@ -970,13 +1012,13 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
     }
 
     // ===== 메이플 캐릭터 조회 =====
-    if (msg.startsWith("/ㄱㅎㅊ")) {
-        var characterName = encodeURIComponent(msg.slice(5).trim());
-        getMapleOcid(characterName, replier);
+    if (msg === "/ㄱㅎㅊ" || msg.startsWith("/ㄱㅎㅊ ")) {
+        var ghc = resolveCharacter(msg.slice(5), sender, replier);
+        if (ghc) getMapleOcid(encodeURIComponent(ghc), replier);
     }
-    if (msg.startsWith("/경험치")) {
-        var characterName1 = encodeURIComponent(msg.slice(5).trim());
-        getMapleOcid(characterName1, replier);
+    if (msg === "/경험치" || msg.startsWith("/경험치 ")) {
+        var ge = resolveCharacter(msg.slice(5), sender, replier);
+        if (ge) getMapleOcid(encodeURIComponent(ge), replier);
     }
     if (msg === "@@" || msg.startsWith("@@ ")) {
         var aaInput = msg.slice(2).trim();
@@ -987,7 +1029,7 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
             // @@ 만 입력 → 등록된 캐릭터 사용
             var registered = DataBase.getDataBase("char_" + sender);
             if (!registered || registered === "") {
-                replier.reply("등록된 캐릭터가 없습니다.\n!캐릭터등록 캐릭터명 으로 먼저 등록해주세요.");
+                replier.reply("등록된 캐릭터가 없습니다.\n사용법: /캐릭터등록 닉네임\n등록 후엔 @@ 만 입력해도 자동 조회됩니다.");
                 return;
             }
             characterName2 = registered;
@@ -1013,17 +1055,17 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
         }
     }
     
-    if (msg.startsWith("/ㅌㄹ ")) {
-        var power1 = encodeURIComponent(msg.slice(4).trim());
-        getPower(power1, replier);
+    if (msg === "/ㅌㄹ" || msg.startsWith("/ㅌㄹ ")) {
+        var trl = resolveCharacter(msg.slice(4), sender, replier);
+        if (trl) getPower(encodeURIComponent(trl), replier);
     }
-    if (msg.startsWith("/ㅈㅌㄹ ")) {
-        var power2 = encodeURIComponent(msg.slice(5).trim());
-        getPower(power2, replier);
+    if (msg === "/ㅈㅌㄹ" || msg.startsWith("/ㅈㅌㄹ ")) {
+        var jtrl = resolveCharacter(msg.slice(5), sender, replier);
+        if (jtrl) getPower(encodeURIComponent(jtrl), replier);
     }
-    if (msg.startsWith("/투력 ")) {
-        var power3 = encodeURIComponent(msg.slice(4).trim());
-        getPower(power3, replier);
+    if (msg === "/투력" || msg.startsWith("/투력 ")) {
+        var tul = resolveCharacter(msg.slice(4), sender, replier);
+        if (tul) getPower(encodeURIComponent(tul), replier);
     }
     if (msg === "@@@@" || msg.startsWith("@@@@ ")) {
         var power5Text = msg.slice(4).trim();
@@ -1031,7 +1073,7 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
         if (power5Text === "") {
             var reg4 = DataBase.getDataBase("char_" + sender);
             if (!reg4 || reg4 === "") {
-                replier.reply("등록된 캐릭터가 없습니다.\n!캐릭터등록 캐릭터명 으로 먼저 등록해주세요.");
+                replier.reply("등록된 캐릭터가 없습니다.\n사용법: /캐릭터등록 닉네임\n등록 후엔 @@ 만 입력해도 자동 조회됩니다.");
                 return;
             }
             getPower(encodeURIComponent(reg4), replier);
@@ -1057,7 +1099,7 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
         if (aaaInput === "") {
             var reg3 = DataBase.getDataBase("char_" + sender);
             if (!reg3 || reg3 === "") {
-                replier.reply("등록된 캐릭터가 없습니다.\n!캐릭터등록 캐릭터명 으로 먼저 등록해주세요.");
+                replier.reply("등록된 캐릭터가 없습니다.\n사용법: /캐릭터등록 닉네임\n등록 후엔 @@ 만 입력해도 자동 조회됩니다.");
                 return;
             }
             getMonthlyExpHistory(encodeURIComponent(reg3), replier);
@@ -1065,27 +1107,39 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
             getMonthlyExpHistory(encodeURIComponent(aaaInput), replier);
         }
     }
-    if (msg.startsWith("/전투력 ")) {
-        var power4 = encodeURIComponent(msg.slice(5).trim());
-        getPower(power4, replier);
+    if (msg === "/전투력" || msg.startsWith("/전투력 ")) {
+        var jpw = resolveCharacter(msg.slice(5), sender, replier);
+        if (jpw) getPower(encodeURIComponent(jpw), replier);
     }
-    if (msg.startsWith("/장비 ")) {
-        var equipParts = msg.slice(4).trim().split(" ");
-        var equipName = encodeURIComponent(equipParts[0]);
-        var equipSlot = equipParts[1] || null;
-        getEquipment(equipName, replier, equipSlot);
+    if (msg === "/장비" || msg.startsWith("/장비 ")) {
+        // 형식: /장비 [닉네임] [슬롯]  닉네임 자리 비면 등록된 캐릭터 사용
+        var equipRaw = msg.slice(4).trim();
+        var equipParts = equipRaw ? equipRaw.split(" ") : [];
+        var firstTok = equipParts[0] || "";
+        // 첫 토큰이 슬롯 키워드일 가능성도 있으나 안전하게 닉네임으로 시도
+        var equipName = resolveCharacter(firstTok, sender, replier);
+        if (equipName) {
+            var equipSlot = equipParts.length > 1 ? equipParts.slice(1).join(" ") : (firstTok === equipName ? null : null);
+            // 입력이 비어 있어서 자동 fallback 된 경우 슬롯은 입력 전체에서 가져옴
+            if (!firstTok) equipSlot = null;
+            getEquipment(encodeURIComponent(equipName), replier, equipSlot);
+        }
     }
-    if (msg.startsWith("/ㅈㅂ ")) {
-        var equipParts2 = msg.slice(4).trim().split(" ");
-        var equipName2 = encodeURIComponent(equipParts2[0]);
-        var equipSlot2 = equipParts2[1] || null;
-        getEquipment(equipName2, replier, equipSlot2);
+    if (msg === "/ㅈㅂ" || msg.startsWith("/ㅈㅂ ")) {
+        var equipRaw2 = msg.slice(4).trim();
+        var equipParts2 = equipRaw2 ? equipRaw2.split(" ") : [];
+        var firstTok2 = equipParts2[0] || "";
+        var equipName2 = resolveCharacter(firstTok2, sender, replier);
+        if (equipName2) {
+            var equipSlot2 = equipParts2.length > 1 ? equipParts2.slice(1).join(" ") : null;
+            getEquipment(encodeURIComponent(equipName2), replier, equipSlot2);
+        }
     }
 
     // ===== 추가 기능 (tmi/보스/확률/환산) =====
-    if (msg.startsWith("/tmi ")) {
-        var tmiName = encodeURIComponent(msg.slice(4).trim());
-        getTmiInfo(tmiName, replier);
+    if (msg === "/tmi" || msg.startsWith("/tmi ")) {
+        var tmi = resolveCharacter(msg.slice(5), sender, replier);
+        if (tmi) getTmiInfo(encodeURIComponent(tmi), replier);
     }
     if (msg=="/보스")
     {
@@ -1115,9 +1169,9 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
         }
     }
 
-    if (msg.startsWith("/환산 ") && room != "[본메] 전국에반협회") {
-        var idlink = encodeURIComponent(msg.slice(4).trim());
-        getLink(idlink, replier);
+    if ((msg === "/환산" || msg.startsWith("/환산 ")) && room != "[본메] 전국에반협회") {
+        var hs = resolveCharacter(msg.slice(4), sender, replier);
+        if (hs) getLink(encodeURIComponent(hs), replier);
     }
 
     // ===== 심볼 정보 조회 (/심볼 /세금 /탈세 모두 동일 동작) =====
@@ -1127,7 +1181,7 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
         if (symbolInput === "") {
             var regSym = DataBase.getDataBase("char_" + sender);
             if (!regSym || regSym === "") {
-                replier.reply("등록된 캐릭터가 없습니다.\n!캐릭터등록 캐릭터명 으로 먼저 등록해주세요.");
+                replier.reply("등록된 캐릭터가 없습니다.\n사용법: /캐릭터등록 닉네임\n등록 후엔 @@ 만 입력해도 자동 조회됩니다.");
                 return;
             }
             symbolCharName = regSym;
@@ -4493,6 +4547,8 @@ function getSymbolInfo(characterName, replier) {
                 summaryLines.push("💰 추가 강화 비용: " + formatMeso(totalUpgradeMeso) + " 메소");
             }
             summaryLines.push("================================");
+            // 카톡 "전체보기" 트리거: zero-width 3000개 라인 추가 (여기 아래부터 접힘)
+            summaryLines.push(new Array(3001).join("​"));
             // 기존 헤더 "================================" (lines[2]) 다음에 삽입
             var headerArgs = [3, 0].concat(summaryLines);
             Array.prototype.splice.apply(lines, headerArgs);

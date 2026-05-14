@@ -2,6 +2,8 @@ package com.wook.kakaobot.ui
 
 import android.content.ComponentName
 import android.content.Intent
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -10,8 +12,10 @@ import android.provider.Settings
 import android.text.method.ScrollingMovementMethod
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.button.MaterialButton
 import com.wook.kakaobot.databinding.ActivityMainBinding
 import com.wook.kakaobot.engine.BotEngine
+import com.wook.kakaobot.engine.BotPrefs
 import com.wook.kakaobot.service.BotForegroundService
 import com.wook.kakaobot.service.KakaoNotificationListener
 import java.text.SimpleDateFormat
@@ -42,6 +46,29 @@ class MainActivity : AppCompatActivity() {
         setupUI()
         setupLogCallback()
         checkPermissions()
+        restoreBotState()
+    }
+
+    /**
+     * 이전에 봇이 ON 상태였다면 자동 복원.
+     * - 스크립트가 미로드면 먼저 로드
+     * - 스위치 ON → 리스너 호출되어 서비스 시작 + isEnabled=true
+     */
+    private fun restoreBotState() {
+        if (!BotPrefs.isBotEnabled(this)) return
+        appendLog("이전 봇 상태 복원 중 (ON)…")
+        Thread {
+            try {
+                if (!botEngine.isLoaded) botEngine.loadScript()
+                runOnUiThread {
+                    binding.switchBot.isChecked = true // 리스너가 서비스 시작 처리
+                }
+            } catch (e: Throwable) {
+                runOnUiThread {
+                    appendLog("봇 자동 복원 실패: ${e.javaClass.simpleName}: ${e.message}")
+                }
+            }
+        }.start()
     }
 
     private fun setupUI() {
@@ -51,6 +78,7 @@ class MainActivity : AppCompatActivity() {
         // 봇 ON/OFF 토글
         binding.switchBot.setOnCheckedChangeListener { _, isChecked ->
             KakaoNotificationListener.isEnabled = isChecked
+            BotPrefs.setBotEnabled(this, isChecked) // 영속화: 다음 실행 때 자동 복원
             if (isChecked) {
                 startBotService()
                 appendLog("봇 활성화됨")
@@ -168,10 +196,32 @@ class MainActivity : AppCompatActivity() {
         val isListenerEnabled = isNotificationListenerEnabled()
         val isScriptLoaded = botEngine.isLoaded
         val isBotEnabled = KakaoNotificationListener.isEnabled
+        val isBatteryIgnored = isIgnoringBatteryOptimization()
 
         binding.tvStatusListener.text = "알림 리스너: ${if (isListenerEnabled) "ON" else "OFF"}"
         binding.tvStatusScript.text = "스크립트: ${if (isScriptLoaded) "로드됨" else "미로드"}"
         binding.tvStatusBot.text = "봇 상태: ${if (isBotEnabled) "활성" else "비활성"}"
+
+        // 각 설정 버튼: 미완료(빨강) / 완료(초록) 색상 표시
+        applyButtonState(binding.btnNotificationPermission, isListenerEnabled, "알림 권한 설정")
+        applyButtonState(binding.btnBatteryOptimization, isBatteryIgnored, "배터리 최적화 해제")
+        applyButtonState(binding.btnLoadScript, isScriptLoaded, "스크립트 로드")
+    }
+
+    /** 버튼 상태별 색상/마커 적용. done=true(초록 ✓), done=false(빨강 ⚠) */
+    private fun applyButtonState(btn: MaterialButton, done: Boolean, label: String) {
+        val bg = if (done) Color.parseColor("#2e7d32") else Color.parseColor("#e94560")
+        btn.backgroundTintList = ColorStateList.valueOf(bg)
+        btn.strokeColor = ColorStateList.valueOf(bg)
+        btn.setTextColor(Color.WHITE)
+        btn.text = if (done) "✓ $label" else "⚠ $label"
+    }
+
+    private fun isIgnoringBatteryOptimization(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val pm = getSystemService(PowerManager::class.java)
+            pm?.isIgnoringBatteryOptimizations(packageName) == true
+        } else true
     }
 
     private fun checkPermissions() {

@@ -66,8 +66,16 @@ class BotEngine private constructor(private val appContext: Context) {
     /**
      * 스크립트를 로드하고 Rhino 엔진을 초기화한다.
      * 내부저장소의 bot_script.js를 읽어서 실행.
+     *
+     * @Synchronized: 두 곳에서 동시 호출 시 race condition으로
+     * scope/responseFunction 덮어쓰기 방지. 이미 로드되어 있으면 즉시 true.
      */
+    @Synchronized
     fun loadScript(): Boolean {
+        if (isLoaded && responseFunction != null) {
+            // 이미 로드된 상태 → 중복 호출 무시 (다른 기능들 깨짐 방지)
+            return true
+        }
         ensureScriptExists()
         return try {
             val rhinoContext = RhinoContext.enter()
@@ -252,6 +260,7 @@ class BotEngine private constructor(private val appContext: Context) {
         return saveScriptContent(content)
     }
 
+    @Synchronized
     fun reloadScript(): Boolean {
         isLoaded = false
         responseFunction = null
