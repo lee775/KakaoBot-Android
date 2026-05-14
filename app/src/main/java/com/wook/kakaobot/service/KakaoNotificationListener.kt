@@ -1,6 +1,7 @@
 package com.wook.kakaobot.service
 
 import android.app.Notification
+import android.app.PendingIntent
 import android.app.RemoteInput
 import android.content.Intent
 import android.os.Bundle
@@ -70,6 +71,8 @@ class KakaoNotificationListener : NotificationListenerService() {
             val isGroupChat = subText != null
             val room = if (isGroupChat) subText!! else sender
 
+            val channelId = extractChannelId(sbn, notification)
+
             log("[$room] $sender: $message")
 
             val replyAction = findReplyAction(notification) ?: run {
@@ -77,14 +80,15 @@ class KakaoNotificationListener : NotificationListenerService() {
                 return
             }
 
-            val replier = Replier(applicationContext, replyAction, sbn)
+            val replier = Replier(applicationContext, replyAction, sbn, channelId)
 
             val chatMessage = ChatMessage(
                 room = room,
                 sender = sender,
                 message = message,
                 isGroupChat = isGroupChat,
-                packageName = sbn.packageName
+                packageName = sbn.packageName,
+                channelId = channelId
             )
 
             botEngine.handleMessage(chatMessage, replier)
@@ -102,6 +106,50 @@ class KakaoNotificationListener : NotificationListenerService() {
             if (action.remoteInputs?.isNotEmpty() == true) return action
         }
         return null
+    }
+
+    /**
+     * 카카오톡 알림에서 channelId(Long) 추출.
+     * sbn.tag → notification.extras → PendingIntent reflection 순으로 시도. 실패 시 0L.
+     */
+    private fun extractChannelId(sbn: StatusBarNotification, notification: Notification): Long {
+        sbn.tag?.let { tag ->
+            tag.toLongOrNull()?.let { return it }
+            tag.split("|", "_", ":", "/").forEach { part ->
+                part.toLongOrNull()?.let { if (it > 1000L) return it }
+            }
+        }
+        val extras = notification.extras
+        for (key in listOf("key_id", "chat_id", "chatId", "chatRoomId", "channelId")) {
+            try {
+                val v = extras.get(key) ?: continue
+                when (v) {
+                    is Long -> return v
+                    is Number -> return v.toLong()
+                    is String -> v.toLongOrNull()?.let { return it }
+                    else -> {}
+                }
+            } catch (_: Exception) {}
+        }
+        val pi = notification.contentIntent
+            ?: notification.actions?.firstOrNull()?.actionIntent ?: return 0L
+        try {
+            val getIntent = PendingIntent::class.java.getDeclaredMethod("getIntent")
+            getIntent.isAccessible = true
+            val intent = getIntent.invoke(pi) as? Intent
+            intent?.extras?.let { ie ->
+                for (key in listOf("key_id", "chat_id", "chatId", "chatRoomId", "channelId")) {
+                    val v = ie.get(key) ?: continue
+                    when (v) {
+                        is Long -> return v
+                        is Number -> return v.toLong()
+                        is String -> v.toLongOrNull()?.let { return it }
+                        else -> {}
+                    }
+                }
+            }
+        } catch (_: Throwable) {}
+        return 0L
     }
 
     private fun log(msg: String) {

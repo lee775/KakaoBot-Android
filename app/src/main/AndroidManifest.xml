@@ -52,6 +52,17 @@
             android:exported="false"
             android:foregroundServiceType="specialUse" />
 
+        <!-- FileProvider (/실험 사진 전송: content:// URI 발급) -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
     </application>
 
 </manifest>

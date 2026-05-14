@@ -9,5 +9,6 @@ data class ChatMessage(
     val message: String,    // 메시지 내용
     val isGroupChat: Boolean, // 단체방 여부
     val packageName: String,  // 앱 패키지명
+    val channelId: Long = 0L, // 카카오톡 채팅방 channelId (사진 전송용)
     val timestamp: Long = System.currentTimeMillis()
 )

@@ -41,6 +41,12 @@ object ScriptBridge {
         val updaterObj = RhinoContext.javaToJS(updater, scope)
         ScriptableObject.putProperty(scope, "BotUpdate", updaterObj)
 
+        // MediaSender 주입 (사진 전송)
+        // JS: MediaSender.send(channelId, url)
+        val mediaSender = MediaSenderBridge(appContext)
+        val mediaSenderObj = RhinoContext.javaToJS(mediaSender, scope)
+        ScriptableObject.putProperty(scope, "MediaSender", mediaSenderObj)
+
         // 브릿지 JavaScript 코드 실행
         val bridgeScript = """
             // ============================================

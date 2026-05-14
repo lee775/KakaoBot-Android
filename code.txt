@@ -4331,6 +4331,28 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
     if (msg === "/이벤트") {
         getCurrentEvents(replier);
     }
+    // ===== /실험 (사진 전송 테스트) =====
+    if (msg === "/실험" || msg.startsWith("/실험 ")) {
+        try {
+            if (typeof MediaSender === "undefined") {
+                replier.reply("MediaSender 미주입 (앱 재설치 필요)");
+                return;
+            }
+            var arg = msg.indexOf(" ") !== -1 ? msg.substring(msg.indexOf(" ") + 1).trim() : "";
+            var imageUrl = arg.length > 0 ? arg : "https://i.imgur.com/FOS0bu1.jpg";
+            var cid = (replier.getChannelId && replier.getChannelId()) || 0;
+            var cidStr = String(cid);
+            if (cid === 0 || cidStr === "0") {
+                replier.reply("[실험] channelId 추출 실패 (=0)");
+                return;
+            }
+            var ok = MediaSender.send(cidStr, imageUrl);
+            replier.reply("[실험] channelId=" + cidStr + "\nurl=" + imageUrl + "\nsend=" + ok);
+        } catch (e) {
+            replier.reply("[실험] 오류: " + e);
+        }
+        return;
+    }
     // ===== /심볼 /세금 /탈세 =====
     if (msg === "/심볼" || msg.startsWith("/심볼 ") ||
         msg === "/세금" || msg.startsWith("/세금 ") ||

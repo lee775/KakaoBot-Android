@@ -18,7 +18,8 @@ import android.util.Log
 class Replier(
     private val context: Context,
     private val replyAction: Notification.Action,
-    private val sbn: StatusBarNotification
+    private val sbn: StatusBarNotification,
+    val channelId: Long = 0L
 ) {
     companion object {
         private const val TAG = "Replier"

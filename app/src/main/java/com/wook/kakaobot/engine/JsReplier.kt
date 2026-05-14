@@ -23,4 +23,7 @@ class JsReplier(private val replier: Replier) {
         Log.d(TAG, "Reply: $message")
         return replier.reply(message)
     }
+
+    /** 현재 채팅방 channelId (Long). MediaSender.send()에 전달. */
+    fun getChannelId(): Long = replier.channelId
 }
