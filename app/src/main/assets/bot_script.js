@@ -3034,10 +3034,10 @@ function getRemainingExpToNextLevel(currLv, currExp) {
   const requiredForThisLevel = expToNext[currLv - 200]; // 200레벨부터 시작
   return Math.max(0, requiredForThisLevel - currExp);
 }
-let namexp=getRemainingExpToNextLevel(Number(data.character_level),Number(data.character_exp));
-// 일주일 평균: (오늘 - 7일 전) / 7
-let ave=calcGainedExp(Number(data8.character_level),Number(data8.character_exp),
-                              Number(data.character_level),Number(data.character_exp))/7
+let namexp=getRemainingExpToNextLevel(Number(data2.character_level),Number(data2.character_exp));
+// 일주일 평균: (최신=data2 - 7일 전=data9) / 7
+let ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
+                              Number(data2.character_level),Number(data2.character_exp))/7
         let namexp1=namexp;
         let ave1=ave;                      
         let av="-"
@@ -4022,13 +4022,13 @@ let ave=calcGainedExp(Number(data8.character_level),Number(data8.character_exp),
     var tagLine = (Tag && Tag.trim() !== "") ? "\n" + Tag : "";
     var fantasyLine = (fantasyTag && fantasyTag.trim() !== "") ? "\n" + fantasyTag : "";
     replier.reply("[" + decodeURIComponent(characterName) + "]  " + cpText + " " + cpIcon + tagLine + fantasyLine + "\n"
-        + dayText_7 + " Lv." + data7.character_level + " " + data7.character_exp_rate + "% +" + getExpDiffText(data8.character_level, data8.character_exp_rate, data7.character_level, data7.character_exp_rate) + "\n"
-        + dayText_6 + " Lv." + data6.character_level + " " + data6.character_exp_rate + "% +" + getExpDiffText(data7.character_level, data7.character_exp_rate, data6.character_level, data6.character_exp_rate) + "\n"
-        + dayText_5 + " Lv." + data5.character_level + " " + data5.character_exp_rate + "% +" + getExpDiffText(data6.character_level, data6.character_exp_rate, data5.character_level, data5.character_exp_rate) + "\n"
-        + dayText_4 + " Lv." + data4.character_level + " " + data4.character_exp_rate + "% +" + getExpDiffText(data5.character_level, data5.character_exp_rate, data4.character_level, data4.character_exp_rate) + "\n"
-        + dayText_3 + " Lv." + data3.character_level + " " + data3.character_exp_rate + "% +" + getExpDiffText(data4.character_level, data4.character_exp_rate, data3.character_level, data3.character_exp_rate) + "\n"
-        + dayText_2 + " Lv." + data2.character_level + " " + data2.character_exp_rate + "% +" + getExpDiffText(data3.character_level, data3.character_exp_rate, data2.character_level, data2.character_exp_rate) + "\n"
-        + dayText_1 + " Lv." + data.character_level + " " + data.character_exp_rate + "% +" + getExpDiffText(data2.character_level, data2.character_exp_rate, data.character_level, data.character_exp_rate) + "\n\n"
+        + dayText_7 + " Lv." + data8.character_level + " " + data8.character_exp_rate + "% +" + getExpDiffText(data9.character_level, data9.character_exp_rate, data8.character_level, data8.character_exp_rate) + "\n"
+        + dayText_6 + " Lv." + data7.character_level + " " + data7.character_exp_rate + "% +" + getExpDiffText(data8.character_level, data8.character_exp_rate, data7.character_level, data7.character_exp_rate) + "\n"
+        + dayText_5 + " Lv." + data6.character_level + " " + data6.character_exp_rate + "% +" + getExpDiffText(data7.character_level, data7.character_exp_rate, data6.character_level, data6.character_exp_rate) + "\n"
+        + dayText_4 + " Lv." + data5.character_level + " " + data5.character_exp_rate + "% +" + getExpDiffText(data6.character_level, data6.character_exp_rate, data5.character_level, data5.character_exp_rate) + "\n"
+        + dayText_3 + " Lv." + data4.character_level + " " + data4.character_exp_rate + "% +" + getExpDiffText(data5.character_level, data5.character_exp_rate, data4.character_level, data4.character_exp_rate) + "\n"
+        + dayText_2 + " Lv." + data3.character_level + " " + data3.character_exp_rate + "% +" + getExpDiffText(data4.character_level, data4.character_exp_rate, data3.character_level, data3.character_exp_rate) + "\n"
+        + dayText_1 + " Lv." + data2.character_level + " " + data2.character_exp_rate + "% +" + getExpDiffText(data3.character_level, data3.character_exp_rate, data2.character_level, data2.character_exp_rate) + "\n\n"
         + "일주일 평균 획득량 : " + ave.toFixed(1) + " " + av + avetext + "\n"
         + "남은 경험치량 :  " + namexp.toFixed(1) + " " + av2 + "\n"
         + "예상 레벨업 날짜 : " + upday + lvup + "\n"
