@@ -4294,7 +4294,9 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
         replier.reply("⏳ 최신 스크립트 가져오는 중...");
         new java.lang.Thread(function() {
             try {
-                var result = String(BotUpdate.applyRemote("https://raw.githubusercontent.com/lee775/KakaoBot-Android/master/code.txt"));
+                // GitHub raw CDN 캐시(약 5분) 무효화: timestamp 쿼리 추가
+                var __upUrl = "https://raw.githubusercontent.com/lee775/KakaoBot-Android/master/code.txt?t=" + Date.now();
+                var result = String(BotUpdate.applyRemote(__upUrl));
                 // "(XXXXX chars)" 같은 용량 표기 제거
                 result = result.replace(/\s*\(\d+\s*chars\)\s*$/, "");
                 replier.reply(result);
