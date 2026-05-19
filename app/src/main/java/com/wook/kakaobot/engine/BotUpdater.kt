@@ -23,13 +23,19 @@ class BotUpdater(private val appContext: Context) {
 
     fun applyRemote(url: String): String {
         return try {
-            Log.d(TAG, "fetch: $url")
-            val conn = URL(url).openConnection() as HttpURLConnection
+            // 매번 timestamp 쿼리 추가 → URL 자체가 달라져 CDN 캐시 우회
+            val realUrl = if ('?' in url) "$url&_t=${System.currentTimeMillis()}"
+                          else "$url?_t=${System.currentTimeMillis()}"
+            Log.d(TAG, "fetch: $realUrl")
+            val conn = URL(realUrl).openConnection() as HttpURLConnection
+            conn.useCaches = false
             conn.connectTimeout = TIMEOUT_MS
             conn.readTimeout = TIMEOUT_MS
             conn.requestMethod = "GET"
             conn.setRequestProperty("User-Agent", "Mozilla/5.0")
             conn.setRequestProperty("Accept", "text/plain, */*")
+            conn.setRequestProperty("Cache-Control", "no-cache, no-store, must-revalidate")
+            conn.setRequestProperty("Pragma", "no-cache")
 
             val code = conn.responseCode
             if (code !in 200..299) {
