@@ -2774,90 +2774,30 @@ const day_8 =
             .execute()
             .body();
         const data = JSON.parse(response);
-        //
-        const inforUrl = MAPLE_INF_API_URL + "?ocid=" + data.ocid;
-        const response2 = org.jsoup.Jsoup.connect(inforUrl)
-            .header("accept", "application/json")
-            .header("x-nxopen-api-key", NEXON_API_KEY)
-            .ignoreContentType(true)
-            .execute()
-            .body();
-        const data2 = JSON.parse(response2);
-        
-        const inforUrl2 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_1;
-        const response3 = org.jsoup.Jsoup.connect(inforUrl2)
-            .header("accept", "application/json")
-            .header("x-nxopen-api-key", NEXON_API_KEY)
-            .ignoreContentType(true)
-            .execute()
-            .body();
-        const data3 = JSON.parse(response3);
-        
-        const inforUrl3 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_2;
-        const response4 = org.jsoup.Jsoup.connect(inforUrl3)
-            .header("accept", "application/json")
-            .header("x-nxopen-api-key", NEXON_API_KEY)
-            
-            .ignoreContentType(true)
-            .execute()
-            .body();
-        const data4 = JSON.parse(response4);
-        
-        const inforUrl4 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_3;
-        const response5 = org.jsoup.Jsoup.connect(inforUrl4)
-            .header("accept", "application/json")
-            .header("x-nxopen-api-key", NEXON_API_KEY)
-            
-            .ignoreContentType(true)
-            .execute()
-            .body();
-        const data5 = JSON.parse(response5);
-        
-        const inforUrl5 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_4;
-        const response6 = org.jsoup.Jsoup.connect(inforUrl5)
-            .header("accept", "application/json")
-            .header("x-nxopen-api-key", NEXON_API_KEY)
-            .ignoreContentType(true)
-            .execute()
-            .body();
-        const data6 = JSON.parse(response6);
-        
-        const inforUrl6 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_5;
-        const response7 = org.jsoup.Jsoup.connect(inforUrl6)
-            .header("accept", "application/json")
-            .header("x-nxopen-api-key", NEXON_API_KEY)
-            .ignoreContentType(true)
-            .execute()
-            .body();
-        const data7 = JSON.parse(response7);
-        
-        const inforUrl7 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_6;
-        const response8 = org.jsoup.Jsoup.connect(inforUrl7)
-            .header("accept", "application/json")
-            .header("x-nxopen-api-key", NEXON_API_KEY)            
-            .ignoreContentType(true)
-            .execute()
-            .body();
-        const data8 = JSON.parse(response8);
-        
-        const inforUrl8 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_7;
-        const response9 = org.jsoup.Jsoup.connect(inforUrl8)
-            .header("accept", "application/json")
-            .header("x-nxopen-api-key", NEXON_API_KEY)            
-            .ignoreContentType(true)
-            .execute()
-            .body();
-        const data9 = JSON.parse(response9);
-
-        // 이번 달 1일 데이터 가져오기
-        const inforUrl9 = MAPLE_INF_API_URL + "?ocid=" + data.ocid+"&date="+day_8;
-        const response10 = org.jsoup.Jsoup.connect(inforUrl9)
-            .header("accept", "application/json")
-            .header("x-nxopen-api-key", NEXON_API_KEY)            
-            .ignoreContentType(true)
-            .execute()
-            .body();
-        const data10 = JSON.parse(response10);
+        // 안전 fetch: 날짜별 character/basic 조회 실패해도 null 반환 (신규 캐릭터 지원)
+        function safeFetchBasic(ocid, date) {
+            try {
+                var url = MAPLE_INF_API_URL + "?ocid=" + ocid + (date ? "&date=" + date : "");
+                var body = org.jsoup.Jsoup.connect(url)
+                    .header("accept", "application/json")
+                    .header("x-nxopen-api-key", NEXON_API_KEY)
+                    .ignoreContentType(true)
+                    .ignoreHttpErrors(true)
+                    .execute().body();
+                var d = JSON.parse(body);
+                if (!d || d.character_level == null) return null;
+                return d;
+            } catch (e) { return null; }
+        }
+        const data2  = safeFetchBasic(data.ocid, null);   // 최신
+        const data3  = safeFetchBasic(data.ocid, day_1);  // 어제
+        const data4  = safeFetchBasic(data.ocid, day_2);
+        const data5  = safeFetchBasic(data.ocid, day_3);
+        const data6  = safeFetchBasic(data.ocid, day_4);
+        const data7  = safeFetchBasic(data.ocid, day_5);
+        const data8  = safeFetchBasic(data.ocid, day_6);
+        const data9  = safeFetchBasic(data.ocid, day_7);
+        const data10 = safeFetchBasic(data.ocid, day_8);  // 전달 마지막날
 
         // 전투력 조회 (현재 - 표시용)
         let combatPower = 0;
@@ -3034,10 +2974,26 @@ function getRemainingExpToNextLevel(currLv, currExp) {
   const requiredForThisLevel = expToNext[currLv - 200]; // 200레벨부터 시작
   return Math.max(0, requiredForThisLevel - currExp);
 }
-let namexp=getRemainingExpToNextLevel(Number(data2.character_level),Number(data2.character_exp));
-// 일주일 평균: (최신=data2 - 7일 전=data9) / 7
-let ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
-                              Number(data2.character_level),Number(data2.character_exp))/7
+// 신규 캐릭터(생성 1주일 미만) 대응: 사용 가능한 가장 오래된 데이터로 평균 계산
+// data2(최신) ~ data9(7일 전) 중 사용 가능한 가장 오래된 데이터 찾기
+let __pairs = [{d:data9,n:7},{d:data8,n:6},{d:data7,n:5},{d:data6,n:4},
+               {d:data5,n:3},{d:data4,n:2},{d:data3,n:1}];
+let __oldest = null, __oldestDays = 7;
+for (let __i = 0; __i < __pairs.length; __i++) {
+    if (__pairs[__i].d && __pairs[__i].d.character_level != null) {
+        __oldest = __pairs[__i].d; __oldestDays = __pairs[__i].n; break;
+    }
+}
+let namexp = (data2 && data2.character_level != null)
+    ? getRemainingExpToNextLevel(Number(data2.character_level),Number(data2.character_exp))
+    : 0;
+let ave = 0;
+if (__oldest && data2 && data2.character_level != null) {
+    try {
+        ave = calcGainedExp(Number(__oldest.character_level),Number(__oldest.character_exp),
+                            Number(data2.character_level),Number(data2.character_exp)) / __oldestDays;
+    } catch (e) { ave = 0; }
+}
         let namexp1=namexp;
         let ave1=ave;                      
         let av="-"
@@ -3091,13 +3047,16 @@ let ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
         const daysInMonth = Math.floor((today_date - monthFirstDate) / 86400000) + 1; // 1일부터 오늘까지 일수
 
         let monthlyAvgExp = null;
-        if (daysInMonth > 0 && data10 && data10.character_level != null && data10.character_exp != null) {
-            monthlyAvgExp = calcGainedExp(
-                Number(data10.character_level),
-                Number(data10.character_exp),
-                Number(data2.character_level),
-                Number(data2.character_exp)
-            ) / daysInMonth;
+        if (daysInMonth > 0 && data10 && data10.character_level != null && data10.character_exp != null
+            && data2 && data2.character_level != null && data2.character_exp != null) {
+            try {
+                monthlyAvgExp = calcGainedExp(
+                    Number(data10.character_level),
+                    Number(data10.character_exp),
+                    Number(data2.character_level),
+                    Number(data2.character_exp)
+                ) / daysInMonth;
+            } catch (e) { monthlyAvgExp = null; }
         }
 
         let monthlyAve = monthlyAvgExp;
@@ -4008,39 +3967,56 @@ let ave=calcGainedExp(Number(data9.character_level),Number(data9.character_exp),
         var fantasyTag = fantasyTags[decodeURIComponent(characterName)] || "";
 
         let lvup=" ";
-        if(data3.character_level<data2.character_level)
+        if(data3 && data2 && data3.character_level != null && data3.character_level<data2.character_level)
         {
           lvup="\n🥳"+decodeURIComponent(characterName) +"님 레벨업 축하드립니다🎉🎉."
         }
 
-        const lvupdate= new Date(Date.now()+86400000*(namexp1/ave1));
-        const upday=
-          lvupdate.getFullYear() + "년" +
-          String(lvupdate.getMonth() + 1).padStart(2, "0") + "월" +
-          String(lvupdate.getDate()).padStart(2, "0")+ "일" ;
+        // 예상 레벨업 날짜 (ave1=0이면 NaN → 표시 안 함)
+        let upday = "-";
+        if (ave1 > 0 && namexp1 >= 0) {
+            const lvupdate = new Date(Date.now() + 86400000 * (namexp1 / ave1));
+            upday = lvupdate.getFullYear() + "년" +
+                String(lvupdate.getMonth() + 1).padStart(2, "0") + "월" +
+                String(lvupdate.getDate()).padStart(2, "0") + "일";
+        }
+        // 일자별 라인 안전 생성 (없는 날은 줄 생략)
+        function __dayLine(label, cur, prev) {
+            if (!cur || cur.character_level == null) return "";
+            var diff = (prev && prev.character_level != null)
+                ? " +" + getExpDiffText(prev.character_level, prev.character_exp_rate, cur.character_level, cur.character_exp_rate)
+                : "";
+            return label + " Lv." + cur.character_level + " " + cur.character_exp_rate + "%" + diff + "\n";
+        }
         if (data.ocid) {
     var tagLine = (Tag && Tag.trim() !== "") ? "\n" + Tag : "";
     var fantasyLine = (fantasyTag && fantasyTag.trim() !== "") ? "\n" + fantasyTag : "";
-    replier.reply("[" + decodeURIComponent(characterName) + "]  " + cpText + " " + cpIcon + tagLine + fantasyLine + "\n"
-        + dayText_7 + " Lv." + data8.character_level + " " + data8.character_exp_rate + "% +" + getExpDiffText(data9.character_level, data9.character_exp_rate, data8.character_level, data8.character_exp_rate) + "\n"
-        + dayText_6 + " Lv." + data7.character_level + " " + data7.character_exp_rate + "% +" + getExpDiffText(data8.character_level, data8.character_exp_rate, data7.character_level, data7.character_exp_rate) + "\n"
-        + dayText_5 + " Lv." + data6.character_level + " " + data6.character_exp_rate + "% +" + getExpDiffText(data7.character_level, data7.character_exp_rate, data6.character_level, data6.character_exp_rate) + "\n"
-        + dayText_4 + " Lv." + data5.character_level + " " + data5.character_exp_rate + "% +" + getExpDiffText(data6.character_level, data6.character_exp_rate, data5.character_level, data5.character_exp_rate) + "\n"
-        + dayText_3 + " Lv." + data4.character_level + " " + data4.character_exp_rate + "% +" + getExpDiffText(data5.character_level, data5.character_exp_rate, data4.character_level, data4.character_exp_rate) + "\n"
-        + dayText_2 + " Lv." + data3.character_level + " " + data3.character_exp_rate + "% +" + getExpDiffText(data4.character_level, data4.character_exp_rate, data3.character_level, data3.character_exp_rate) + "\n"
-        + dayText_1 + " Lv." + data2.character_level + " " + data2.character_exp_rate + "% +" + getExpDiffText(data3.character_level, data3.character_exp_rate, data2.character_level, data2.character_exp_rate) + "\n\n"
-        + "일주일 평균 획득량 : " + ave.toFixed(1) + " " + av + avetext + "\n"
-        + "남은 경험치량 :  " + namexp.toFixed(1) + " " + av2 + "\n"
-        + "예상 레벨업 날짜 : " + upday + lvup + "\n"
-        + "이번 달 평균 획득량 : " + (monthlyAve != null ? monthlyAve.toFixed(1) + " " + monthlyAv : "null") + " (" + daysInMonth + "일간)"
-    );
+    var __header = "[" + decodeURIComponent(characterName) + "]  " + cpText + " " + cpIcon + tagLine + fantasyLine + "\n";
+    var __daysBlock = __dayLine(dayText_7, data8, data9)
+                    + __dayLine(dayText_6, data7, data8)
+                    + __dayLine(dayText_5, data6, data7)
+                    + __dayLine(dayText_4, data5, data6)
+                    + __dayLine(dayText_3, data4, data5)
+                    + __dayLine(dayText_2, data3, data4)
+                    + __dayLine(dayText_1, data2, data3);
+    var __aveLine = (ave1 > 0)
+        ? "주간 평균 획득량 : " + ave.toFixed(1) + " " + av + avetext + "\n"
+        : "주간 평균 획득량 : (데이터 부족)\n";
+    var __namexpLine = (namexp1 > 0)
+        ? "남은 경험치량 :  " + namexp.toFixed(1) + " " + av2 + "\n"
+        : "";
+    var __upLine = (upday !== "-")
+        ? "예상 레벨업 날짜 : " + upday + lvup + "\n"
+        : "";
+    var __monthlyLine = "이번 달 평균 획득량 : " + (monthlyAve != null ? monthlyAve.toFixed(1) + " " + monthlyAv : "(데이터 부족)") + " (" + daysInMonth + "일간)";
+    replier.reply(__header + __daysBlock + "\n" + __aveLine + __namexpLine + __upLine + __monthlyLine);
 
 }
         else {
             replier.reply("해당 캐릭터를 찾을 수 없습니다.");
         }
     } catch (error) {
-        replier.reply("새벽점검시간 혹은 월드리프, 생성일이 일주일이 되지 않음 ");
+        replier.reply("조회 중 오류가 발생했습니다. (NEXON 점검 또는 월드리프 가능성)");
         return;
     }
     function getRealExp(level, rate) {
