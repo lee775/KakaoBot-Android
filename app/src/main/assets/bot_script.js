@@ -3981,11 +3981,16 @@ if (__oldest && data2 && data2.character_level != null) {
                 String(lvupdate.getDate()).padStart(2, "0") + "일";
         }
         // 일자별 라인 안전 생성 (없는 날은 줄 생략)
+        // prev 없는 가장 오래된 데이터는 "(시작) +<해당일 누적경험치>" 표시
         function __dayLine(label, cur, prev) {
             if (!cur || cur.character_level == null) return "";
-            var diff = (prev && prev.character_level != null)
-                ? " +" + getExpDiffText(prev.character_level, prev.character_exp_rate, cur.character_level, cur.character_exp_rate)
-                : "";
+            var diff;
+            if (prev && prev.character_level != null) {
+                diff = " +" + getExpDiffText(prev.character_level, prev.character_exp_rate, cur.character_level, cur.character_exp_rate);
+            } else {
+                var __raw = Number(cur.character_exp || 0);
+                diff = " (시작) +" + (__raw > 0 ? formatExp(__raw) : "0");
+            }
             return label + " Lv." + cur.character_level + " " + cur.character_exp_rate + "%" + diff + "\n";
         }
         if (data.ocid) {
