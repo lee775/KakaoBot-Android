@@ -626,6 +626,7 @@ const MAPLE_INF_STAT_URL = "https://open.api.nexon.com/maplestory/v1/character/s
 var MAPLE_GUILD_ID_URL = "https://open.api.nexon.com/maplestory/v1/guild/id";
 var MAPLE_GUILD_BASIC_URL = "https://open.api.nexon.com/maplestory/v1/guild/basic";
 var MAPLE_ITEM_EQUIPMENT_URL = "https://open.api.nexon.com/maplestory/v1/character/item-equipment";
+var MAPLE_SCHEDULER_URL = "https://open.api.nexon.com/maplestory/v1/scheduler/character-state";
 const RANKING_CHARACTERS4 = [
 "글자",
 "Nine",
@@ -4352,6 +4353,13 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
     if (msg === "/이벤트") {
         getCurrentEvents(replier);
     }
+    // ===== /스케줄러 /숙제 (NEXON 스케줄러 API, 본인 계정 캐릭터만) =====
+    if (msg === "/스케줄러" || msg.startsWith("/스케줄러 ") ||
+        msg === "/숙제" || msg.startsWith("/숙제 ")) {
+        var schInput = msg.indexOf(" ") !== -1 ? msg.substring(msg.indexOf(" ") + 1).trim() : "";
+        var schName = resolveCharacter(schInput, sender, replier);
+        if (schName) getCharacterState(encodeURIComponent(schName), replier);
+    }
     // ===== /실험 (사진 전송 테스트) =====
     if (msg === "/실험" || msg.startsWith("/실험 ")) {
         try {
@@ -4644,6 +4652,78 @@ function getSundayMaple(replier, room) {
     });
     thread.start();
 }
+// ===== 캐릭터 스케줄러 정보 조회 (메이플 숙제) =====
+// 주의: 자신의 계정에 속한 캐릭터만 조회 가능 (NEXON API 제한)
+function getCharacterState(characterName, replier) {
+    var thread = new java.lang.Thread(function() {
+        try {
+            // 1) OCID 조회
+            var ocidUrl = MAPLE_OCID_API_URL + "?character_name=" + characterName;
+            var ocidResp = org.jsoup.Jsoup.connect(ocidUrl)
+                .header("accept", "application/json")
+                .header("x-nxopen-api-key", NEXON_API_KEY)
+                .ignoreContentType(true).ignoreHttpErrors(true)
+                .timeout(10000).execute().body();
+            var ocidData = JSON.parse(ocidResp);
+            if (!ocidData || !ocidData.ocid) {
+                replier.reply("해당 캐릭터를 찾을 수 없습니다.");
+                return;
+            }
+            // 2) 스케줄러 조회 (date 미입력 시 오늘)
+            var url = MAPLE_SCHEDULER_URL + "?ocid=" + ocidData.ocid;
+            var resp = org.jsoup.Jsoup.connect(url)
+                .header("accept", "application/json")
+                .header("x-nxopen-api-key", NEXON_API_KEY)
+                .ignoreContentType(true).ignoreHttpErrors(true)
+                .timeout(10000).execute().body();
+            var d = JSON.parse(resp);
+            if (!d || d.error) {
+                var msg = (d && d.error && d.error.message) ? d.error.message : "조회 실패";
+                if (msg.indexOf("valid parameter") !== -1 || (d.error && d.error.name === "OPENAPI00004")) {
+                    replier.reply("⚠️ 스케줄러는 봇 API 키 발급 계정의 캐릭터만 조회됩니다.\n("+ msg + ")");
+                } else {
+                    replier.reply("⚠️ " + msg);
+                }
+                return;
+            }
+            // 3) 포맷
+            function fmtFlag(v) { return (v === "Y" || v === true) ? "✅" : "❌"; }
+            function listLines(arr, withCount) {
+                if (!arr || arr.length === 0) return ["  (없음)"];
+                var out = [];
+                for (var i = 0; i < arr.length; i++) {
+                    var c = arr[i];
+                    var done = fmtFlag(c.complete_flag || c.registration_flag);
+                    var cnt = "";
+                    if (withCount && c.max_count != null && c.max_count > 0) {
+                        cnt = " (" + (c.now_count || 0) + "/" + c.max_count + ")";
+                    }
+                    var diff = c.difficulty ? "[" + c.difficulty + "] " : "";
+                    out.push("  " + done + " " + diff + (c.content_name || "?") + cnt);
+                }
+                return out;
+            }
+            var lines = [];
+            lines.push("[" + (d.character_name || decodeURIComponent(characterName)) + "] 스케줄러");
+            lines.push("Lv." + (d.character_level || "?") + " " + (d.character_class || "") + " | " + (d.world_name || ""));
+            lines.push("기준: " + (d.date || "오늘"));
+            lines.push("================================");
+            lines.push("📅 일일 콘텐츠 (" + (d.daily_contents ? d.daily_contents.length : 0) + ")");
+            lines = lines.concat(listLines(d.daily_contents, true));
+            lines.push("");
+            lines.push("📆 주간 콘텐츠 (" + (d.weekly_contents ? d.weekly_contents.length : 0) + ")");
+            lines = lines.concat(listLines(d.weekly_contents, true));
+            lines.push("");
+            lines.push("⚔️ 보스 (" + (d.weekly_boss_clear_count || 0) + "/" + (d.weekly_boss_clear_limit_count || 0) + " 주간클리어)");
+            lines = lines.concat(listLines(d.boss_contents, false));
+            replier.reply(lines.join("\n"));
+        } catch (e) {
+            replier.reply("스케줄러 조회 오류: " + (e.message || e));
+        }
+    });
+    thread.start();
+}
+
 function getCurrentEvents(replier) {
     var thread = new java.lang.Thread(function() {
         try {
