@@ -629,6 +629,20 @@ function foodchoice(replier) {
 }
 
 const NEXON_API_KEY = "live_7a3074bd54665cadd86920528d44eac7700ae3f8853a3ff626d42db3f7b301f6efe8d04e6d233bd35cf2fabdeb93fb0d";
+// 스케줄러는 "본인 계정 캐릭터만 조회 가능"이므로 캐릭터 → API키 매핑 필요.
+// 매핑 없는 캐릭은 기본 NEXON_API_KEY 사용.
+var CHAR_API_KEYS = {
+    "그리즈": "live_24aaad0330641eb2b8f1107614f8d7972638eb45088b6769f1a78e3b1f714d22efe8d04e6d233bd35cf2fabdeb93fb0d",
+    "코코섬": "live_24aaad0330641eb2b8f1107614f8d7972638eb45088b6769f1a78e3b1f714d22efe8d04e6d233bd35cf2fabdeb93fb0d",
+    "쿄코섬": "live_24aaad0330641eb2b8f1107614f8d7972638eb45088b6769f1a78e3b1f714d22efe8d04e6d233bd35cf2fabdeb93fb0d",
+    "활든그리즈": "live_24aaad0330641eb2b8f1107614f8d7972638eb45088b6769f1a78e3b1f714d22efe8d04e6d233bd35cf2fabdeb93fb0d"
+};
+function getApiKeyForChar(charName) {
+    if (!charName) return NEXON_API_KEY;
+    var n = String(charName);
+    try { n = decodeURIComponent(n); } catch(e) {}
+    return CHAR_API_KEYS[n] || NEXON_API_KEY;
+}
 const MAPLE_OCID_API_URL = "https://open.api.nexon.com/maplestory/v1/id";
 var MAPLE_SYMBOL_URL = "https://open.api.nexon.com/maplestory/v1/character/symbol-equipment";
 const MAPLE_INF_API_URL = "https://open.api.nexon.com/maplestory/v1/character/basic";
@@ -4682,11 +4696,13 @@ function getSundayMaple(replier, room) {
 function getCharacterState(characterName, replier) {
     var thread = new java.lang.Thread(function() {
         try {
+            // 캐릭터별 API 키 (스케줄러는 본인 계정 키만 작동)
+            var __apiKey = getApiKeyForChar(characterName);
             // 1) OCID 조회
             var ocidUrl = MAPLE_OCID_API_URL + "?character_name=" + characterName;
             var ocidResp = org.jsoup.Jsoup.connect(ocidUrl)
                 .header("accept", "application/json")
-                .header("x-nxopen-api-key", NEXON_API_KEY)
+                .header("x-nxopen-api-key", __apiKey)
                 .ignoreContentType(true).ignoreHttpErrors(true)
                 .timeout(10000).execute().body();
             var ocidData = JSON.parse(ocidResp);
@@ -4698,7 +4714,7 @@ function getCharacterState(characterName, replier) {
             var url = MAPLE_SCHEDULER_URL + "?ocid=" + ocidData.ocid;
             var resp = org.jsoup.Jsoup.connect(url)
                 .header("accept", "application/json")
-                .header("x-nxopen-api-key", NEXON_API_KEY)
+                .header("x-nxopen-api-key", __apiKey)
                 .ignoreContentType(true).ignoreHttpErrors(true)
                 .timeout(10000).execute().body();
             var d = JSON.parse(resp);
