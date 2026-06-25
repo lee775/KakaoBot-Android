@@ -4680,42 +4680,74 @@ function getCharacterState(characterName, replier) {
             if (!d || d.error) {
                 var msg = (d && d.error && d.error.message) ? d.error.message : "조회 실패";
                 if (msg.indexOf("valid parameter") !== -1 || (d.error && d.error.name === "OPENAPI00004")) {
-                    replier.reply("⚠️ 스케줄러는 봇 API 키 발급 계정의 캐릭터만 조회됩니다.\n("+ msg + ")");
+                    replier.reply("⚠️ 스케줄러는 봇 API 키 발급 계정의 캐릭터만 조회됩니다.\n(" + msg + ")");
                 } else {
                     replier.reply("⚠️ " + msg);
                 }
                 return;
             }
-            // 3) 포맷
-            function fmtFlag(v) { return (v === "Y" || v === true) ? "✅" : "❌"; }
-            function listLines(arr, withCount) {
-                if (!arr || arr.length === 0) return ["  (없음)"];
+            // 3) 헬퍼
+            function isTrue(v) { return v === true || v === "true" || v === "Y" || v === 1 || v === "1"; }
+            function diffKor(s) {
+                var m = { easy: "이지", normal: "노말", hard: "하드", chaos: "카오스", extreme: "익스트림" };
+                return s ? (m[String(s).toLowerCase()] || s) : "";
+            }
+            function cycleKor(s) {
+                if (!s) return "";
+                var t = String(s);
+                if (t.indexOf("Daily") !== -1) return "일일";
+                if (t.indexOf("Weekly") !== -1) return "주간";
+                if (t.indexOf("Monthly") !== -1) return "월간";
+                return t;
+            }
+            // 4) 일일/주간 콘텐츠: 등록된 항목만 표시, 진행도 ✅/⏳
+            function contentLines(arr) {
                 var out = [];
+                if (!arr) return out;
                 for (var i = 0; i < arr.length; i++) {
                     var c = arr[i];
-                    var done = fmtFlag(c.complete_flag || c.registration_flag);
-                    var cnt = "";
-                    if (withCount && c.max_count != null && c.max_count > 0) {
-                        cnt = " (" + (c.now_count || 0) + "/" + c.max_count + ")";
-                    }
-                    var diff = c.difficulty ? "[" + c.difficulty + "] " : "";
-                    out.push("  " + done + " " + diff + (c.content_name || "?") + cnt);
+                    if (!isTrue(c.registration_flag)) continue;  // 미등록 스킵
+                    var now = Number(c.now_count || 0), max = Number(c.max_count || 0);
+                    var icon = (max > 0 && now >= max) ? "✅" : "⏳";
+                    var cnt = (max > 0) ? " " + now + "/" + max : "";
+                    out.push(icon + " " + (c.content_name || "?") + cnt);
                 }
                 return out;
             }
+            // 5) 보스: 등록되거나 완료한 것만 표시
+            function bossLines(arr) {
+                var out = [];
+                if (!arr) return out;
+                for (var i = 0; i < arr.length; i++) {
+                    var b = arr[i];
+                    var reg = isTrue(b.registration_flag), done = isTrue(b.complete_flag);
+                    if (!reg && !done) continue;
+                    var icon = done ? "✅" : "⏳";
+                    var diff = b.difficulty ? "[" + diffKor(b.difficulty) + "] " : "";
+                    var cyc = b.cycle ? " (" + cycleKor(b.cycle) + ")" : "";
+                    out.push(icon + " " + diff + (b.content_name || "?") + cyc);
+                }
+                return out;
+            }
+            var dailyL = contentLines(d.daily_contents);
+            var weeklyL = contentLines(d.weekly_contents);
+            var bossL = bossLines(d.boss_contents);
+            var dateStr = (d.date || "").substring(0, 10);
             var lines = [];
-            lines.push("[" + (d.character_name || decodeURIComponent(characterName)) + "] 스케줄러");
-            lines.push("Lv." + (d.character_level || "?") + " " + (d.character_class || "") + " | " + (d.world_name || ""));
-            lines.push("기준: " + (d.date || "오늘"));
-            lines.push("================================");
-            lines.push("📅 일일 콘텐츠 (" + (d.daily_contents ? d.daily_contents.length : 0) + ")");
-            lines = lines.concat(listLines(d.daily_contents, true));
+            lines.push("🍁 " + (d.character_name || decodeURIComponent(characterName)) + " 메이플 숙제");
+            lines.push("Lv." + (d.character_level || "?") + " " + (d.character_class || "") + " | " + (d.world_name || "") + " | " + dateStr);
+            lines.push("━━━━━━━━━━━━━━━━");
             lines.push("");
-            lines.push("📆 주간 콘텐츠 (" + (d.weekly_contents ? d.weekly_contents.length : 0) + ")");
-            lines = lines.concat(listLines(d.weekly_contents, true));
+            lines.push("📅 일일 (" + dailyL.length + ")");
+            lines = lines.concat(dailyL.length ? dailyL : ["  (등록 없음)"]);
             lines.push("");
-            lines.push("⚔️ 보스 (" + (d.weekly_boss_clear_count || 0) + "/" + (d.weekly_boss_clear_limit_count || 0) + " 주간클리어)");
-            lines = lines.concat(listLines(d.boss_contents, false));
+            lines.push("📆 주간 (" + weeklyL.length + ")");
+            lines = lines.concat(weeklyL.length ? weeklyL : ["  (등록 없음)"]);
+            lines.push("");
+            lines.push("⚔️ 보스 (주간클 " + (d.weekly_boss_clear_count || 0) + "/" + (d.weekly_boss_clear_limit_count || 0) + ")");
+            lines = lines.concat(bossL.length ? bossL : ["  (등록/완료 없음)"]);
+            lines.push("");
+            lines.push("ℹ️ 미등록 콘텐츠는 표시되지 않음");
             replier.reply(lines.join("\n"));
         } catch (e) {
             replier.reply("스케줄러 조회 오류: " + (e.message || e));
