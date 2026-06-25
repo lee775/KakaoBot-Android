@@ -635,7 +635,9 @@ var CHAR_API_KEYS = {
     "그리즈": "live_24aaad0330641eb2b8f1107614f8d7972638eb45088b6769f1a78e3b1f714d22efe8d04e6d233bd35cf2fabdeb93fb0d",
     "코코섬": "live_24aaad0330641eb2b8f1107614f8d7972638eb45088b6769f1a78e3b1f714d22efe8d04e6d233bd35cf2fabdeb93fb0d",
     "쿄코섬": "live_24aaad0330641eb2b8f1107614f8d7972638eb45088b6769f1a78e3b1f714d22efe8d04e6d233bd35cf2fabdeb93fb0d",
-    "활든그리즈": "live_24aaad0330641eb2b8f1107614f8d7972638eb45088b6769f1a78e3b1f714d22efe8d04e6d233bd35cf2fabdeb93fb0d"
+    "활든그리즈": "live_24aaad0330641eb2b8f1107614f8d7972638eb45088b6769f1a78e3b1f714d22efe8d04e6d233bd35cf2fabdeb93fb0d",
+    "보마Lia": "test_c20c9a743fb76cfdb57b865e9e55ff0f0b355d5ae460e8b525c3bcd39996aec9efe8d04e6d233bd35cf2fabdeb93fb0d",
+    "엔젤릭Lia": "test_c20c9a743fb76cfdb57b865e9e55ff0f0b355d5ae460e8b525c3bcd39996aec9efe8d04e6d233bd35cf2fabdeb93fb0d"
 };
 function getApiKeyForChar(charName) {
     if (!charName) return NEXON_API_KEY;
