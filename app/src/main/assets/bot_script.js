@@ -4286,11 +4286,26 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
         replier.reply("⏳ 최신 스크립트 가져오는 중...");
         new java.lang.Thread(function() {
             try {
-                // GitHub raw CDN 캐시(약 5분) 무효화: timestamp 쿼리 추가
-                var __upUrl = "https://raw.githubusercontent.com/lee775/KakaoBot-Android/master/code.txt?t=" + Date.now();
+                // CDN 캐시 회피: 최신 commit SHA 조회 → SHA 기반 raw URL 호출
+                // GitHub raw는 path 동일하면 Fastly 5분 캐시(query 무시)지만
+                // commit SHA마다 URL이 달라 매번 fresh 응답
+                var __sha = null;
+                try {
+                    var __apiResp = org.jsoup.Jsoup.connect(
+                        "https://api.github.com/repos/lee775/KakaoBot-Android/commits/master?t=" + Date.now())
+                        .header("Accept", "application/vnd.github+json")
+                        .header("Cache-Control", "no-cache")
+                        .ignoreContentType(true).ignoreHttpErrors(true)
+                        .timeout(10000).execute().body();
+                    var __api = JSON.parse(__apiResp);
+                    __sha = __api && __api.sha;
+                } catch(eApi) {}
+                var __upUrl = __sha
+                    ? "https://raw.githubusercontent.com/lee775/KakaoBot-Android/" + __sha + "/code.txt"
+                    : "https://raw.githubusercontent.com/lee775/KakaoBot-Android/master/code.txt?t=" + Date.now();
                 var result = String(BotUpdate.applyRemote(__upUrl));
-                // "(XXXXX chars)" 같은 용량 표기 제거
                 result = result.replace(/\s*\(\d+\s*chars\)\s*$/, "");
+                if (__sha) result += "\n(SHA " + __sha.substring(0, 7) + ")";
                 replier.reply(result);
             } catch (e) {
                 replier.reply("/업데이트 오류: " + e);
