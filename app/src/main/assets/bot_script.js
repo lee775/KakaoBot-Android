@@ -4356,10 +4356,19 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
     // ===== /스케줄러 /숙제 (NEXON 스케줄러 API, 본인 계정 캐릭터만) =====
     if (msg === "/스케줄러" || msg.startsWith("/스케줄러 ") ||
         msg === "/숙제" || msg.startsWith("/숙제 ")) {
-        try { replier.reply("[DBG] /숙제 라우팅 도달 - msg=" + msg); } catch(e){} // 임시 진단
-        var schInput = msg.indexOf(" ") !== -1 ? msg.substring(msg.indexOf(" ") + 1).trim() : "";
-        var schName = resolveCharacter(schInput, sender, replier);
-        if (schName) getCharacterState(encodeURIComponent(schName), replier);
+        try {
+            var schInput = msg.indexOf(" ") !== -1 ? msg.substring(msg.indexOf(" ") + 1).trim() : "";
+            replier.reply("[DBG1] input=[" + schInput + "] sender=[" + sender + "]");
+            var schName = resolveCharacter(schInput, sender, replier);
+            replier.reply("[DBG2] schName=[" + schName + "]");
+            if (schName) {
+                replier.reply("[DBG3] MAPLE_SCHEDULER_URL=" + (typeof MAPLE_SCHEDULER_URL) + " getCharacterState=" + (typeof getCharacterState));
+                getCharacterState(encodeURIComponent(schName), replier);
+                replier.reply("[DBG4] getCharacterState 호출 직후 (thread.start 완료)");
+            }
+        } catch (eDbg) {
+            replier.reply("[DBG ERR] " + eDbg);
+        }
     }
     // ===== /실험 (사진 전송 테스트) =====
     if (msg === "/실험" || msg.startsWith("/실험 ")) {
@@ -4658,6 +4667,7 @@ function getSundayMaple(replier, room) {
 function getCharacterState(characterName, replier) {
     var thread = new java.lang.Thread(function() {
         try {
+            replier.reply("[DBG-T1] thread 진입 OK");
             // 1) OCID 조회
             var ocidUrl = MAPLE_OCID_API_URL + "?character_name=" + characterName;
             var ocidResp = org.jsoup.Jsoup.connect(ocidUrl)
@@ -4665,11 +4675,13 @@ function getCharacterState(characterName, replier) {
                 .header("x-nxopen-api-key", NEXON_API_KEY)
                 .ignoreContentType(true).ignoreHttpErrors(true)
                 .timeout(10000).execute().body();
+            replier.reply("[DBG-T2] OCID fetch 완료 len=" + (ocidResp ? ocidResp.length : 0));
             var ocidData = JSON.parse(ocidResp);
             if (!ocidData || !ocidData.ocid) {
                 replier.reply("해당 캐릭터를 찾을 수 없습니다.");
                 return;
             }
+            replier.reply("[DBG-T3] OCID=" + ocidData.ocid);
             // 2) 스케줄러 조회 (date 미입력 시 오늘)
             var url = MAPLE_SCHEDULER_URL + "?ocid=" + ocidData.ocid;
             var resp = org.jsoup.Jsoup.connect(url)
@@ -4677,7 +4689,9 @@ function getCharacterState(characterName, replier) {
                 .header("x-nxopen-api-key", NEXON_API_KEY)
                 .ignoreContentType(true).ignoreHttpErrors(true)
                 .timeout(10000).execute().body();
+            replier.reply("[DBG-T4] 스케줄러 fetch 완료 len=" + (resp ? resp.length : 0));
             var d = JSON.parse(resp);
+            replier.reply("[DBG-T5] JSON.parse OK keys=" + (d ? Object.keys(d).join(",") : "null"));
             if (!d || d.error) {
                 var msg = (d && d.error && d.error.message) ? d.error.message : "조회 실패";
                 if (msg.indexOf("valid parameter") !== -1 || (d.error && d.error.name === "OPENAPI00004")) {
