@@ -4319,7 +4319,6 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
                     : "https://raw.githubusercontent.com/lee775/KakaoBot-Android/master/code.txt?t=" + Date.now();
                 var result = String(BotUpdate.applyRemote(__upUrl));
                 result = result.replace(/\s*\(\d+\s*chars\)\s*$/, "");
-                if (__sha) result += "\n(SHA " + __sha.substring(0, 7) + ")";
                 replier.reply(result);
             } catch (e) {
                 replier.reply("/업데이트 오류: " + e);
