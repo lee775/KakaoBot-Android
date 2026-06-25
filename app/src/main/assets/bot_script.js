@@ -4356,6 +4356,7 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
     // ===== /스케줄러 /숙제 (NEXON 스케줄러 API, 본인 계정 캐릭터만) =====
     if (msg === "/스케줄러" || msg.startsWith("/스케줄러 ") ||
         msg === "/숙제" || msg.startsWith("/숙제 ")) {
+        try { replier.reply("[DBG] /숙제 라우팅 도달 - msg=" + msg); } catch(e){} // 임시 진단
         var schInput = msg.indexOf(" ") !== -1 ? msg.substring(msg.indexOf(" ") + 1).trim() : "";
         var schName = resolveCharacter(schInput, sender, replier);
         if (schName) getCharacterState(encodeURIComponent(schName), replier);
