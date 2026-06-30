@@ -183,6 +183,32 @@ function resolveCharacter(input, sender, replier) {
     return null;
 }
 
+// ===== 이미지 전송 (로컬 Node 카카오링크 서버 경유) =====
+// 서버 위치: C:\WOOK\kakaobot\kakaolink-server  (이 PC에서 npm start)
+// 폰과 PC가 같은 Wi-Fi 여야 하며, 아래 IP는 이 PC의 LAN IP 입니다.
+// (PC IP가 바뀌면 IMG_SERVER_URL 의 주소만 수정하면 됩니다)
+var IMG_SERVER_URL   = "http://192.168.3.19:3000/send-image";
+var IMG_SERVER_TOKEN = "806bdc1c268275fbc4ea002883562bb137fd20bfa6026737";
+
+function sendImage(room, imageUrl, title, desc) {
+    var t = new java.lang.Thread(function() {
+        try {
+            var payload = JSON.stringify({
+                room: room, imageUrl: imageUrl,
+                title: title || "", desc: desc || ""
+            });
+            org.jsoup.Jsoup.connect(IMG_SERVER_URL)
+                .header("Content-Type", "application/json")
+                .header("x-token", IMG_SERVER_TOKEN)
+                .requestBody(payload)
+                .ignoreContentType(true).ignoreHttpErrors(true)
+                .timeout(15000)
+                .post();
+        } catch (e) {}
+    });
+    t.start();
+}
+
 function responsePart1(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
     // 캐릭터 등록 기능
     if (msg.startsWith("/캐릭터등록 ")) {
@@ -4288,6 +4314,14 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
     // 분리된 part 호출
     try { responsePart1(room, msg, sender, isGroupChat, replier, imageDB, packageName); } catch(e){}
     try { responsePart2(room, msg, sender, isGroupChat, replier, imageDB, packageName); } catch(e){}
+
+    // ===== /사진 (이미지 전송 테스트) =====
+    if (msg.startsWith("/사진 ")) {
+        var __imgUrl = msg.slice(4).trim();
+        if (__imgUrl) sendImage(room, __imgUrl, "이미지", "");
+        else replier.reply("사용법: /사진 이미지URL");
+        return;
+    }
 
     // ===== /업데이트 (관리자 전용) =====
     if (msg === "/업데이트") {
