@@ -4809,18 +4809,23 @@ function getCharacterState(characterName, replier) {
             var weeklyL = contentLines(d.weekly_contents);
             var bossL = bossLines(d.boss_contents);
             var dateStr = (d.date || "").substring(0, 10);
+            var bossClr = (d.weekly_boss_clear_count || 0) + "/" + (d.weekly_boss_clear_limit_count || 0);
             var lines = [];
+            // 헤더 (미리보기에 보이는 부분)
             lines.push("🍁 " + (d.character_name || decodeURIComponent(characterName)) + " 메이플 숙제");
             lines.push("Lv." + (d.character_level || "?") + " " + (d.character_class || "") + " | " + (d.world_name || "") + " | " + dateStr);
+            lines.push("📊 일일 " + dailyL.length + " · 주간 " + weeklyL.length + " · 보스 " + bossClr);
             lines.push("━━━━━━━━━━━━━━━━");
-            lines.push("");
+            // 카톡 "전체보기" 트리거: zero-width 3000개 라인 (여기 아래부터 접힘)
+            lines.push(new Array(3001).join("​"));
+            // 상세 (펼쳐야 보임)
             lines.push("📅 일일 (" + dailyL.length + ")");
             lines = lines.concat(dailyL.length ? dailyL : ["  (등록 없음)"]);
             lines.push("");
             lines.push("📆 주간 (" + weeklyL.length + ")");
             lines = lines.concat(weeklyL.length ? weeklyL : ["  (등록 없음)"]);
             lines.push("");
-            lines.push("⚔️ 보스 (주간클 " + (d.weekly_boss_clear_count || 0) + "/" + (d.weekly_boss_clear_limit_count || 0) + ")");
+            lines.push("⚔️ 보스 (주간클 " + bossClr + ")");
             lines = lines.concat(bossL.length ? bossL : ["  (등록/완료 없음)"]);
             lines.push("");
             lines.push("ℹ️ 미등록 콘텐츠는 표시되지 않음");
