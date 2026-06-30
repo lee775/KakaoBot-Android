@@ -4742,32 +4742,66 @@ function getCharacterState(characterName, replier) {
                 if (t.indexOf("Monthly") !== -1) return "월간";
                 return t;
             }
-            // 4) 일일/주간 콘텐츠: 등록된 항목만 표시, 진행도 ✅/⏳
+            // 4) 일일/주간 콘텐츠: 등록된 항목만 표시
+            //    - max_count > 0: now/max 비율로 ✅/⏳
+            //    - max_count = 0: quest_state "2"=완료 / "0"=미완료 / "1"=진행중
             function contentLines(arr) {
                 var out = [];
                 if (!arr) return out;
                 for (var i = 0; i < arr.length; i++) {
                     var c = arr[i];
-                    if (!isTrue(c.registration_flag)) continue;  // 미등록 스킵
+                    if (!isTrue(c.registration_flag)) continue;
                     var now = Number(c.now_count || 0), max = Number(c.max_count || 0);
-                    var icon = (max > 0 && now >= max) ? "✅" : "⏳";
-                    var cnt = (max > 0) ? " " + now + "/" + max : "";
+                    var qs = c.quest_state;
+                    var icon, cnt;
+                    if (max > 0) {
+                        icon = (now >= max) ? "✅" : "⏳";
+                        cnt = " " + now + "/" + max;
+                    } else if (qs === "2") {
+                        icon = "✅"; cnt = "";
+                    } else if (qs === "1") {
+                        icon = "🔄"; cnt = "";
+                    } else {
+                        icon = "⏳"; cnt = "";
+                    }
                     out.push(icon + " " + (c.content_name || "?") + cnt);
                 }
                 return out;
             }
-            // 5) 보스: 등록되거나 완료한 것만 표시
+            // 5) 보스: 같은 보스(content_name)는 가장 어려운 1개만 표시
+            //    - 완료한 난이도가 있으면 그 중 list_order_no 최대
+            //    - 없으면 등록된 난이도 중 list_order_no 최대
             function bossLines(arr) {
                 var out = [];
                 if (!arr) return out;
+                var groups = {}, names = [];
                 for (var i = 0; i < arr.length; i++) {
                     var b = arr[i];
-                    var reg = isTrue(b.registration_flag), done = isTrue(b.complete_flag);
-                    if (!reg && !done) continue;
-                    var icon = done ? "✅" : "⏳";
-                    var diff = b.difficulty ? "[" + diffKor(b.difficulty) + "] " : "";
-                    var cyc = b.cycle ? " (" + cycleKor(b.cycle) + ")" : "";
-                    out.push(icon + " " + diff + (b.content_name || "?") + cyc);
+                    var nm = b.content_name || "?";
+                    if (!groups[nm]) { groups[nm] = []; names.push(nm); }
+                    groups[nm].push(b);
+                }
+                for (var k = 0; k < names.length; k++) {
+                    var entries = groups[names[k]], chosen = null;
+                    // 완료한 것 중 가장 어려운 것 우선
+                    for (var j = 0; j < entries.length; j++) {
+                        var e = entries[j];
+                        if (!isTrue(e.complete_flag)) continue;
+                        if (!chosen || (e.list_order_no || 0) > (chosen.list_order_no || 0)) chosen = e;
+                    }
+                    // 완료 없으면 등록된 것 중 가장 어려운 것
+                    if (!chosen) {
+                        for (var jj = 0; jj < entries.length; jj++) {
+                            var er = entries[jj];
+                            if (!isTrue(er.registration_flag)) continue;
+                            if (!chosen || (er.list_order_no || 0) > (chosen.list_order_no || 0)) chosen = er;
+                        }
+                    }
+                    if (!chosen) continue;
+                    var icon = isTrue(chosen.complete_flag) ? "✅" : "⏳";
+                    var diff = chosen.difficulty ? "[" + diffKor(chosen.difficulty) + "] " : "";
+                    var cyc = chosen.cycle ? " (" + cycleKor(chosen.cycle) + ")" : "";
+                    out.push(icon + " " + diff + names[k] + cyc);
                 }
                 return out;
             }
