@@ -2807,10 +2807,10 @@ const day_7 =
   String(today8.getMonth() + 1).padStart(2, "0") + "-" +
   String(today8.getDate()).padStart(2, "0");
 
-// 이번 달 1일 0시 데이터를 가져오기 위해 전달 마지막날 날짜 계산
+// 이번 달 1일 0시 상태 = 넥슨 API date=이번달1일 스냅샷 (date=D는 D일 0시=전날 끝 상태)
+// (예전엔 전달 마지막날로 -1 했으나, 그러면 직전 달 마지막날 하루치가 이번 달에 섞여 버그)
 const today9 = new Date(today.getTime());
 today9.setDate(1); // 이번 달 1일
-today9.setDate(today9.getDate() - 1); // 하루 빼면 전달 마지막날
 
 const day_8 =
   today9.getFullYear() + "-" +
