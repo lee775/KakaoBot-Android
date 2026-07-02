@@ -3097,7 +3097,7 @@ if (__oldest && data2 && data2.character_level != null) {
 
         today_date.setHours(0, 0, 0, 0);
         monthFirstDate.setHours(0, 0, 0, 0);
-        const daysInMonth = Math.floor((today_date - monthFirstDate) / 86400000) + 1; // 1일부터 오늘까지 일수
+        const daysInMonth = Math.max(1, Math.floor((today_date - monthFirstDate) / 86400000)); // 이번 달 실제 경과일수 (있는 만큼만, 최소 1)
 
         let monthlyAvgExp = null;
         if (daysInMonth > 0 && data10 && data10.character_level != null && data10.character_exp != null
