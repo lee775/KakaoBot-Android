@@ -4199,15 +4199,36 @@ function getEquipment(characterName, replier, slotFilter) {
             var foundItem = false;
 
             var charName = decodeURIComponent(characterName);
-            if (slotFilter) {
-                // 특정 부위만 조회
-                result.push("[" + charName + "] " + slotFilter + " 정보");
-                result.push("================================");
-            } else {
-                // 전체 조회
-                result.push("[" + charName + "] 장비 정보");
-                result.push("================================");
+
+            // 전투력 + 환산 (maplescouter) — 실패해도 장비는 계속 표시
+            function fmtNum(n) {
+                var s = String(Math.floor(Number(n)));
+                return s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
             }
+            var statHeader = [];
+            try {
+                var scUrl = "https://api.maplescouter.com/api/id?name=" + characterName + "&preset=00000&region=kms";
+                var scResp = org.jsoup.Jsoup.connect(scUrl)
+                    .header("api-key", "ff6a7ce0-c4ce-11ee-900c-df03c8ea0d4c")
+                    .header("Content-Type", "application/json")
+                    .ignoreContentType(true).ignoreHttpErrors(true)
+                    .timeout(15000)
+                    .execute().body();
+                var scData = JSON.parse(scResp);
+                if (scData && scData.calculatedData) {
+                    var cd = scData.calculatedData;
+                    if (cd.combatPower != null)     statHeader.push("전투력: " + fmtNum(cd.combatPower));
+                    if (cd.boss380_stat != null)    statHeader.push("일반환산: " + fmtNum(cd.boss380_stat));
+                    if (cd.boss380_hexaStat != null) statHeader.push("헥사환산: " + fmtNum(cd.boss380_hexaStat));
+                }
+            } catch (e) {}
+
+            // 헤더 (미리보기에 보이는 부분)
+            result.push("[" + charName + "] " + (slotFilter ? slotFilter + " 정보" : "장비 정보"));
+            for (var si = 0; si < statHeader.length; si++) result.push(statHeader[si]);
+            result.push("================================");
+            // 카톡 "전체보기" 트리거: zero-width 3000개 (아래 장비 목록부터 접힘)
+            if (!slotFilter) result.push(new Array(3001).join("​"));
 
             if (equipData.item_equipment && equipData.item_equipment.length > 0) {
                 for (var i = 0; i < equipData.item_equipment.length; i++) {
