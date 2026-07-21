@@ -4343,6 +4343,20 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
         return;
     }
 
+    // ===== vs 랜덤 선택 ("A vs B" → 둘 중 랜덤으로 하나, 3개 이상도 가능) =====
+    if (/\svs\s/i.test(msg)) {
+        var __vsParts = msg.split(/\s+vs\s+/i);
+        var __vsCand = [];
+        for (var __vi = 0; __vi < __vsParts.length; __vi++) {
+            var __vt = __vsParts[__vi].trim();
+            if (__vt.length > 0) __vsCand.push(__vt);
+        }
+        if (__vsCand.length >= 2) {
+            replier.reply(__vsCand[Math.floor(Math.random() * __vsCand.length)]);
+            return;
+        }
+    }
+
     // ===== /업데이트 (관리자 전용) =====
     if (msg === "/업데이트") {
         if (typeof ADMINS !== "undefined" && ADMINS.indexOf(sender) === -1) {
