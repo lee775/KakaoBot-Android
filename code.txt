@@ -4552,16 +4552,20 @@ function getBossRatio(idlink, replier) {
     var thread = new java.lang.Thread(function() {
         try {
             var url = "https://api.maplescouter.com/api/id?name=" + idlink + "&preset=00000&region=kms";
-            var resp = org.jsoup.Jsoup.connect(url)
+            var rconn = org.jsoup.Jsoup.connect(url)
                 .header("api-key", "ff6a7ce0-c4ce-11ee-900c-df03c8ea0d4c")
                 .header("Content-Type", "application/json")
                 .ignoreContentType(true)
+                .ignoreHttpErrors(true)
                 .timeout(15000)
-                .execute()
-                .body();
-            var data = JSON.parse(resp);
+                .execute();
+            if (rconn.statusCode() !== 200) {
+                replier.reply("[" + decodeURIComponent(idlink) + "] 조회 실패 — 닉네임을 확인해주세요.\n사용법: /배율 닉네임");
+                return;
+            }
+            var data = JSON.parse(rconn.body());
             if (!data || !data.calculatedData || !data.userApiData || !data.userApiData.info) {
-                replier.reply("캐릭터 정보를 불러오지 못했습니다.");
+                replier.reply("캐릭터 정보를 불러오지 못했습니다. 닉네임을 확인해주세요.");
                 return;
             }
             var cd = data.calculatedData;
@@ -4721,7 +4725,7 @@ function getBossRatio(idlink, replier) {
             }
             replier.reply(msg.replace(/\n+$/, ""));
         } catch (e) {
-            replier.reply("배율 조회 실패: " + e);
+            replier.reply("배율 조회 실패 — 잠시 후 다시 시도하거나 닉네임을 확인해주세요.");
         }
     });
     thread.start();
@@ -4956,16 +4960,20 @@ function getHexaOrder(idlink, replier) {
     var thread = new java.lang.Thread(function() {
         try {
             var infoUrl = "https://api.maplescouter.com/api/id?name=" + idlink + "&preset=00000&region=kms";
-            var infoResp = org.jsoup.Jsoup.connect(infoUrl)
+            var infoConn = org.jsoup.Jsoup.connect(infoUrl)
                 .header("api-key", "ff6a7ce0-c4ce-11ee-900c-df03c8ea0d4c")
                 .header("Content-Type", "application/json")
                 .ignoreContentType(true)
+                .ignoreHttpErrors(true)
                 .timeout(15000)
-                .execute()
-                .body();
-            var info = JSON.parse(infoResp);
+                .execute();
+            if (infoConn.statusCode() !== 200) {
+                replier.reply("[" + decodeURIComponent(idlink) + "] 조회 실패 — 닉네임을 확인해주세요.\n사용법: /헥사 닉네임");
+                return;
+            }
+            var info = JSON.parse(infoConn.body());
             if (!info || !info.calculatedData || !info.userStat) {
-                replier.reply("캐릭터 정보를 불러오지 못했습니다.");
+                replier.reply("캐릭터 정보를 불러오지 못했습니다. 닉네임을 확인해주세요.");
                 return;
             }
             var className = info.calculatedData.class || "";
@@ -4978,16 +4986,20 @@ function getHexaOrder(idlink, replier) {
                 userStat: info.userStat
             });
             var postUrl = "https://api.maplescouter.com/api/calc/hexa-order?class=" + encodeURIComponent(className);
-            var hexaResp = org.jsoup.Jsoup.connect(postUrl)
+            var hexaConn = org.jsoup.Jsoup.connect(postUrl)
                 .method(org.jsoup.Connection.Method.POST)
                 .header("api-key", "ff6a7ce0-c4ce-11ee-900c-df03c8ea0d4c")
                 .header("Content-Type", "application/json")
                 .ignoreContentType(true)
+                .ignoreHttpErrors(true)
                 .timeout(20000)
                 .requestBody(body)
-                .execute()
-                .body();
-            var hexa = JSON.parse(hexaResp);
+                .execute();
+            if (hexaConn.statusCode() !== 200) {
+                replier.reply("헥사 순서 조회 실패 — 잠시 후 다시 시도해주세요.");
+                return;
+            }
+            var hexa = JSON.parse(hexaConn.body());
             if (!hexa || !hexa.class_hexa) {
                 replier.reply("헥사 순서 조회 실패: 응답 형식 오류");
                 return;
@@ -5015,7 +5027,7 @@ function getHexaOrder(idlink, replier) {
             }
             replier.reply(msg.replace(/\n+$/, ""));
         } catch (e) {
-            replier.reply("헥사 순서 조회 실패: " + e);
+            replier.reply("헥사 순서 조회 실패 — 잠시 후 다시 시도하거나 닉네임을 확인해주세요.");
         }
     });
     thread.start();
