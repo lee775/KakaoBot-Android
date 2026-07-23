@@ -4446,9 +4446,17 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
         else getHexaOrder(encodeURIComponent(__rHex), replier);
     }
     if (msg === "/헥사" || msg.startsWith("/헥사 ")) {
-        var __rHex2 = resolveName(msg.slice(3).trim(), sender);
-        if (!__rHex2) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
-        else getHexaOrder(encodeURIComponent(__rHex2), replier);
+        var __hexArg = msg.slice(3).trim();
+        var __hexNums = __hexArg.match(/^(\d+)\s+(\d+)$/);
+        if (__hexNums) {
+            // 숫자 2개 → 6차 코어 비용 계산 (예: /헥사 0 30)
+            calc(parseInt(__hexNums[1]), parseInt(__hexNums[2]), replier);
+        } else {
+            // 닉네임 → 헥사 강화 순서 추천
+            var __rHex2 = resolveName(__hexArg, sender);
+            if (!__rHex2) replier.reply("사용법\n/헥사 0 30 → 6차 코어 비용\n/헥사 닉네임 → 강화 순서 추천");
+            else getHexaOrder(encodeURIComponent(__rHex2), replier);
+        }
     }
     if (msg === "/배율" || msg.startsWith("/배율 ")) {
         var __rRatio = resolveName(msg.slice(3).trim(), sender);
@@ -5068,7 +5076,8 @@ function option(replier) {
     m += "/환산 [닉] / && [닉]\n";
     m += " → 전투력·일반환산·헥사환산\n";
     m += "/배율 [닉] - 보스별 클리어 배율\n";
-    m += "/헥사순서 /헥사 [닉] - 헥사 강화 추천\n";
+    m += "/헥사순서 [닉] - 헥사 강화 순서\n";
+    m += "/헥사 [닉] 순서 / [0 30] 코어비용\n";
     m += "/ㄱㅎㅊ [닉] - 종합 정보\n";
     m += "/경험치 [닉] - 현재 경험치\n";
     m += "/tmi [닉] - 캐릭터 TMI\n";
