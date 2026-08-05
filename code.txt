@@ -3191,6 +3191,10 @@ if (__oldest && data2 && data2.character_level != null) {
         {
           Tag="🐰 월하검귀 🌙";
         }
+        else if(decodeURIComponent(characterName)=="속물")
+        {
+          Tag="속이 시커먼 야 이 속물";
+        }
         else if(decodeURIComponent(characterName)=="메Lia")
         {
           Tag="초급ㅣ엘프";
