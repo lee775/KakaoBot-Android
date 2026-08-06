@@ -3193,7 +3193,11 @@ if (__oldest && data2 && data2.character_level != null) {
         }
         else if(decodeURIComponent(characterName)=="속물")
         {
-          Tag="속이 시커먼 야 이 속물";
+          Tag="🖤 속이 시커먼 야 이 속물";
+        }
+        else if(decodeURIComponent(characterName)=="쿄코섬")
+        {
+          Tag="👑 에공삼 오너";
         }
         else if(decodeURIComponent(characterName)=="메Lia")
         {
@@ -3862,6 +3866,7 @@ if (__oldest && data2 && data2.character_level != null) {
         }
         // 판타지 칭호 (고정 - 30일 최고치 기준 126명)
         var fantasyTags = {
+            "쿄코섬": "🖤 속물 견습생",
             "처단": "⚔️ 천하제일검",
             "영디": "⛓️ 쇄혼의 지배자",
             "페에멜라": "⚔️ 천하제일검",
