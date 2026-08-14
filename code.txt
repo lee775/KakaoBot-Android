@@ -4219,7 +4219,7 @@ function getEquipment(characterName, replier, slotFilter) {
             try {
                 var scUrl = "https://api.maplescouter.com/api/id?name=" + characterName + "&preset=00000&region=kms";
                 var scResp = org.jsoup.Jsoup.connect(scUrl)
-                    .header("api-key", "ff6a7ce0-c4ce-11ee-900c-df03c8ea0d4c")
+                    .header("api-key", "01ce8bc7-43a0-4122-ae05-e23f07640b9c")
                     .header("Content-Type", "application/json")
                     .ignoreContentType(true).ignoreHttpErrors(true)
                     .timeout(15000)
@@ -4532,7 +4532,7 @@ function getLink(idlink, replier) {
         try {
             var url = "https://api.maplescouter.com/api/id?name=" + idlink + "&preset=00000&region=kms";
             var resp = org.jsoup.Jsoup.connect(url)
-                .header("api-key", "ff6a7ce0-c4ce-11ee-900c-df03c8ea0d4c")
+                .header("api-key", "01ce8bc7-43a0-4122-ae05-e23f07640b9c")
                 .header("Content-Type", "application/json")
                 .ignoreContentType(true)
                 .ignoreHttpErrors(true)
@@ -4571,7 +4571,7 @@ function getBossRatio(idlink, replier) {
         try {
             var url = "https://api.maplescouter.com/api/id?name=" + idlink + "&preset=00000&region=kms";
             var rconn = org.jsoup.Jsoup.connect(url)
-                .header("api-key", "ff6a7ce0-c4ce-11ee-900c-df03c8ea0d4c")
+                .header("api-key", "01ce8bc7-43a0-4122-ae05-e23f07640b9c")
                 .header("Content-Type", "application/json")
                 .ignoreContentType(true)
                 .ignoreHttpErrors(true)
@@ -4979,7 +4979,7 @@ function getHexaOrder(idlink, replier) {
         try {
             var infoUrl = "https://api.maplescouter.com/api/id?name=" + idlink + "&preset=00000&region=kms";
             var infoConn = org.jsoup.Jsoup.connect(infoUrl)
-                .header("api-key", "ff6a7ce0-c4ce-11ee-900c-df03c8ea0d4c")
+                .header("api-key", "01ce8bc7-43a0-4122-ae05-e23f07640b9c")
                 .header("Content-Type", "application/json")
                 .ignoreContentType(true)
                 .ignoreHttpErrors(true)
@@ -5006,7 +5006,7 @@ function getHexaOrder(idlink, replier) {
             var postUrl = "https://api.maplescouter.com/api/calc/hexa-order?class=" + encodeURIComponent(className);
             var hexaConn = org.jsoup.Jsoup.connect(postUrl)
                 .method(org.jsoup.Connection.Method.POST)
-                .header("api-key", "ff6a7ce0-c4ce-11ee-900c-df03c8ea0d4c")
+                .header("api-key", "01ce8bc7-43a0-4122-ae05-e23f07640b9c")
                 .header("Content-Type", "application/json")
                 .ignoreContentType(true)
                 .ignoreHttpErrors(true)
