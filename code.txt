@@ -4526,6 +4526,26 @@ function test(replier) {
     const imageUrl = "https://i.imgur.com/FOS0bu1.jpg"; 
     replier.reply(imageUrl);
 }
+// URL 단축 (TinyURL). 실패 시 원본 URL 그대로 반환.
+function shortenUrl(longUrl) {
+    try {
+        var api = "https://tinyurl.com/api-create.php?url=" + encodeURIComponent(longUrl);
+        var body = org.jsoup.Jsoup.connect(api)
+            .ignoreContentType(true)
+            .ignoreHttpErrors(true)
+            .timeout(5000)
+            .userAgent("Mozilla/5.0")
+            .execute()
+            .body();
+        if (body) {
+            body = String(body).trim();
+            if (body.indexOf("http") === 0 && body.indexOf("tinyurl.com") !== -1) {
+                return body;
+            }
+        }
+    } catch (e) {}
+    return longUrl;
+}
 function getLink(idlink, replier) {
     var thread = new java.lang.Thread(function() {
         var siteUrl = "https://maplescouter.com/ko/info?name=" + idlink;
@@ -4554,12 +4574,13 @@ function getLink(idlink, replier) {
                 return s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
             }
             var name = decodeURIComponent(idlink);
+            var shortUrl = shortenUrl(siteUrl);
             replier.reply(
                 "[" + name + "] " + d.class + "\n" +
                 "전투력: " + fmt(d.combatPower) + "\n" +
                 "일반환산: " + fmt(d.boss380_stat) + "\n" +
                 "헥사환산: " + fmt(d.boss380_hexaStat) + "\n\n" +
-                "🔗 " + siteUrl
+                "🔗 " + shortUrl
             );
         } catch (e) {
             replier.reply("환산 조회 실패\n사이트: " + siteUrl);
