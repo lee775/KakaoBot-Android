@@ -4528,7 +4528,7 @@ function test(replier) {
 }
 function getLink(idlink, replier) {
     var thread = new java.lang.Thread(function() {
-        var siteUrl = "https://maplescouter.com/info?name=" + idlink;
+        var siteUrl = "https://maplescouter.com/ko/info?name=" + idlink;
         try {
             var url = "https://api.maplescouter.com/api/id?name=" + idlink + "&preset=00000&region=kms";
             var resp = org.jsoup.Jsoup.connect(url)
@@ -4558,7 +4558,8 @@ function getLink(idlink, replier) {
                 "[" + name + "] " + d.class + "\n" +
                 "전투력: " + fmt(d.combatPower) + "\n" +
                 "일반환산: " + fmt(d.boss380_stat) + "\n" +
-                "헥사환산: " + fmt(d.boss380_hexaStat)
+                "헥사환산: " + fmt(d.boss380_hexaStat) + "\n\n" +
+                "🔗 " + siteUrl
             );
         } catch (e) {
             replier.reply("환산 조회 실패\n사이트: " + siteUrl);
