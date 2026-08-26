@@ -4340,7 +4340,16 @@ function runScheduler() {
 // 스케줄러 시작
 runScheduler();
 
+// 진입점: 메시지가 올 때마다 개별 스레드를 띄워 모든 기능을 백그라운드에서 실행.
+// (카톡 알림 리스너 스레드를 절대 막지 않음 → 어떤 명령도 봇 전체를 멈추지 않음)
 function response(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
+    new java.lang.Thread(function() {
+        try {
+            responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packageName);
+        } catch (e) {}
+    }).start();
+}
+function responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
     // 분리된 part 호출
     try { responsePart1(room, msg, sender, isGroupChat, replier, imageDB, packageName); } catch(e){}
     try { responsePart2(room, msg, sender, isGroupChat, replier, imageDB, packageName); } catch(e){}
