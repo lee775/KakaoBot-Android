@@ -4407,7 +4407,7 @@ function responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packag
         if (__lottoSets === 1) {
             __lottoMsg = "🎰 로또 번호\n" + __lottoSeg(0).join(" · ");
         } else {
-            __lottoMsg = "🎰 로또 " + __lottoSets + "세트 (서로 안 겹침)";
+            __lottoMsg = "🎰 로또 " + __lottoSets + "세트";
             for (var __ls = 0; __ls < __lottoSets; __ls++) {
                 var __mark = String.fromCharCode(0x2460 + __ls); // ①②③...⑦
                 __lottoMsg += "\n" + __mark + " " + __lottoSeg(__ls).join(" · ");
