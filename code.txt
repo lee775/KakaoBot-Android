@@ -4546,33 +4546,6 @@ function responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packag
         return;
     }
 
-    // ===== /tmi테스트 (관리자 전용, TMI 발송 진단) =====
-    if (msg === "/tmi테스트" || msg === "/tmitest") {
-        if (typeof ADMINS !== "undefined" && ADMINS.indexOf(sender) === -1) {
-            replier.reply("관리자 전용입니다.");
-            return;
-        }
-        var __diag = "🧪 TMI 진단\n";
-        __diag += "schedulerRunning: " + (typeof schedulerRunning !== "undefined" ? schedulerRunning : "미정의") + "\n";
-        if (typeof tmiNextTime !== "undefined") {
-            __diag += "tmiNextTime: " + tmiNextTime;
-            if (tmiNextTime > 0) __diag += " (" + Math.round((tmiNextTime - Date.now()) / 1000) + "초 후 예정)";
-            __diag += "\n";
-        } else {
-            __diag += "tmiNextTime: 미정의\n";
-        }
-        __diag += "대상방: [" + TMI_ROOM + "]\n";
-        __diag += "tmiReplier: " + (tmiReplier ? "저장됨 ✅" : "없음(수다방 메시지 필요)") + "\n";
-        var __r;
-        try {
-            if (tmiReplier) { tmiReplier.reply("🧪 TMI 테스트 발송\n\n그거 아시나요?"); __r = "tmiReplier.reply 발송 시도"; }
-            else { __r = "tmiReplier 없음 → 수다방에서 아무 메시지나 오면 저장됨"; }
-        } catch (e) { __r = "예외: " + e; }
-        __diag += "발송: " + __r + "\n→ 수다방에 테스트 문구가 실제로 떴는지 확인하세요.";
-        replier.reply(__diag);
-        return;
-    }
-
     // ===== /업데이트 (관리자 전용) =====
     if (msg === "/업데이트") {
         if (typeof ADMINS !== "undefined" && ADMINS.indexOf(sender) === -1) {
