@@ -4306,10 +4306,13 @@ var TMI_ROOM = "메이플 루나봄비길드 수다방♡";
 var TMI_MIN_MIN = 120;   // 최소 대기(분) = 2시간
 var TMI_MAX_MIN = 300;   // 최대 대기(분) = 5시간
 var tmiNextTime = 0;      // 다음 발동 시각(ms). 0이면 미초기화
-var tmiFirstDone = false; // 부팅/업데이트 후 쿄코섬 TMI 1회 발송 여부
-var TMI_FIRST = "쿄코섬님은 에디천장과 동시에 에공삼이 떴습니다."; // 업데이트 직후 강제 발송
-function tmiPickWait() {
+var TMI_SHORT_MIN_SEC = 30;  // 업데이트 직후 첫 발동 최소 대기(초)
+var TMI_SHORT_MAX_SEC = 90;  // 업데이트 직후 첫 발동 최대 대기(초)
+function tmiPickWait() {        // 평상시 주기: 2~5시간
     return (TMI_MIN_MIN + Math.floor(Math.random() * (TMI_MAX_MIN - TMI_MIN_MIN + 1))) * 60 * 1000;
+}
+function tmiPickShortWait() {   // 업데이트 직후 첫 발동: 매우 짧게(초)
+    return (TMI_SHORT_MIN_SEC + Math.floor(Math.random() * (TMI_SHORT_MAX_SEC - TMI_SHORT_MIN_SEC + 1))) * 1000;
 }
 var TMI_FACTS = [
     "문어는 심장이 3개고 피가 파란색이에요. 구리 성분인 헤모시아닌이 산소를 나르기 때문이죠.",
@@ -4426,16 +4429,14 @@ function runScheduler() {
                         schedulerLastRun = currentKey;
                     }
 
-                    // 뜬금 TMI: 업데이트 직후 쿄코섬 TMI 1회 강제 → 이후 랜덤 주기
+                    // 뜬금 TMI: 업데이트 직후 첫 발동은 매우 짧게 → 이후 원래 주기(2~5시간)
                     var __tmiNow = now.getTime();
-                    if (!tmiFirstDone) {
-                        Api.sendMessage(TMI_ROOM, TMI_FIRST + "\n\n그거 아시나요?");
-                        tmiFirstDone = true;
-                        tmiNextTime = __tmiNow + tmiPickWait(); // 다음부터는 랜덤 주기
+                    if (tmiNextTime === 0) {
+                        tmiNextTime = __tmiNow + tmiPickShortWait(); // 첫 발동 매우 짧게(30~90초)
                     } else if (__tmiNow >= tmiNextTime) {
                         var __fact = TMI_FACTS[Math.floor(Math.random() * TMI_FACTS.length)];
                         Api.sendMessage(TMI_ROOM, __fact + "\n\n그거 아시나요?");
-                        tmiNextTime = __tmiNow + tmiPickWait();
+                        tmiNextTime = __tmiNow + tmiPickWait(); // 이후 원래 주기
                     }
 
                     java.lang.Thread.sleep(10000); // 10초마다 체크
