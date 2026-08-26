@@ -4439,7 +4439,7 @@ function runScheduler() {
                     } else if (__tmiNow >= tmiNextTime) {
                         if (tmiReplier) {
                             var __fact = TMI_FACTS[Math.floor(Math.random() * TMI_FACTS.length)];
-                            try { tmiReplier.reply(__fact + "\n\n그거 아시나요?"); } catch (e2) {}
+                            try { tmiReplier.reply("그거 아시나요?\n\n" + __fact); } catch (e2) {}
                             tmiNextTime = __tmiNow + tmiPickWait(); // 발송 성공 시에만 다음 주기로
                         }
                         // tmiReplier 없으면 tmiNextTime 유지 → 수다방 메시지 오면 다음 틱에 발송
