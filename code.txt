@@ -4376,35 +4376,46 @@ function responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packag
         }
     }
 
-    // ===== /로또 (1~45 중복 없는 랜덤 번호) =====
+    // ===== /로또 (6개 세트, N세트) =====
     if (msg === "/로또" || msg.startsWith("/로또 ")) {
         var __lottoArg = msg.slice(3).trim();
-        var __lottoCnt = 6;
+        var __lottoSets = 1;
         if (__lottoArg.length > 0) {
             if (!/^\d+$/.test(__lottoArg)) {
-                replier.reply("사용법: /로또  또는  /로또 개수\n예) /로또 5");
+                replier.reply("사용법: /로또  또는  /로또 세트수\n예) /로또 5  → 6개짜리 5세트");
                 return;
             }
-            __lottoCnt = parseInt(__lottoArg, 10);
+            __lottoSets = parseInt(__lottoArg, 10);
         }
-        if (__lottoCnt < 1) {
-            replier.reply("1개 이상 입력해주세요.");
+        if (__lottoSets < 1) {
+            replier.reply("1세트 이상 입력해주세요.");
             return;
         }
         var __lottoCapped = false;
-        if (__lottoCnt > 45) { __lottoCnt = 45; __lottoCapped = true; }
-        var __lottoPool = [];
-        for (var __li = 1; __li <= 45; __li++) __lottoPool.push(__li);
-        var __lottoPick = [];
-        for (var __lk = 0; __lk < __lottoCnt; __lk++) {
-            var __lidx = Math.floor(Math.random() * __lottoPool.length);
-            __lottoPick.push(__lottoPool[__lidx]);
-            __lottoPool.splice(__lidx, 1);
+        if (__lottoSets > 20) { __lottoSets = 20; __lottoCapped = true; }
+        function __genLottoSet() {
+            var pool = [];
+            for (var i = 1; i <= 45; i++) pool.push(i);
+            var pick = [];
+            for (var k = 0; k < 6; k++) {
+                var idx = Math.floor(Math.random() * pool.length);
+                pick.push(pool[idx]);
+                pool.splice(idx, 1);
+            }
+            pick.sort(function(a, b) { return a - b; });
+            return pick;
         }
-        __lottoPick.sort(function(a, b) { return a - b; });
-        var __lottoHead = (__lottoArg.length > 0) ? ("🎰 로또 " + __lottoCnt + "개") : "🎰 로또 번호";
-        var __lottoMsg = __lottoHead + "\n" + __lottoPick.join(" · ");
-        if (__lottoCapped) __lottoMsg += "\n(로또 번호는 1~45라 최대 45개)";
+        var __lottoMsg;
+        if (__lottoSets === 1) {
+            __lottoMsg = "🎰 로또 번호\n" + __genLottoSet().join(" · ");
+        } else {
+            __lottoMsg = "🎰 로또 " + __lottoSets + "세트";
+            for (var __ls = 0; __ls < __lottoSets; __ls++) {
+                var __mark = String.fromCharCode(0x2460 + __ls); // ①②③...⑳
+                __lottoMsg += "\n" + __mark + " " + __genLottoSet().join(" · ");
+            }
+            if (__lottoCapped) __lottoMsg += "\n(한 번에 최대 20세트)";
+        }
         replier.reply(__lottoMsg);
         return;
     }
@@ -5200,7 +5211,7 @@ function option(replier) {
     m += "/수로 - 수로 점수표\n";
     m += "/음식 - 점심 추천\n";
     m += "/코디 - 코디 사이트\n";
-    m += "/로또 [개수] - 로또 번호 추첨(기본 6개)\n\n";
+    m += "/로또 [세트수] - 로또 추첨(1세트=6개)\n\n";
 
     m += "📝 벽지\n";
     m += "─────────────────\n";
