@@ -4302,7 +4302,9 @@ var schedulerRunning = false;
 var schedulerLastRun = "";
 
 // ===== 뜬금 TMI (특정 방에서만, 랜덤 긴 주기로 자동 발동) =====
-var TMI_ROOM = "메이플 루나봄비길드 수다방♡";
+var TMI_ROOM = "메이플 루나봄비길드 수다방♡";  // 표시/기준용
+var TMI_ROOM_KEY = "루나봄비길드 수다방";        // 방 식별용 부분문자열(하트/공백 오차 무시)
+var tmiReplier = null;   // 그 방에서 온 마지막 replier (Api.sendMessage 대체 - 확실히 배달됨)
 var TMI_MIN_MIN = 120;   // 최소 대기(분) = 2시간
 var TMI_MAX_MIN = 300;   // 최대 대기(분) = 5시간
 var tmiNextTime = 0;      // 다음 발동 시각(ms). 0이면 미초기화
@@ -4430,13 +4432,17 @@ function runScheduler() {
                     }
 
                     // 뜬금 TMI: 업데이트 직후 첫 발동은 매우 짧게 → 이후 원래 주기(2~5시간)
+                    // 발송은 저장해둔 tmiReplier.reply 사용 (Api.sendMessage는 이 봇에서 배달 안 됨)
                     var __tmiNow = now.getTime();
                     if (tmiNextTime === 0) {
                         tmiNextTime = __tmiNow + tmiPickShortWait(); // 첫 발동 매우 짧게(30~90초)
                     } else if (__tmiNow >= tmiNextTime) {
-                        var __fact = TMI_FACTS[Math.floor(Math.random() * TMI_FACTS.length)];
-                        Api.sendMessage(TMI_ROOM, __fact + "\n\n그거 아시나요?");
-                        tmiNextTime = __tmiNow + tmiPickWait(); // 이후 원래 주기
+                        if (tmiReplier) {
+                            var __fact = TMI_FACTS[Math.floor(Math.random() * TMI_FACTS.length)];
+                            try { tmiReplier.reply(__fact + "\n\n그거 아시나요?"); } catch (e2) {}
+                            tmiNextTime = __tmiNow + tmiPickWait(); // 발송 성공 시에만 다음 주기로
+                        }
+                        // tmiReplier 없으면 tmiNextTime 유지 → 수다방 메시지 오면 다음 틱에 발송
                     }
 
                     java.lang.Thread.sleep(10000); // 10초마다 체크
@@ -4462,6 +4468,9 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
     }).start();
 }
 function responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
+    // 수다방 메시지가 올 때마다 replier 저장 (TMI 프로액티브 발송용)
+    if (room && room.indexOf(TMI_ROOM_KEY) !== -1) { tmiReplier = replier; }
+
     // 분리된 part 호출
     try { responsePart1(room, msg, sender, isGroupChat, replier, imageDB, packageName); } catch(e){}
     try { responsePart2(room, msg, sender, isGroupChat, replier, imageDB, packageName); } catch(e){}
@@ -4553,10 +4562,13 @@ function responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packag
             __diag += "tmiNextTime: 미정의\n";
         }
         __diag += "대상방: [" + TMI_ROOM + "]\n";
+        __diag += "tmiReplier: " + (tmiReplier ? "저장됨 ✅" : "없음(수다방 메시지 필요)") + "\n";
         var __r;
-        try { __r = String(Api.sendMessage(TMI_ROOM, "🧪 TMI 테스트 발송\n\n그거 아시나요?")); }
-        catch (e) { __r = "예외: " + e; }
-        __diag += "직접 발송 반환값: " + __r + "\n→ 위 대상방에 테스트 문구가 실제로 떴는지 확인하세요.";
+        try {
+            if (tmiReplier) { tmiReplier.reply("🧪 TMI 테스트 발송\n\n그거 아시나요?"); __r = "tmiReplier.reply 발송 시도"; }
+            else { __r = "tmiReplier 없음 → 수다방에서 아무 메시지나 오면 저장됨"; }
+        } catch (e) { __r = "예외: " + e; }
+        __diag += "발송: " + __r + "\n→ 수다방에 테스트 문구가 실제로 떴는지 확인하세요.";
         replier.reply(__diag);
         return;
     }
