@@ -1055,7 +1055,7 @@ function responsePart2(room, msg, sender, isGroupChat, replier, imageDB, package
         if (!__rExp) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
         else getMapleOcid(encodeURIComponent(__rExp), replier);
     }
-    if (msg === "@@" || msg.startsWith("@@ ")) {
+    if (msg.startsWith("@@") && !msg.startsWith("@@@")) {  // 공백 없이도(@@쿄코, @@295) 동작
         var rawAt2 = msg.slice(2).trim();
         var partsAt2 = rawAt2 ? rawAt2.split(/\s+/) : [];
         var firstAt2 = partsAt2[0];
@@ -1098,7 +1098,7 @@ function responsePart2(room, msg, sender, isGroupChat, replier, imageDB, package
         if (!__rTu) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
         else getPower(encodeURIComponent(__rTu), replier);
     }
-    if (msg === "@@@@" || msg.startsWith("@@@@ ")) {
+    if (msg.startsWith("@@@@")) {  // 공백 없이도 동작
         var raw4 = msg.slice(4).trim();
         if (raw4 === "헤르메스") {
             getPowerRanking(replier, RANKING_CHARACTERS);
@@ -1112,7 +1112,7 @@ function responsePart2(room, msg, sender, isGroupChat, replier, imageDB, package
             else getPower(encodeURIComponent(res4), replier);
         }
     }
-    if (msg === "@@@" || msg.startsWith("@@@ ")) {
+    if (msg.startsWith("@@@") && !msg.startsWith("@@@@")) {  // 공백 없이도 동작
         var __r3 = resolveName(msg.slice(3).trim(), sender);
         if (!__r3) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
         else getMonthlyExpHistory(encodeURIComponent(__r3), replier);
@@ -5289,7 +5289,8 @@ function option(replier) {
     m += "/tmi [닉] - 캐릭터 TMI\n";
     m += "@@ [닉] - 월간 경험치\n";
     m += "@@ [닉] [목표레벨] - 레벨업 예측\n";
-    m += "@@@ [닉] - 월간 경험치 히스토리\n\n";
+    m += "@@@ [닉] - 월간 경험치 히스토리\n";
+    m += "(붙여써도 OK: @@쿄코섬 / @@295)\n\n";
 
     m += "📅 이벤트 / 공지\n";
     m += "─────────────────\n";
