@@ -4426,20 +4426,6 @@ function runScheduler() {
                         schedulerLastRun = currentKey;
                     }
 
-                    // 뜬금 TMI: 24~48시간 랜덤 주기로 발동
-                    // 발송은 저장해둔 tmiReplier.reply 사용 (Api.sendMessage는 이 봇에서 배달 안 됨)
-                    var __tmiNow = now.getTime();
-                    if (tmiNextTime === 0) {
-                        tmiNextTime = __tmiNow + tmiPickWait(); // 첫 발동도 일반 주기(24~48시간)
-                    } else if (__tmiNow >= tmiNextTime) {
-                        if (tmiReplier) {
-                            var __fact = TMI_FACTS[Math.floor(Math.random() * TMI_FACTS.length)];
-                            try { tmiReplier.reply("그거 아시나요?\n\n" + __fact); } catch (e2) {}
-                            tmiNextTime = __tmiNow + tmiPickWait(); // 발송 성공 시에만 다음 주기로
-                        }
-                        // tmiReplier 없으면 tmiNextTime 유지 → 수다방 메시지 오면 다음 틱에 발송
-                    }
-
                     java.lang.Thread.sleep(10000); // 10초마다 체크
                 } catch (e) {
                     // 에러 무시하고 계속 실행
@@ -4463,8 +4449,21 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
     }).start();
 }
 function responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
-    // 수다방 메시지가 올 때마다 replier 저장 (TMI 프로액티브 발송용)
-    if (room && room.indexOf(TMI_ROOM_KEY) !== -1) { tmiReplier = replier; }
+    // 뜬금 TMI: 수다방 메시지가 올 때마다 시간 체크 → 발동 (메시지 구동, 백그라운드 스레드 미사용)
+    // → /업데이트할 때마다 이 로직이 최신으로 갈리므로 주기 변경이 즉시 반영됨(유령 스레드 문제 없음)
+    if (room && room.indexOf(TMI_ROOM_KEY) !== -1) {
+        tmiReplier = replier;
+        var __tmiNow = Date.now();
+        if (tmiNextTime === 0) {
+            tmiNextTime = __tmiNow + tmiPickWait(); // 첫 발동 예약(24~48시간)
+        } else if (__tmiNow >= tmiNextTime) {
+            tmiNextTime = __tmiNow + tmiPickWait(); // 먼저 다음 주기 예약(중복 발동 방지)
+            try {
+                var __tmiFact = TMI_FACTS[Math.floor(Math.random() * TMI_FACTS.length)];
+                replier.reply("그거 아시나요?\n\n" + __tmiFact);
+            } catch (eTmi) {}
+        }
+    }
 
     // 분리된 part 호출
     try { responsePart1(room, msg, sender, isGroupChat, replier, imageDB, packageName); } catch(e){}
