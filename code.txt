@@ -4305,16 +4305,11 @@ var schedulerLastRun = "";
 var TMI_ROOM = "메이플 루나봄비길드 수다방♡";  // 표시/기준용
 var TMI_ROOM_KEY = "루나봄비길드 수다방";        // 방 식별용 부분문자열(하트/공백 오차 무시)
 var tmiReplier = null;   // 그 방에서 온 마지막 replier (Api.sendMessage 대체 - 확실히 배달됨)
-var TMI_MIN_MIN = 120;   // 최소 대기(분) = 2시간
-var TMI_MAX_MIN = 300;   // 최대 대기(분) = 5시간
+var TMI_MIN_MIN = 1440;  // 최소 대기(분) = 24시간
+var TMI_MAX_MIN = 2880;  // 최대 대기(분) = 48시간
 var tmiNextTime = 0;      // 다음 발동 시각(ms). 0이면 미초기화
-var TMI_SHORT_MIN_SEC = 30;  // 업데이트 직후 첫 발동 최소 대기(초)
-var TMI_SHORT_MAX_SEC = 90;  // 업데이트 직후 첫 발동 최대 대기(초)
-function tmiPickWait() {        // 평상시 주기: 2~5시간
+function tmiPickWait() {        // 발동 주기: 24~48시간 랜덤
     return (TMI_MIN_MIN + Math.floor(Math.random() * (TMI_MAX_MIN - TMI_MIN_MIN + 1))) * 60 * 1000;
-}
-function tmiPickShortWait() {   // 업데이트 직후 첫 발동: 매우 짧게(초)
-    return (TMI_SHORT_MIN_SEC + Math.floor(Math.random() * (TMI_SHORT_MAX_SEC - TMI_SHORT_MIN_SEC + 1))) * 1000;
 }
 var TMI_FACTS = [
     "문어는 심장이 3개고 피가 파란색이에요. 구리 성분인 헤모시아닌이 산소를 나르기 때문이죠.",
@@ -4431,11 +4426,11 @@ function runScheduler() {
                         schedulerLastRun = currentKey;
                     }
 
-                    // 뜬금 TMI: 업데이트 직후 첫 발동은 매우 짧게 → 이후 원래 주기(2~5시간)
+                    // 뜬금 TMI: 24~48시간 랜덤 주기로 발동
                     // 발송은 저장해둔 tmiReplier.reply 사용 (Api.sendMessage는 이 봇에서 배달 안 됨)
                     var __tmiNow = now.getTime();
                     if (tmiNextTime === 0) {
-                        tmiNextTime = __tmiNow + tmiPickShortWait(); // 첫 발동 매우 짧게(30~90초)
+                        tmiNextTime = __tmiNow + tmiPickWait(); // 첫 발동도 일반 주기(24~48시간)
                     } else if (__tmiNow >= tmiNextTime) {
                         if (tmiReplier) {
                             var __fact = TMI_FACTS[Math.floor(Math.random() * TMI_FACTS.length)];
