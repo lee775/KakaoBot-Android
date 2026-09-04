@@ -4160,15 +4160,19 @@ function getEquipment(characterName, replier, slotFilter) {
                 if (__slotAlias[__sf]) slotFilter = __slotAlias[__sf];
             }
 
-            // OCID 조회
+            // OCID 조회 (캐릭터 없으면 400 → 친절한 안내)
             var ocidUrl = MAPLE_OCID_API_URL + "?character_name=" + characterName;
-            var ocidResp = org.jsoup.Jsoup.connect(ocidUrl)
+            var ocidConn = org.jsoup.Jsoup.connect(ocidUrl)
                 .header("accept", "application/json")
                 .header("x-nxopen-api-key", NEXON_API_KEY)
                 .ignoreContentType(true)
-                .execute()
-                .body();
-            var ocidData = JSON.parse(ocidResp);
+                .ignoreHttpErrors(true)
+                .execute();
+            if (ocidConn.statusCode() !== 200) {
+                replier.reply("'" + decodeURIComponent(characterName) + "' 캐릭터를 찾을 수 없습니다. 닉네임을 확인해주세요.");
+                return;
+            }
+            var ocidData = JSON.parse(ocidConn.body());
 
             // 메소/드롭 옵션 체크 함수
             function hasDropMesoOption(data) {
@@ -4273,9 +4277,15 @@ function getEquipment(characterName, replier, slotFilter) {
                 for (var i = 0; i < equipData.item_equipment.length; i++) {
                     var item = equipData.item_equipment[i];
 
-                    // 부위 필터링 (공백 무시 매칭)
-                    if (slotFilter && item.item_equipment_part.replace(/\s+/g, "").indexOf(slotFilter.replace(/\s+/g, "")) === -1) {
-                        continue;
+                    // 부위 필터링 (공백 무시, 부위명 + 슬롯 매칭)
+                    // 무기는 part가 무기종류(활/튜너 등)라 slot("무기")으로 잡음. slot은 앞부분 일치만("무기"가 "보조무기"에 안 걸리게)
+                    if (slotFilter) {
+                        var __fNS = slotFilter.replace(/\s+/g, "");
+                        var __partNS = String(item.item_equipment_part || "").replace(/\s+/g, "");
+                        var __slotNS = String(item.item_equipment_slot || "").replace(/\s+/g, "");
+                        if (__partNS.indexOf(__fNS) === -1 && __slotNS.indexOf(__fNS) !== 0) {
+                            continue;
+                        }
                     }
 
                     foundItem = true;
