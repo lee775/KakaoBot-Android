@@ -4131,6 +4131,35 @@ if (__oldest && data2 && data2.character_level != null) {
 function getEquipment(characterName, replier, slotFilter) {
     var thread = new java.lang.Thread(function() {
         try {
+            // 부위 유사어 정규화 (목걸이→펜던트 등). 공백 제거 후 매칭.
+            if (slotFilter) {
+                var __slotAlias = {
+                    "목걸이": "펜던트", "펜던트": "펜던트",
+                    "귀걸이": "귀고리", "귀고리": "귀고리", "귀": "귀고리",
+                    "모자": "모자", "캡": "모자",
+                    "얼굴": "얼굴장식", "얼장": "얼굴장식", "얼굴장식": "얼굴장식",
+                    "눈": "눈장식", "눈장": "눈장식", "눈장식": "눈장식",
+                    "상의": "상의", "옷": "상의", "윗도리": "상의",
+                    "하의": "하의", "바지": "하의",
+                    "신발": "신발", "신": "신발", "슈즈": "신발",
+                    "장갑": "장갑", "글러브": "장갑",
+                    "망토": "망토", "케이프": "망토",
+                    "벨트": "벨트",
+                    "어깨": "어깨장식", "어깨장식": "어깨장식", "숄더": "어깨장식",
+                    "반지": "반지", "링": "반지",
+                    "무기": "무기", "웨폰": "무기",
+                    "보조": "보조무기", "보조무기": "보조무기", "방패": "보조무기",
+                    "엠블렘": "엠블렘", "엠블": "엠블렘",
+                    "뱃지": "뱃지", "배지": "뱃지",
+                    "훈장": "훈장", "메달": "훈장",
+                    "안드로이드": "안드로이드", "안드": "안드로이드",
+                    "기계심장": "기계심장", "심장": "기계심장", "하트": "기계심장",
+                    "포켓": "포켓아이템", "포켓아이템": "포켓아이템"
+                };
+                var __sf = slotFilter.replace(/\s+/g, "");
+                if (__slotAlias[__sf]) slotFilter = __slotAlias[__sf];
+            }
+
             // OCID 조회
             var ocidUrl = MAPLE_OCID_API_URL + "?character_name=" + characterName;
             var ocidResp = org.jsoup.Jsoup.connect(ocidUrl)
@@ -4176,8 +4205,8 @@ function getEquipment(characterName, replier, slotFilter) {
                 .body();
             var equipData = JSON.parse(equipResp);
 
-            // 메소/드롭 옵션이 있으면 이전 날짜 확인
-            if (hasDropMesoOption(equipData)) {
+            // 메소/드롭 옵션이 있으면 이전 날짜 확인 (부위 조회는 건너뜀 → 빠르게)
+            if (!slotFilter && hasDropMesoOption(equipData)) {
                 for (var dayBack = 2; dayBack <= 8; dayBack++) {
                     try {
                         var pastDate = new Date(Date.now() - 86400000 * dayBack);
@@ -4216,7 +4245,7 @@ function getEquipment(characterName, replier, slotFilter) {
                 return s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
             }
             var statHeader = [];
-            try {
+            if (!slotFilter) try {
                 var scUrl = "https://api.maplescouter.com/api/id?name=" + characterName + "&preset=00000&region=kms";
                 var scResp = org.jsoup.Jsoup.connect(scUrl)
                     .header("api-key", "01ce8bc7-43a0-4122-ae05-e23f07640b9c")
@@ -4244,8 +4273,8 @@ function getEquipment(characterName, replier, slotFilter) {
                 for (var i = 0; i < equipData.item_equipment.length; i++) {
                     var item = equipData.item_equipment[i];
 
-                    // 부위 필터링
-                    if (slotFilter && item.item_equipment_part.indexOf(slotFilter) === -1) {
+                    // 부위 필터링 (공백 무시 매칭)
+                    if (slotFilter && item.item_equipment_part.replace(/\s+/g, "").indexOf(slotFilter.replace(/\s+/g, "")) === -1) {
                         continue;
                     }
 
