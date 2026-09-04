@@ -1138,6 +1138,16 @@ function responsePart2(room, msg, sender, isGroupChat, replier, imageDB, package
         if (!__rEq2) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
         else getEquipment(encodeURIComponent(__rEq2), replier, slotEq2);
     }
+    if (msg === "/방어구" || msg.startsWith("/방어구 ")) {
+        var __rAm = resolveName(msg.slice(4).trim(), sender);
+        if (!__rAm) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getEquipment(encodeURIComponent(__rAm), replier, "방어구");
+    }
+    if (msg === "/장신구" || msg.startsWith("/장신구 ")) {
+        var __rAc = resolveName(msg.slice(4).trim(), sender);
+        if (!__rAc) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
+        else getEquipment(encodeURIComponent(__rAc), replier, "장신구");
+    }
   }
 }
 
@@ -4131,6 +4141,12 @@ if (__oldest && data2 && data2.character_level != null) {
 function getEquipment(characterName, replier, slotFilter) {
     var thread = new java.lang.Thread(function() {
         try {
+            // 부위 그룹 (방어구/장신구 묶음 조회)
+            var __slotGroups = {
+                "방어구": ["모자", "상의", "하의", "신발", "장갑", "망토", "어깨장식"],
+                "장신구": ["얼굴장식", "눈장식", "귀고리", "펜던트", "벨트", "반지", "포켓아이템"]
+            };
+            var __eqIsGroup = false;
             // 부위 유사어 정규화 (목걸이→펜던트 등). 공백 제거 후 매칭.
             if (slotFilter) {
                 var __slotAlias = {
@@ -4154,10 +4170,13 @@ function getEquipment(characterName, replier, slotFilter) {
                     "훈장": "훈장", "메달": "훈장",
                     "안드로이드": "안드로이드", "안드": "안드로이드",
                     "기계심장": "기계심장", "심장": "기계심장", "하트": "기계심장",
-                    "포켓": "포켓아이템", "포켓아이템": "포켓아이템"
+                    "포켓": "포켓아이템", "포켓아이템": "포켓아이템",
+                    "방어구": "방어구", "갑옷": "방어구",
+                    "장신구": "장신구", "악세": "장신구", "악세사리": "장신구", "악세서리": "장신구"
                 };
                 var __sf = slotFilter.replace(/\s+/g, "");
                 if (__slotAlias[__sf]) slotFilter = __slotAlias[__sf];
+                __eqIsGroup = !!__slotGroups[slotFilter.replace(/\s+/g, "")];
             }
 
             // OCID 조회 (캐릭터 없으면 400 → 친절한 안내)
@@ -4271,21 +4290,24 @@ function getEquipment(characterName, replier, slotFilter) {
             for (var si = 0; si < statHeader.length; si++) result.push(statHeader[si]);
             result.push("================================");
             // 카톡 "전체보기" 트리거: zero-width 3000개 (아래 장비 목록부터 접힘)
-            if (!slotFilter) result.push(new Array(3001).join("​"));
+            if (!slotFilter || __eqIsGroup) result.push(new Array(3001).join("​"));
 
             if (equipData.item_equipment && equipData.item_equipment.length > 0) {
                 for (var i = 0; i < equipData.item_equipment.length; i++) {
                     var item = equipData.item_equipment[i];
 
-                    // 부위 필터링 (공백 무시, 부위명 + 슬롯 매칭)
+                    // 부위 필터링 (공백 무시, 부위명 + 슬롯 매칭, 그룹이면 멤버 중 하나라도 일치)
                     // 무기는 part가 무기종류(활/튜너 등)라 slot("무기")으로 잡음. slot은 앞부분 일치만("무기"가 "보조무기"에 안 걸리게)
                     if (slotFilter) {
                         var __fNS = slotFilter.replace(/\s+/g, "");
+                        var __terms = __slotGroups[__fNS] || [__fNS];
                         var __partNS = String(item.item_equipment_part || "").replace(/\s+/g, "");
                         var __slotNS = String(item.item_equipment_slot || "").replace(/\s+/g, "");
-                        if (__partNS.indexOf(__fNS) === -1 && __slotNS.indexOf(__fNS) !== 0) {
-                            continue;
+                        var __hit = false;
+                        for (var __ti = 0; __ti < __terms.length; __ti++) {
+                            if (__partNS.indexOf(__terms[__ti]) !== -1 || __slotNS.indexOf(__terms[__ti]) === 0) { __hit = true; break; }
                         }
+                        if (!__hit) continue;
                     }
 
                     foundItem = true;
