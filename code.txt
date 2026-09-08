@@ -4587,6 +4587,12 @@ function responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packag
         return;
     }
 
+    // ===== /바보 =====
+    if (msg === "/바보") {
+        replier.reply("플로렌스");
+        return;
+    }
+
     // ===== /업데이트 (관리자 전용) =====
     if (msg === "/업데이트") {
         if (typeof ADMINS !== "undefined" && ADMINS.indexOf(sender) === -1) {
