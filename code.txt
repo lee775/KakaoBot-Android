@@ -5099,6 +5099,9 @@ function getCharacterState(characterName, replier) {
                         icon = "✅"; cnt = "";
                     } else if (qs === "1") {
                         icon = "🔄"; cnt = "";
+                    } else if (qs == null && now > 0) {
+                        // 누적형(점수/횟수): max_count=0 && quest_state=null → now_count 표시 (예: 지하 수로 점수)
+                        icon = "✅"; cnt = " " + String(now).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
                     } else {
                         icon = "⏳"; cnt = "";
                     }
@@ -5109,7 +5112,7 @@ function getCharacterState(characterName, replier) {
             // 5) 보스: 같은 보스(content_name)는 가장 어려운 1개만 표시
             //    - 완료한 난이도가 있으면 그 중 list_order_no 최대
             //    - 없으면 등록된 난이도 중 list_order_no 최대
-            function bossLines(arr) {
+            function bossLines(arr, wantMonthly) {
                 var out = [];
                 if (!arr) return out;
                 var groups = {}, names = [];
@@ -5136,16 +5139,19 @@ function getCharacterState(characterName, replier) {
                         }
                     }
                     if (!chosen) continue;
+                    // 주간/월간 분리 (섹션 머리말이 주기를 알려주므로 줄별 표기는 생략)
+                    var isMonthly = String(chosen.cycle || "").indexOf("Monthly") !== -1;
+                    if (!!wantMonthly !== isMonthly) continue;
                     var icon = isTrue(chosen.complete_flag) ? "✅" : "⏳";
                     var diff = chosen.difficulty ? "[" + diffKor(chosen.difficulty) + "] " : "";
-                    var cyc = chosen.cycle ? " (" + cycleKor(chosen.cycle) + ")" : "";
-                    out.push(icon + " " + diff + names[k] + cyc);
+                    out.push(icon + " " + diff + names[k]);
                 }
                 return out;
             }
             var dailyL = contentLines(d.daily_contents);
             var weeklyL = contentLines(d.weekly_contents);
-            var bossL = bossLines(d.boss_contents);
+            var bossL = bossLines(d.boss_contents, false);
+            var bossML = bossLines(d.boss_contents, true);
             var dateStr = (d.date || "").substring(0, 10);
             var bossClr = (d.weekly_boss_clear_count || 0) + "/" + (d.weekly_boss_clear_limit_count || 0);
             var lines = [];
@@ -5163,8 +5169,11 @@ function getCharacterState(characterName, replier) {
             lines.push("📆 주간 (" + weeklyL.length + ")");
             lines = lines.concat(weeklyL.length ? weeklyL : ["  (등록 없음)"]);
             lines.push("");
-            lines.push("⚔️ 보스 (주간클 " + bossClr + ")");
+            lines.push("⚔️ 주간 보스 (주간클 " + bossClr + ")");
             lines = lines.concat(bossL.length ? bossL : ["  (등록/완료 없음)"]);
+            lines.push("");
+            lines.push("🌑 월간 보스 (" + bossML.length + ")");
+            lines = lines.concat(bossML.length ? bossML : ["  (등록/완료 없음)"]);
             lines.push("");
             lines.push("ℹ️ 미등록 콘텐츠는 표시되지 않음");
             replier.reply(lines.join("\n"));
