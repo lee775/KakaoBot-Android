@@ -290,8 +290,10 @@ function responsePart1(room, msg, sender, isGroupChat, replier, imageDB, package
     if (msg == "/코디") {
         cody(replier);
     }
-    if (msg == "/수로") {
-        suro(replier);
+    if (msg === "/수로" || msg.startsWith("/수로 ")) {
+        var __srIn = msg.indexOf(" ") !== -1 ? msg.substring(msg.indexOf(" ") + 1).trim() : "";
+        var __srNm = resolveCharacter(__srIn, sender, replier);
+        if (__srNm) getSuroScore(encodeURIComponent(__srNm), replier);
     }
     
     if (msg.indexOf("검은돈") !== -1 || msg.indexOf("/창고") !== -1) {
@@ -461,25 +463,6 @@ function starff(num1, num2, replier) {
 
     replier.reply(end + "성 강화 성공!\n경로: " + path.join(" "));
 }
-function suro(replier) {
-    replier.reply("수로 점수표(2025/12/30)\n" +
-        "━━━ 🏆 만점 달성자 ━━━\n" +
-        "- 14만 -\n영디\n" +
-        "- 12만 -\n뭘해도우냥\n" +
-        "- 11만 -\n처단\n" +
-        "- 10만 -\n덕고미콩 굼뱅이상자 늘귤 페에멜라\n" +
-        "- 9만 -\n렌영v\n" +
-        "- 8만 -\n믈빙건\n" +
-        "- 7만 -\n쫀뚜 유랑극단\n" +
-        "- 6만 -\n담체 너조아 플로렌스 활쏘러가여\n" +
-        "- 5만 -\n좋냥 다크나이이뚜 세렌팬티도둑\n" +
-        "- 4만 -\n도혼갓 멍붕바오 태엽준 아퐁 무지개오라 제육쌈밥사장 그리즈\n" +
-        "- 3만 -\n살콩 승에 국진시치 noyes비숍 팔라단약한듯 몰랑흥사\n" +
-        "- 2만 -\n냥연진 센애 서울꽃삼 장덕동소나미 나우테크시치 가령성우펜 아오렌시치\n" +
-        "- 1만 -\n대머리공장장 TreySongz 수심각 초전도건틀릿 라인카적 태준바라깅 꼬마모찌 유랑준 홈추는신뚜형 질풍준 금발태닝께보 별의탈빛시수 엘리맵 파이난류화 유토피 비표본위험 나준혁 태준시치 토모으는자 총을써보자 태즌v 씨단 페문 바텀바투기 메Lia 홍군리 진담토\n\n" +
-        "     - 헤르메스 -");
-}
-
 function calc(num1, num2, replier) {
     var skillcore_energy = [
         5, 1, 1, 1, 2, 2, 2, 3, 3, 10,
@@ -5036,8 +5019,75 @@ function getSundayMaple(replier, room) {
     });
     thread.start();
 }
+// ===== 넥슨 API 키 미등록 안내 (스케줄러 계열 공용) =====
+// 스케줄러 API는 "본인 계정에서 발급한 키"로만 조회 가능 → 권한 없으면 발급 링크 안내
+var NEXON_APIKEY_GUIDE_URL = "https://openapi.nexon.com/";
+function replyApiKeyNeeded(replier, charName, what) {
+    replier.reply(
+        "🔑 '" + charName + "' 님은 " + what + " 조회 권한이 없습니다.\n\n" +
+        "메이플 스케줄러(숙제·주보·수로)는 넥슨 정책상\n" +
+        "\"본인 계정에서 발급한 API 키\"로만 조회됩니다.\n\n" +
+        "아래에서 키를 발급받아 관리자에게 전달해주세요.\n" +
+        "🔗 " + NEXON_APIKEY_GUIDE_URL + "\n\n" +
+        "넥슨 로그인 → 오픈 API → 애플리케이션 등록 → 키 복사"
+    );
+}
+
+// ===== /수로 (지하 수로 점수) =====
+function getSuroScore(characterName, replier) {
+    var thread = new java.lang.Thread(function() {
+        try {
+            var plain = characterName;
+            try { plain = decodeURIComponent(characterName); } catch (e0) {}
+            var __apiKey = getApiKeyForChar(characterName);
+            // 1) OCID
+            var ocidResp = org.jsoup.Jsoup.connect(MAPLE_OCID_API_URL + "?character_name=" + characterName)
+                .header("accept", "application/json")
+                .header("x-nxopen-api-key", __apiKey)
+                .ignoreContentType(true).ignoreHttpErrors(true)
+                .timeout(10000).execute().body();
+            var ocidData = JSON.parse(ocidResp);
+            if (!ocidData || !ocidData.ocid) {
+                replier.reply("'" + plain + "' 캐릭터를 찾을 수 없습니다. 닉네임을 확인해주세요.");
+                return;
+            }
+            // 2) 스케줄러 (date 미입력 = 오늘)
+            var resp = org.jsoup.Jsoup.connect(MAPLE_SCHEDULER_URL + "?ocid=" + ocidData.ocid)
+                .header("accept", "application/json")
+                .header("x-nxopen-api-key", __apiKey)
+                .ignoreContentType(true).ignoreHttpErrors(true)
+                .timeout(10000).execute().body();
+            var d = JSON.parse(resp);
+            if (!d || d.error) {
+                replyApiKeyNeeded(replier, plain, "수로");
+                return;
+            }
+            // 3) 주간 콘텐츠에서 "수로" 찾기
+            var arr = d.weekly_contents || [], found = null;
+            for (var i = 0; i < arr.length; i++) {
+                if (String(arr[i].content_name || "").indexOf("수로") !== -1) { found = arr[i]; break; }
+            }
+            if (!found) {
+                replier.reply("🌊 " + (d.character_name || plain) + " 지하 수로\n\n수로 항목이 없습니다.\n(길드 미가입이거나 스케줄러 미등록)");
+                return;
+            }
+            var score = Number(found.now_count || 0);
+            var scoreStr = String(score).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            var m = "🌊 " + (d.character_name || plain) + " 지하 수로\n";
+            m += "Lv." + (d.character_level || "?") + " " + (d.character_class || "") + " | " + (d.world_name || "") + " | " + String(d.date || "").substring(0, 10) + "\n";
+            m += "━━━━━━━━━━━━\n";
+            m += (score > 0 ? "🏆 " : "⏳ ") + scoreStr + "점";
+            if (score === 0) m += "\n\n아직 이번 주 기록이 없습니다.";
+            replier.reply(m);
+        } catch (e) {
+            replier.reply("수로 조회 오류: " + (e.message || e));
+        }
+    });
+    thread.start();
+}
+
 // ===== /주보 (이번주 주간 보스 + 월간 보스) =====
-// 난이도 상위 클리어는 하위 클리어로 인정 (예: 익스 검마 잡으면 하드 검마도 완료 처리)
+// 난이도(이지/노말/하드/카오스/익스트림) 무관: 같은 이름 보스를 어느 난이도로든 잡으면 클리어 처리
 function getWeeklyBoss(characterName, replier) {
     var thread = new java.lang.Thread(function() {
         try {
@@ -5063,8 +5113,7 @@ function getWeeklyBoss(characterName, replier) {
                 .timeout(10000).execute().body();
             var d = JSON.parse(resp);
             if (!d || d.error) {
-                var em = (d && d.error && d.error.message) ? d.error.message : "조회 실패";
-                replier.reply("⚠️ 주보는 봇 API 키 발급 계정의 캐릭터만 조회됩니다.\n(" + em + ")");
+                replyApiKeyNeeded(replier, plain, "주보");
                 return;
             }
             function isTrue(v) { return v === true || v === "true" || v === "Y" || v === 1 || v === "1"; }
@@ -5485,7 +5534,7 @@ function option(replier) {
     m += "/창고 또는 검은돈 - 길드 창고\n";
     m += "/보스 - 보스 사이트\n";
     m += "/주보 [닉] - 이번주 주간·월간 보스 현황\n";
-    m += "/수로 - 수로 점수표\n";
+    m += "/수로 [닉] - 지하 수로 점수\n";
     m += "/음식 - 점심 추천\n";
     m += "/코디 - 코디 사이트\n";
     m += "/로또 [세트수] - 로또 추첨(세트끼리 안겹침, 최대7)\n";
