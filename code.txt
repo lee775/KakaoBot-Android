@@ -4712,6 +4712,12 @@ function responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packag
         var schName = resolveCharacter(schInput, sender, replier);
         if (schName) getCharacterState(encodeURIComponent(schName), replier);
     }
+    // ===== /주보 (이번주 주간 보스 + 월간 보스) =====
+    if (msg === "/주보" || msg.startsWith("/주보 ")) {
+        var __jbIn = msg.indexOf(" ") !== -1 ? msg.substring(msg.indexOf(" ") + 1).trim() : "";
+        var __jbNm = resolveCharacter(__jbIn, sender, replier);
+        if (__jbNm) getWeeklyBoss(encodeURIComponent(__jbNm), replier);
+    }
     // ===== /실험 (사진 전송 테스트) =====
     if (msg === "/실험" || msg.startsWith("/실험 ")) {
         try {
@@ -5030,6 +5036,93 @@ function getSundayMaple(replier, room) {
     });
     thread.start();
 }
+// ===== /주보 (이번주 주간 보스 + 월간 보스) =====
+// 난이도 상위 클리어는 하위 클리어로 인정 (예: 익스 검마 잡으면 하드 검마도 완료 처리)
+function getWeeklyBoss(characterName, replier) {
+    var thread = new java.lang.Thread(function() {
+        try {
+            var plain = characterName;
+            try { plain = decodeURIComponent(characterName); } catch (e0) {}
+            var __apiKey = getApiKeyForChar(characterName);
+            // 1) OCID
+            var ocidResp = org.jsoup.Jsoup.connect(MAPLE_OCID_API_URL + "?character_name=" + characterName)
+                .header("accept", "application/json")
+                .header("x-nxopen-api-key", __apiKey)
+                .ignoreContentType(true).ignoreHttpErrors(true)
+                .timeout(10000).execute().body();
+            var ocidData = JSON.parse(ocidResp);
+            if (!ocidData || !ocidData.ocid) {
+                replier.reply("'" + plain + "' 캐릭터를 찾을 수 없습니다. 닉네임을 확인해주세요.");
+                return;
+            }
+            // 2) 스케줄러 (date 미입력 = 오늘)
+            var resp = org.jsoup.Jsoup.connect(MAPLE_SCHEDULER_URL + "?ocid=" + ocidData.ocid)
+                .header("accept", "application/json")
+                .header("x-nxopen-api-key", __apiKey)
+                .ignoreContentType(true).ignoreHttpErrors(true)
+                .timeout(10000).execute().body();
+            var d = JSON.parse(resp);
+            if (!d || d.error) {
+                var em = (d && d.error && d.error.message) ? d.error.message : "조회 실패";
+                replier.reply("⚠️ 주보는 봇 API 키 발급 계정의 캐릭터만 조회됩니다.\n(" + em + ")");
+                return;
+            }
+            function isTrue(v) { return v === true || v === "true" || v === "Y" || v === 1 || v === "1"; }
+            function diffKor(s) {
+                var m = { easy: "이지", normal: "노말", hard: "하드", chaos: "카오스", extreme: "익스트림" };
+                return s ? (m[String(s).toLowerCase()] || s) : "";
+            }
+            // 보스 이름으로 묶기 → 난이도 중 하나라도 클리어면 완료 (상위 난이도가 하위 인정)
+            var arr = d.boss_contents || [], groups = {}, names = [];
+            for (var i = 0; i < arr.length; i++) {
+                var b = arr[i], nm = b.content_name || "?";
+                if (!groups[nm]) { groups[nm] = []; names.push(nm); }
+                groups[nm].push(b);
+            }
+            var weekly = [], monthly = [], wDone = 0, mDone = 0;
+            for (var k = 0; k < names.length; k++) {
+                var entries = groups[names[k]], chosen = null, done = false;
+                // 클리어한 난이도 중 가장 높은 것
+                for (var j = 0; j < entries.length; j++) {
+                    var e = entries[j];
+                    if (!isTrue(e.complete_flag)) continue;
+                    done = true;
+                    if (!chosen || (e.list_order_no || 0) > (chosen.list_order_no || 0)) chosen = e;
+                }
+                // 클리어 없으면 등록한 난이도 중 가장 높은 것
+                if (!chosen) {
+                    for (var jj = 0; jj < entries.length; jj++) {
+                        var er = entries[jj];
+                        if (!isTrue(er.registration_flag)) continue;
+                        if (!chosen || (er.list_order_no || 0) > (chosen.list_order_no || 0)) chosen = er;
+                    }
+                }
+                if (!chosen) continue;
+                var line = (done ? "✅ " : "⏳ ") + (chosen.difficulty ? "[" + diffKor(chosen.difficulty) + "] " : "") + names[k];
+                if (String(chosen.cycle || "").indexOf("Monthly") !== -1) {
+                    monthly.push(line); if (done) mDone++;
+                } else {
+                    weekly.push(line); if (done) wDone++;
+                }
+            }
+            var lines = [];
+            lines.push("⚔️ " + (d.character_name || plain) + " 이번주 주보");
+            lines.push("Lv." + (d.character_level || "?") + " " + (d.character_class || "") + " | " + (d.world_name || "") + " | " + String(d.date || "").substring(0, 10));
+            lines.push("📊 주간 " + wDone + "/" + weekly.length + " · 월간 " + mDone + "/" + monthly.length + " · 주간클 " + (d.weekly_boss_clear_count || 0) + "/" + (d.weekly_boss_clear_limit_count || 0));
+            lines.push("━━━━━━━━━━━━━━━━");
+            lines.push("⚔️ 주간 보스 (" + wDone + "/" + weekly.length + ")");
+            lines = lines.concat(weekly.length ? weekly : ["  (등록/완료 없음)"]);
+            lines.push("");
+            lines.push("🌑 월간 보스 (" + mDone + "/" + monthly.length + ")");
+            lines = lines.concat(monthly.length ? monthly : ["  (등록/완료 없음)"]);
+            replier.reply(lines.join("\n"));
+        } catch (e) {
+            replier.reply("주보 조회 오류: " + (e.message || e));
+        }
+    });
+    thread.start();
+}
+
 // ===== 캐릭터 스케줄러 정보 조회 (메이플 숙제) =====
 // 주의: 자신의 계정에 속한 캐릭터만 조회 가능 (NEXON API 제한)
 function getCharacterState(characterName, replier) {
@@ -5391,6 +5484,7 @@ function option(replier) {
     m += "─────────────────\n";
     m += "/창고 또는 검은돈 - 길드 창고\n";
     m += "/보스 - 보스 사이트\n";
+    m += "/주보 [닉] - 이번주 주간·월간 보스 현황\n";
     m += "/수로 - 수로 점수표\n";
     m += "/음식 - 점심 추천\n";
     m += "/코디 - 코디 사이트\n";
