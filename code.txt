@@ -5078,6 +5078,7 @@ function getSuroScore(characterName, replier) {
             m += "━━━━━━━━━━━━\n";
             m += (score > 0 ? "🏆 " : "⏳ ") + scoreStr + "점";
             if (score === 0) m += "\n\n아직 이번 주 기록이 없습니다.";
+            m += "\n\nℹ️ 넘슨 API 반영은 하루 늦습니다 (오늘 기록은 내일 표시)";
             replier.reply(m);
         } catch (e) {
             replier.reply("수로 조회 오류: " + (e.message || e));
@@ -5164,6 +5165,8 @@ function getWeeklyBoss(characterName, replier) {
             lines.push("");
             lines.push("🌑 월간 보스 (" + mDone + "/" + monthly.length + ")");
             lines = lines.concat(monthly.length ? monthly : ["  (등록/완료 없음)"]);
+            lines.push("");
+            lines.push("ℹ️ 넘슨 API 반영은 하루 늦습니다 (오늘 기록은 내일 표시)");
             replier.reply(lines.join("\n"));
         } catch (e) {
             replier.reply("주보 조회 오류: " + (e.message || e));
@@ -5318,6 +5321,7 @@ function getCharacterState(characterName, replier) {
             lines = lines.concat(bossML.length ? bossML : ["  (등록/완료 없음)"]);
             lines.push("");
             lines.push("ℹ️ 미등록 콘텐츠는 표시되지 않음");
+            lines.push("ℹ️ 넘슨 API 반영은 하루 늦습니다 (오늘 기록은 내일 표시)");
             replier.reply(lines.join("\n"));
         } catch (e) {
             replier.reply("스케줄러 조회 오류: " + (e.message || e));
@@ -5490,6 +5494,7 @@ function option(replier) {
     m += "/ㄱㅎㅊ [닉] - 종합 정보\n";
     m += "/경험치 [닉] - 현재 경험치\n";
     m += "/tmi [닉] - 캐릭터 TMI\n";
+    m += "/심볼 또는 /세금 [닉] - 심볼 현황\n";
     m += "@@ [닉] - 월간 경험치\n";
     m += "@@ [닉] [목표레벨] - 레벨업 예측\n";
     m += "@@@ [닉] - 월간 경험치 히스토리\n";
@@ -5513,6 +5518,9 @@ function option(replier) {
     m += "─────────────────\n";
     m += "/장비 [닉] [부위]\n";
     m += "/ㅈㅂ [닉] [부위]\n";
+    m += "/방어구 [닉] - 방어구 전체\n";
+    m += "/장신구 [닉] - 장신구 전체\n";
+    m += "부위 유사어 OK (목걸이→펜던트 등)\n";
     m += "부위 생략 시 전체 요약\n\n";
 
     m += "🏆 랭킹\n";
@@ -5529,12 +5537,18 @@ function option(replier) {
     m += "/6차 [현재] [목표] - 6차 코어 비용\n";
     m += "/확률 [확률%] [횟수] - 확률 시뮬\n\n";
 
+    m += "📋 메이플 숙제\n";
+    m += "─────────────────\n";
+    m += "/숙제 또는 /스케줄러 [닉]\n";
+    m += " → 일일·주간·보스 전체\n";
+    m += "/주보 [닉] - 이번주 주간·월간 보스\n";
+    m += "/수로 [닉] - 지하 수로 점수\n";
+    m += "※ 본인 계정 API 키 필요, 반영은 하루 늦음\n\n";
+
     m += "📦 길드 / 잡학\n";
     m += "─────────────────\n";
     m += "/창고 또는 검은돈 - 길드 창고\n";
     m += "/보스 - 보스 사이트\n";
-    m += "/주보 [닉] - 이번주 주간·월간 보스 현황\n";
-    m += "/수로 [닉] - 지하 수로 점수\n";
     m += "/음식 - 점심 추천\n";
     m += "/코디 - 코디 사이트\n";
     m += "/로또 [세트수] - 로또 추첨(세트끼리 안겹침, 최대7)\n";
