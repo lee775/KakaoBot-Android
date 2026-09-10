@@ -619,6 +619,10 @@ function cody(replier) {
     replier.reply("https://meaegi.com/dressing-room");
 }
 
+function bunbae(replier) {
+    replier.reply("https://mapleroad.kr/utils/boss");
+}
+
 function foodchoice(replier) {
     var foods = [
         "김치찌개", "된장찌개", "불고기", "비빔밥", "삼겹살", "떡볶이", "순대국", "치킨",
@@ -4625,6 +4629,10 @@ function responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packag
     {
       clan(replier);
     }
+    if (msg == "/분배")
+    {
+      bunbae(replier);
+    }
     if (msg=="/테")
     {
       test(replier);
@@ -5549,6 +5557,7 @@ function option(replier) {
     m += "─────────────────\n";
     m += "/창고 또는 검은돈 - 길드 창고\n";
     m += "/보스 - 보스 사이트\n";
+    m += "/분배 - 보스 분배금 계산\n";
     m += "/음식 - 점심 추천\n";
     m += "/코디 - 코디 사이트\n";
     m += "/로또 [세트수] - 로또 추첨(세트끼리 안겹침, 최대7)\n";
