@@ -4274,10 +4274,20 @@ function getEquipment(characterName, replier, slotFilter) {
                 }
             } catch (e) {}
 
+            // 부위/아이템 1건 조회는 압축 출력 (카톡 전체보기 없이 바로 보이게)
+            var __compact = !!slotFilter && !__eqIsGroup;
+            function __optLine(grade, o1, o2, o3) {
+                if (!grade) return null;
+                var o = [];
+                if (o1) o.push(o1);
+                if (o2) o.push(o2);
+                if (o3) o.push(o3);
+                return "(" + grade + ") " + o.join(" / ");
+            }
             // 헤더 (미리보기에 보이는 부분)
             result.push("[" + charName + "] " + (slotFilter ? slotFilter + " 정보" : "장비 정보"));
             for (var si = 0; si < statHeader.length; si++) result.push(statHeader[si]);
-            result.push("================================");
+            if (!__compact) result.push("================================");
             // 카톡 "전체보기" 트리거: zero-width 3000개 (아래 장비 목록부터 접힘)
             if (!slotFilter || __eqIsGroup) result.push(new Array(3001).join("​"));
 
@@ -4315,6 +4325,17 @@ function getEquipment(characterName, replier, slotFilter) {
                     }
 
                     foundItem = true;
+                    if (__compact) {
+                        // 부위/아이템 1건 조회: 카톡 "전체보기" 없이 바로 보이도록 줄 수 최소화
+                        result.push("[" + item.item_equipment_part + "] " + item.item_name
+                            + (Number(item.starforce || 0) > 0 ? "  ★" + item.starforce : ""));
+                        var __p = __optLine(item.potential_option_grade,
+                            item.potential_option_1, item.potential_option_2, item.potential_option_3);
+                        if (__p) result.push("잠재 " + __p);
+                        var __a = __optLine(item.additional_potential_option_grade,
+                            item.additional_potential_option_1, item.additional_potential_option_2, item.additional_potential_option_3);
+                        if (__a) result.push("에디 " + __a);
+                    } else {
                     result.push("[" + item.item_equipment_part + "] " + item.item_name);
                     result.push("  스타포스: " + (item.starforce || "0"));
 
@@ -4332,6 +4353,7 @@ function getEquipment(characterName, replier, slotFilter) {
                         if (item.additional_potential_option_3) result.push("    - " + item.additional_potential_option_3);
                     }
                     result.push("");
+                    }
                 }
             }
 
