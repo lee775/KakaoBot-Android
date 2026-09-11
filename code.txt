@@ -4159,7 +4159,9 @@ function getEquipment(characterName, replier, slotFilter) {
                     "기계심장": "기계심장", "심장": "기계심장", "하트": "기계심장",
                     "포켓": "포켓아이템", "포켓아이템": "포켓아이템",
                     "방어구": "방어구", "갑옷": "방어구",
-                    "장신구": "장신구", "악세": "장신구", "악세사리": "장신구", "악세서리": "장신구"
+                    "장신구": "장신구", "악세": "장신구", "악세사리": "장신구", "악세서리": "장신구",
+                    // 아이템 약어 (이름 약어는 순서 매칭으로도 잡히지만 명시적으로도 등록)
+                    "거공": "거대한 공포"
                 };
                 var __sf = slotFilter.replace(/\s+/g, "");
                 if (__slotAlias[__sf]) slotFilter = __slotAlias[__sf];
@@ -4283,16 +4285,31 @@ function getEquipment(characterName, replier, slotFilter) {
                 for (var i = 0; i < equipData.item_equipment.length; i++) {
                     var item = equipData.item_equipment[i];
 
-                    // 부위 필터링 (공백 무시, 부위명 + 슬롯 매칭, 그룹이면 멤버 중 하나라도 일치)
-                    // 무기는 part가 무기종류(활/튜너 등)라 slot("무기")으로 잡음. slot은 앞부분 일치만("무기"가 "보조무기"에 안 걸리게)
+                    // 부위/아이템 필터링 (공백 무시)
+                    //  1) 부위명(part) 또는 슬롯(slot) 일치  ← 무기는 part가 무기종류(활/튜너)라 slot으로 잡음
+                    //     slot은 앞부분 일치만 ("무기"가 "보조무기"에 안 걸리게)
+                    //  2) 아이템 이름에 포함
+                    //  3) 아이템 이름 약어 (글자가 순서대로 들어있으면 매칭: 거공 → 거대한 공포)
                     if (slotFilter) {
                         var __fNS = slotFilter.replace(/\s+/g, "");
                         var __terms = __slotGroups[__fNS] || [__fNS];
                         var __partNS = String(item.item_equipment_part || "").replace(/\s+/g, "");
                         var __slotNS = String(item.item_equipment_slot || "").replace(/\s+/g, "");
+                        var __nameNS = String(item.item_name || "").replace(/\s+/g, "");
                         var __hit = false;
                         for (var __ti = 0; __ti < __terms.length; __ti++) {
-                            if (__partNS.indexOf(__terms[__ti]) !== -1 || __slotNS.indexOf(__terms[__ti]) === 0) { __hit = true; break; }
+                            var __t = __terms[__ti];
+                            if (__partNS.indexOf(__t) !== -1 || __slotNS.indexOf(__t) === 0 || __nameNS.indexOf(__t) !== -1) { __hit = true; break; }
+                        }
+                        // 약어 매칭: 그룹 조회가 아니고 2글자 이상일 때만
+                        if (!__hit && !__eqIsGroup && __fNS.length >= 2) {
+                            var __pos = 0, __all = true;
+                            for (var __ci = 0; __ci < __fNS.length; __ci++) {
+                                var __at = __nameNS.indexOf(__fNS.charAt(__ci), __pos);
+                                if (__at === -1) { __all = false; break; }
+                                __pos = __at + 1;
+                            }
+                            if (__all) __hit = true;
                         }
                         if (!__hit) continue;
                     }
@@ -4319,7 +4336,7 @@ function getEquipment(characterName, replier, slotFilter) {
             }
 
             if (slotFilter && !foundItem) {
-                result.push("해당 부위를 찾을 수 없습니다.");
+                result.push("해당 부위/아이템을 찾을 수 없습니다.");
             }
 
             if (!slotFilter && equipData.title && equipData.title.title_name) {
