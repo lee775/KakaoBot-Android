@@ -3214,7 +3214,7 @@ if (__oldest && data2 && data2.character_level != null) {
         }
         else if(decodeURIComponent(characterName)=="태엽준")
         {
-          Tag="⏳시간 속 모험가⏳";
+          Tag="⏳말대가리⏳";
         }
         else if(decodeURIComponent(characterName)=="키보입니다만")
         {
