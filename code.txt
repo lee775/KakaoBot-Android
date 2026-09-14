@@ -4310,8 +4310,8 @@ function getEquipment(characterName, replier, slotFilter) {
                 return false;
             }
 
-            function __renderItem(item, note) {
-                result.push("[" + item.item_equipment_part + "] " + item.item_name + (note || ""));
+            function __renderItem(item) {
+                result.push("[" + item.item_equipment_part + "] " + item.item_name);
                 result.push("  스타포스: " + (item.starforce || "0"));
 
                 if (item.potential_option_grade) {
@@ -4335,7 +4335,7 @@ function getEquipment(characterName, replier, slotFilter) {
                     var item = equipData.item_equipment[i];
                     if (!__matchItem(item)) continue;
                     foundItem = true;
-                    __renderItem(item, null);
+                    __renderItem(item);
                 }
             }
 
@@ -4352,7 +4352,7 @@ function getEquipment(characterName, replier, slotFilter) {
                         if (__seen[__key]) continue;
                         __seen[__key] = true;
                         foundItem = true;
-                        __renderItem(__it, "  (프리셋 " + __pi + ")");
+                        __renderItem(__it);
                     }
                 }
             }
