@@ -4281,57 +4281,79 @@ function getEquipment(characterName, replier, slotFilter) {
             // 카톡 "전체보기" 트리거: zero-width 3000개 (아래 장비 목록부터 접힘)
             if (!slotFilter || __eqIsGroup) result.push(new Array(3001).join("​"));
 
+            // 부위/아이템 매칭 (공백 무시)
+            //  1) 부위명(part) 또는 슬롯(slot) 일치  ← 무기는 part가 무기종류(활/튜너)라 slot으로 잡음
+            //     slot은 앞부분 일치만 ("무기"가 "보조무기"에 안 걸리게)
+            //  2) 아이템 이름에 포함
+            //  3) 아이템 이름 약어 (글자가 순서대로 들어있으면 매칭: 거공 → 거대한 공포)
+            function __matchItem(item) {
+                if (!slotFilter) return true;
+                var __fNS = slotFilter.replace(/\s+/g, "");
+                var __terms = __slotGroups[__fNS] || [__fNS];
+                var __partNS = String(item.item_equipment_part || "").replace(/\s+/g, "");
+                var __slotNS = String(item.item_equipment_slot || "").replace(/\s+/g, "");
+                var __nameNS = String(item.item_name || "").replace(/\s+/g, "");
+                for (var __ti = 0; __ti < __terms.length; __ti++) {
+                    var __t = __terms[__ti];
+                    if (__partNS.indexOf(__t) !== -1 || __slotNS.indexOf(__t) === 0 || __nameNS.indexOf(__t) !== -1) return true;
+                }
+                // 약어 매칭: 그룹 조회가 아니고 2글자 이상일 때만
+                if (!__eqIsGroup && __fNS.length >= 2) {
+                    var __pos = 0;
+                    for (var __ci = 0; __ci < __fNS.length; __ci++) {
+                        var __at = __nameNS.indexOf(__fNS.charAt(__ci), __pos);
+                        if (__at === -1) return false;
+                        __pos = __at + 1;
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+            function __renderItem(item, note) {
+                result.push("[" + item.item_equipment_part + "] " + item.item_name + (note || ""));
+                result.push("  스타포스: " + (item.starforce || "0"));
+
+                if (item.potential_option_grade) {
+                    result.push("  잠재: " + item.potential_option_grade);
+                    if (item.potential_option_1) result.push("    - " + item.potential_option_1);
+                    if (item.potential_option_2) result.push("    - " + item.potential_option_2);
+                    if (item.potential_option_3) result.push("    - " + item.potential_option_3);
+                }
+
+                if (item.additional_potential_option_grade) {
+                    result.push("  에디: " + item.additional_potential_option_grade);
+                    if (item.additional_potential_option_1) result.push("    - " + item.additional_potential_option_1);
+                    if (item.additional_potential_option_2) result.push("    - " + item.additional_potential_option_2);
+                    if (item.additional_potential_option_3) result.push("    - " + item.additional_potential_option_3);
+                }
+                result.push("");
+            }
+
             if (equipData.item_equipment && equipData.item_equipment.length > 0) {
                 for (var i = 0; i < equipData.item_equipment.length; i++) {
                     var item = equipData.item_equipment[i];
-
-                    // 부위/아이템 필터링 (공백 무시)
-                    //  1) 부위명(part) 또는 슬롯(slot) 일치  ← 무기는 part가 무기종류(활/튜너)라 slot으로 잡음
-                    //     slot은 앞부분 일치만 ("무기"가 "보조무기"에 안 걸리게)
-                    //  2) 아이템 이름에 포함
-                    //  3) 아이템 이름 약어 (글자가 순서대로 들어있으면 매칭: 거공 → 거대한 공포)
-                    if (slotFilter) {
-                        var __fNS = slotFilter.replace(/\s+/g, "");
-                        var __terms = __slotGroups[__fNS] || [__fNS];
-                        var __partNS = String(item.item_equipment_part || "").replace(/\s+/g, "");
-                        var __slotNS = String(item.item_equipment_slot || "").replace(/\s+/g, "");
-                        var __nameNS = String(item.item_name || "").replace(/\s+/g, "");
-                        var __hit = false;
-                        for (var __ti = 0; __ti < __terms.length; __ti++) {
-                            var __t = __terms[__ti];
-                            if (__partNS.indexOf(__t) !== -1 || __slotNS.indexOf(__t) === 0 || __nameNS.indexOf(__t) !== -1) { __hit = true; break; }
-                        }
-                        // 약어 매칭: 그룹 조회가 아니고 2글자 이상일 때만
-                        if (!__hit && !__eqIsGroup && __fNS.length >= 2) {
-                            var __pos = 0, __all = true;
-                            for (var __ci = 0; __ci < __fNS.length; __ci++) {
-                                var __at = __nameNS.indexOf(__fNS.charAt(__ci), __pos);
-                                if (__at === -1) { __all = false; break; }
-                                __pos = __at + 1;
-                            }
-                            if (__all) __hit = true;
-                        }
-                        if (!__hit) continue;
-                    }
-
+                    if (!__matchItem(item)) continue;
                     foundItem = true;
-                    result.push("[" + item.item_equipment_part + "] " + item.item_name);
-                    result.push("  스타포스: " + (item.starforce || "0"));
+                    __renderItem(item, null);
+                }
+            }
 
-                    if (item.potential_option_grade) {
-                        result.push("  잠재: " + item.potential_option_grade);
-                        if (item.potential_option_1) result.push("    - " + item.potential_option_1);
-                        if (item.potential_option_2) result.push("    - " + item.potential_option_2);
-                        if (item.potential_option_3) result.push("    - " + item.potential_option_3);
+            // 활성 프리셋에 없으면 다른 프리셋(1~3)에서도 찾아봄 (고통의 근원처럼 예비 프리셋에만 있는 경우)
+            if (slotFilter && !foundItem) {
+                var __seen = {};
+                for (var __pi = 1; __pi <= 3; __pi++) {
+                    var __arr = equipData["item_equipment_preset_" + __pi];
+                    if (!__arr) continue;
+                    for (var __k = 0; __k < __arr.length; __k++) {
+                        var __it = __arr[__k];
+                        if (!__matchItem(__it)) continue;
+                        var __key = (__it.item_equipment_slot || "") + "|" + (__it.item_name || "");
+                        if (__seen[__key]) continue;
+                        __seen[__key] = true;
+                        foundItem = true;
+                        __renderItem(__it, "  (프리셋 " + __pi + ")");
                     }
-
-                    if (item.additional_potential_option_grade) {
-                        result.push("  에디: " + item.additional_potential_option_grade);
-                        if (item.additional_potential_option_1) result.push("    - " + item.additional_potential_option_1);
-                        if (item.additional_potential_option_2) result.push("    - " + item.additional_potential_option_2);
-                        if (item.additional_potential_option_3) result.push("    - " + item.additional_potential_option_3);
-                    }
-                    result.push("");
                 }
             }
 
