@@ -5074,7 +5074,7 @@ function replyApiKeyNeeded(replier, charName, what) {
         "🔑 '" + charName + "' 님은 " + what + " 조회 권한이 없습니다.\n\n" +
         "메이플 스케줄러(숙제·주보·수로)는 넥슨 정책상\n" +
         "\"본인 계정에서 발급한 API 키\"로만 조회됩니다.\n\n" +
-        "아래에서 키를 발급받아 관리자에게 전달해주세요.\n" +
+        "아래에서 키를 발급받아 쿄코섬/그리즈한테 전달해주세요.\n" +
         "🔗 " + NEXON_APIKEY_GUIDE_URL + "\n\n" +
         "넥슨 로그인 → 오픈 API → 애플리케이션 등록 → 키 복사"
     );
