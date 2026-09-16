@@ -5125,7 +5125,6 @@ function getSuroScore(characterName, replier) {
             m += "━━━━━━━━━━━━\n";
             m += (score > 0 ? "🏆 " : "⏳ ") + scoreStr + "점";
             if (score === 0) m += "\n\n아직 이번 주 기록이 없습니다.";
-            m += "\n\nℹ️ 넥슨 API 반영은 하루 늦습니다 (오늘 기록은 내일 표시)";
             replier.reply(m);
         } catch (e) {
             replier.reply("수로 조회 오류: " + (e.message || e));
