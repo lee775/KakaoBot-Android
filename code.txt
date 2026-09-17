@@ -300,18 +300,19 @@ function responsePart1(room, msg, sender, isGroupChat, replier, imageDB, package
         var __cbArg = msg.indexOf(" ") !== -1 ? msg.substring(msg.indexOf(" ") + 1).trim() : "";
         // 끝에 붙은 숫자 = 일수
         var __cbDays = CUBE_DEFAULT_DAYS;
-        var __cbM = __cbArg.match(/(?:^|\s)(\d{1,2})$/);
+        var __cbM = __cbArg.match(/(?:^|\s)(\d+)$/);
         if (__cbM) {
             __cbDays = parseInt(__cbM[1], 10);
             __cbArg = __cbArg.substring(0, __cbArg.length - __cbM[0].length).trim();
         }
-        if (__cbDays < 1) __cbDays = 1;
+        if (!(__cbDays >= 1)) __cbDays = 1;
         if (__cbDays > CUBE_MAX_DAYS) __cbDays = CUBE_MAX_DAYS;
-        // 첫 토큰이 API 키 등록된 캐릭터면 닉네임으로, 아니면 전부 장비명으로
         var __cbNick = "", __cbItem = __cbArg;
         var __cbSp = __cbArg.indexOf(" ");
         var __cbFirst = __cbSp === -1 ? __cbArg : __cbArg.substring(0, __cbSp);
-        if (__cbFirst && CHAR_API_KEYS[__cbFirst]) {
+        // 첫 토큰이 등록 캐릭터거나, 토큰이 2개 이상이면서 부위어가 아니면 닉네임으로 간주
+        if (__cbFirst && (CHAR_API_KEYS[__cbFirst] ||
+            (__cbSp !== -1 && !SLOT_ALIAS[__cbFirst] && !SLOT_GROUPS[__cbFirst]))) {
             __cbNick = __cbFirst;
             __cbItem = __cbSp === -1 ? "" : __cbArg.substring(__cbSp + 1).trim();
         }
