@@ -295,6 +295,25 @@ function responsePart1(room, msg, sender, isGroupChat, replier, imageDB, package
         var __srNm = resolveCharacter(__srIn, sender, replier);
         if (__srNm) getSuroScore(encodeURIComponent(__srNm), replier);
     }
+    // ===== /큐브 [장비명] [일수] =====
+    if (msg === "/큐브" || msg.startsWith("/큐브 ")) {
+        var __cbNm = resolveCharacter("", sender, replier);
+        if (__cbNm) {
+            var __cbArg = msg.indexOf(" ") !== -1 ? msg.substring(msg.indexOf(" ") + 1).trim() : "";
+            var __cbDays = CUBE_DEFAULT_DAYS;
+            var __cbM = __cbArg.match(/\s(\d{1,2})$/);
+            if (__cbM) {
+                __cbDays = parseInt(__cbM[1], 10);
+                __cbArg = __cbArg.substring(0, __cbArg.length - __cbM[0].length).trim();
+            } else if (/^\d{1,2}$/.test(__cbArg)) {
+                __cbDays = parseInt(__cbArg, 10);
+                __cbArg = "";
+            }
+            if (__cbDays < 1) __cbDays = 1;
+            if (__cbDays > CUBE_MAX_DAYS) __cbDays = CUBE_MAX_DAYS;
+            getCubeHistory(encodeURIComponent(__cbNm), __cbArg, __cbDays, replier);
+        }
+    }
     
     if (msg.indexOf("검은돈") !== -1 || msg.indexOf("/창고") !== -1) {
         money(replier);
@@ -5091,6 +5110,154 @@ function replyApiKeyNeeded(replier, charName, what) {
     );
 }
 
+// ===== /큐브 (큐브 사용 내역 + 천장 카운트) =====
+// 넥슨 history/cube 는 하루 단위 조회(count 최소 10, date 필수)라 일수만큼 반복 호출.
+// upgrade_guarantee_count 는 넥슨이 0으로만 주므로, 천장은 "마지막 등급상승 이후 사용 횟수"로 직접 계산.
+var CUBE_HISTORY_URL = "https://open.api.nexon.com/maplestory/v1/history/cube";
+var CUBE_DEFAULT_DAYS = 7;
+var CUBE_MAX_DAYS = 30;
+
+function getCubeHistory(characterName, itemQuery, days, replier) {
+    var thread = new java.lang.Thread(function() {
+        try {
+            var plain = characterName;
+            try { plain = decodeURIComponent(characterName); } catch (e0) {}
+
+            // 미등록 캐릭터는 기본키로 폴백되면 남의 계정 내역이 나오므로 차단
+            if (!CHAR_API_KEYS[plain]) {
+                replyApiKeyNeeded(replier, plain, "큐브 내역");
+                return;
+            }
+            var __apiKey = CHAR_API_KEYS[plain];
+
+            function pad(n) { return n < 10 ? "0" + n : "" + n; }
+            function dstr(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+            function comma(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+
+            // 장비명 매칭: 부분일치 → 약어(글자 순서) 매칭
+            var q = String(itemQuery || "").replace(/\s+/g, "");
+            function nameHit(nm) {
+                var n = String(nm || "").replace(/\s+/g, "");
+                if (q.length === 0) return true;
+                if (n.indexOf(q) !== -1) return true;
+                if (q.length < 2) return false;
+                var pos = 0;
+                for (var i = 0; i < q.length; i++) {
+                    var at = n.indexOf(q.charAt(i), pos);
+                    if (at === -1) return false;
+                    pos = at + 1;
+                }
+                return true;
+            }
+
+            // 일수만큼 하루씩 조회
+            var all = [], okDays = 0, from = "", to = "";
+            for (var dd = days - 1; dd >= 0; dd--) {
+                var ds = dstr(new Date(Date.now() - dd * 86400000));
+                if (!from) from = ds;
+                to = ds;
+                try {
+                    var conn = org.jsoup.Jsoup.connect(CUBE_HISTORY_URL + "?count=1000&date=" + ds)
+                        .header("accept", "application/json")
+                        .header("x-nxopen-api-key", __apiKey)
+                        .ignoreContentType(true).ignoreHttpErrors(true)
+                        .timeout(10000).execute();
+                    if (conn.statusCode() !== 200) continue;
+                    okDays++;
+                    var j = JSON.parse(conn.body());
+                    var h = (j && j.cube_history) || [];
+                    for (var k = 0; k < h.length; k++) all.push(h[k]);
+                } catch (e1) {}
+            }
+            if (okDays === 0) {
+                replyApiKeyNeeded(replier, plain, "큐브 내역");
+                return;
+            }
+            all.sort(function (a, b) { return a.date_create < b.date_create ? -1 : (a.date_create > b.date_create ? 1 : 0); });
+
+            var period = "최근 " + days + "일 (" + from.substring(5) + "~" + to.substring(5) + ")";
+
+            // 장비명 미입력 → 기간 내 장비별 사용 횟수 요약
+            if (q.length === 0) {
+                if (all.length === 0) {
+                    replier.reply("🎲 큐브 내역\n" + period + "\n\n기록이 없습니다.");
+                    return;
+                }
+                var cnt = {}, order = [];
+                for (var a1 = 0; a1 < all.length; a1++) {
+                    var nm1 = all[a1].target_item || "?";
+                    if (!cnt[nm1]) { cnt[nm1] = 0; order.push(nm1); }
+                    cnt[nm1]++;
+                }
+                order.sort(function (x, y) { return cnt[y] - cnt[x]; });
+                var m0 = "🎲 큐브 내역 (장비별)\n" + period + " · 총 " + comma(all.length) + "회\n";
+                m0 += "━━━━━━━━━━━━\n";
+                for (var o = 0; o < order.length && o < 15; o++) {
+                    m0 += comma(cnt[order[o]]) + "회  " + order[o] + "\n";
+                }
+                m0 += "\n장비명을 붙이면 상세: /큐브 " + (order[0] || "장비명");
+                replier.reply(m0.replace(/\n+$/, ""));
+                return;
+            }
+
+            // 장비 필터
+            var hit = [];
+            for (var a2 = 0; a2 < all.length; a2++) {
+                if (nameHit(all[a2].target_item)) hit.push(all[a2]);
+            }
+            if (hit.length === 0) {
+                replier.reply("🎲 '" + itemQuery + "' 큐브 내역\n" + period + "\n\n해당 장비 기록이 없습니다.\n/큐브 만 입력하면 기간 내 장비 목록을 보여줍니다.");
+                return;
+            }
+
+            // (캐릭터 + 일반/에디) 그룹별 집계
+            var groups = {}, gorder = [];
+            for (var a3 = 0; a3 < hit.length; a3++) {
+                var r = hit[a3];
+                var isAdd = String(r.cube_type || "").indexOf("에디셔널") !== -1;
+                var gk = (r.character_name || "?") + "|" + (isAdd ? "1" : "0");
+                if (!groups[gk]) { groups[gk] = []; gorder.push(gk); }
+                groups[gk].push(r);
+            }
+
+            var realName = hit[hit.length - 1].target_item || itemQuery;
+            var msg = "🎲 " + realName + "\n" + period + " · 총 " + comma(hit.length) + "회\n";
+            msg += "━━━━━━━━━━━━";
+
+            for (var gi = 0; gi < gorder.length; gi++) {
+                var list = groups[gorder[gi]];
+                var parts = gorder[gi].split("|");
+                var since = 0, lastUp = null, ups = 0;
+                var cubeCnt = {}, cubeOrder = [];
+                for (var li = 0; li < list.length; li++) {
+                    var it = list[li];
+                    if (it.item_upgrade_result === "성공") { ups++; since = 0; lastUp = it.date_create; }
+                    else since++;
+                    var ct = it.cube_type || "?";
+                    if (!cubeCnt[ct]) { cubeCnt[ct] = 0; cubeOrder.push(ct); }
+                    cubeCnt[ct]++;
+                }
+                var last = list[list.length - 1];
+                var grade = parts[1] === "1" ? last.additional_potential_option_grade : last.potential_option_grade;
+
+                msg += "\n\n[" + parts[0] + "] " + (parts[1] === "1" ? "에디셔널" : "일반") + " 잠재";
+                msg += "\n  사용 " + comma(list.length) + "회 · 등급상승 " + ups + "회";
+                if (grade) msg += "\n  현재 등급: " + grade;
+                if (lastUp) msg += "\n  🎯 천장 " + comma(since) + "회 (마지막 상승 " + lastUp.substring(5, 10) + ")";
+                else msg += "\n  🎯 천장 " + comma(since) + "회 이상 (기간 내 등급상승 없음)";
+                for (var ci = 0; ci < cubeOrder.length; ci++) {
+                    msg += "\n  · " + cubeOrder[ci] + " " + comma(cubeCnt[cubeOrder[ci]]) + "회";
+                }
+            }
+            msg += "\n\nℹ️ 천장은 조회 기간 내 기록으로 계산합니다";
+            replier.reply(msg);
+        } catch (e) {
+            replier.reply("큐브 내역 조회 오류: " + (e.message || e));
+        }
+    });
+    thread.start();
+}
+
 // ===== /수로 (지하 수로 점수) =====
 function getSuroScore(characterName, replier) {
     var thread = new java.lang.Thread(function() {
@@ -5600,6 +5767,7 @@ function option(replier) {
     m += " → 일일·주간·보스 전체\n";
     m += "/주보 [닉] - 이번주 주간·월간 보스\n";
     m += "/수로 [닉] - 지하 수로 점수\n";
+    m += "/큐브 [장비명] [일수] - 큐브 내역·천장\n";
     m += "※ 본인 계정 API 키 필요, 반영은 하루 늦음\n\n";
 
     m += "📦 길드 / 잡학\n";
