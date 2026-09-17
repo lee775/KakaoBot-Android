@@ -5483,6 +5483,14 @@ function getCubeHistory(characterName, itemQuery, days, replier) {
                 else msg += "\n  🎯 천장 " + comma(since) + "회 이상 (기간 내 등급상승 없음)";
                 for (var ci = 0; ci < cubeOrder.length; ci++) {
                     msg += "\n  · " + cubeOrder[ci] + " " + comma(cubeCnt[cubeOrder[ci]]) + "회";
+                // 마지막으로 나온 잠재 옵션 (에디면 additional 쪽)
+                var __op = parts[1] === "1" ? last.after_additional_potential_option : last.after_potential_option;
+                if (__op && __op.length) {
+                    msg += "\n  📋 마지막 결과 (" + last.date_create.substring(5, 10) + ")";
+                    for (var oi = 0; oi < __op.length; oi++) {
+                        msg += "\n    · " + __op[oi].value + (__op[oi].grade ? " [" + __op[oi].grade + "]" : "");
+                    }
+                }
                 }
             }
             msg += "\n\nℹ️ 천장은 조회 기간 내 기록으로 계산합니다";
