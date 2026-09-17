@@ -295,24 +295,28 @@ function responsePart1(room, msg, sender, isGroupChat, replier, imageDB, package
         var __srNm = resolveCharacter(__srIn, sender, replier);
         if (__srNm) getSuroScore(encodeURIComponent(__srNm), replier);
     }
-    // ===== /큐브 [장비명] [일수] =====
+    // ===== /큐브 [닉] [장비명|부위] [일수] =====
     if (msg === "/큐브" || msg.startsWith("/큐브 ")) {
-        var __cbNm = resolveCharacter("", sender, replier);
-        if (__cbNm) {
-            var __cbArg = msg.indexOf(" ") !== -1 ? msg.substring(msg.indexOf(" ") + 1).trim() : "";
-            var __cbDays = CUBE_DEFAULT_DAYS;
-            var __cbM = __cbArg.match(/\s(\d{1,2})$/);
-            if (__cbM) {
-                __cbDays = parseInt(__cbM[1], 10);
-                __cbArg = __cbArg.substring(0, __cbArg.length - __cbM[0].length).trim();
-            } else if (/^\d{1,2}$/.test(__cbArg)) {
-                __cbDays = parseInt(__cbArg, 10);
-                __cbArg = "";
-            }
-            if (__cbDays < 1) __cbDays = 1;
-            if (__cbDays > CUBE_MAX_DAYS) __cbDays = CUBE_MAX_DAYS;
-            getCubeHistory(encodeURIComponent(__cbNm), __cbArg, __cbDays, replier);
+        var __cbArg = msg.indexOf(" ") !== -1 ? msg.substring(msg.indexOf(" ") + 1).trim() : "";
+        // 끝에 붙은 숫자 = 일수
+        var __cbDays = CUBE_DEFAULT_DAYS;
+        var __cbM = __cbArg.match(/(?:^|\s)(\d{1,2})$/);
+        if (__cbM) {
+            __cbDays = parseInt(__cbM[1], 10);
+            __cbArg = __cbArg.substring(0, __cbArg.length - __cbM[0].length).trim();
         }
+        if (__cbDays < 1) __cbDays = 1;
+        if (__cbDays > CUBE_MAX_DAYS) __cbDays = CUBE_MAX_DAYS;
+        // 첫 토큰이 API 키 등록된 캐릭터면 닉네임으로, 아니면 전부 장비명으로
+        var __cbNick = "", __cbItem = __cbArg;
+        var __cbSp = __cbArg.indexOf(" ");
+        var __cbFirst = __cbSp === -1 ? __cbArg : __cbArg.substring(0, __cbSp);
+        if (__cbFirst && CHAR_API_KEYS[__cbFirst]) {
+            __cbNick = __cbFirst;
+            __cbItem = __cbSp === -1 ? "" : __cbArg.substring(__cbSp + 1).trim();
+        }
+        var __cbNm = __cbNick || resolveCharacter("", sender, replier);
+        if (__cbNm) getCubeHistory(encodeURIComponent(__cbNm), __cbItem, __cbDays, replier);
     }
     
     if (msg.indexOf("검은돈") !== -1 || msg.indexOf("/창고") !== -1) {
@@ -4154,48 +4158,51 @@ if (__oldest && data2 && data2.character_level != null) {
 }
 }
 
+// ===== 부위 그룹 / 유사어 (리비장비·큐브 공용) =====
+// 부위 그룹 (방어구/장신구 묶음 조회)
+var SLOT_GROUPS = {
+    "방어구": ["모자", "상의", "하의", "신발", "장갑", "망토", "어깨장식"],
+    "장신구": ["얼굴장식", "눈장식", "귀고리", "펜던트", "벨트", "반지", "포켓아이템"]
+};
+var SLOT_ALIAS = {
+    "목걸이": "펜던트", "펜던트": "펜던트",
+    "귀걸이": "귀고리", "귀고리": "귀고리", "귀": "귀고리",
+    "모자": "모자", "캡": "모자",
+    "얼굴": "얼굴장식", "얼장": "얼굴장식", "얼굴장식": "얼굴장식",
+    "눈": "눈장식", "눈장": "눈장식", "눈장식": "눈장식",
+    "상의": "상의", "옷": "상의", "윗도리": "상의",
+    "하의": "하의", "바지": "하의",
+    "신발": "신발", "신": "신발", "슈즈": "신발",
+    "장갑": "장갑", "글러브": "장갑",
+    "망토": "망토", "케이프": "망토",
+    "벨트": "벨트",
+    "어깨": "어깨장식", "어깨장식": "어깨장식", "숄더": "어깨장식",
+    "반지": "반지", "링": "반지",
+    "무기": "무기", "웨폰": "무기",
+    "보조": "보조무기", "보조무기": "보조무기", "방패": "보조무기",
+    "엠블렘": "엠블렘", "엠블": "엠블렘",
+    "뱃지": "뱃지", "배지": "뱃지",
+    "훈장": "훈장", "메달": "훈장",
+    "안드로이드": "안드로이드", "안드": "안드로이드",
+    "기계심장": "기계심장", "심장": "기계심장", "하트": "기계심장",
+    "포켓": "포켓아이템", "포켓아이템": "포켓아이템",
+    "방어구": "방어구", "갑옷": "방어구",
+    "장신구": "장신구", "악세": "장신구", "악세사리": "장신구", "악세서리": "장신구",
+    // 아이템 약어 (이름 약어는 순서 매칭으로도 잡히지만 명시적으로도 등록)
+    "거공": "거대한 공포"
+};
+
 // 장비 조회 함수
 function getEquipment(characterName, replier, slotFilter) {
     var thread = new java.lang.Thread(function() {
         try {
-            // 부위 그룹 (방어구/장신구 묶음 조회)
-            var __slotGroups = {
-                "방어구": ["모자", "상의", "하의", "신발", "장갑", "망토", "어깨장식"],
-                "장신구": ["얼굴장식", "눈장식", "귀고리", "펜던트", "벨트", "반지", "포켓아이템"]
-            };
             var __eqIsGroup = false;
             // 부위 유사어 정규화 (목걸이→펜던트 등). 공백 제거 후 매칭.
             if (slotFilter) {
-                var __slotAlias = {
-                    "목걸이": "펜던트", "펜던트": "펜던트",
-                    "귀걸이": "귀고리", "귀고리": "귀고리", "귀": "귀고리",
-                    "모자": "모자", "캡": "모자",
-                    "얼굴": "얼굴장식", "얼장": "얼굴장식", "얼굴장식": "얼굴장식",
-                    "눈": "눈장식", "눈장": "눈장식", "눈장식": "눈장식",
-                    "상의": "상의", "옷": "상의", "윗도리": "상의",
-                    "하의": "하의", "바지": "하의",
-                    "신발": "신발", "신": "신발", "슈즈": "신발",
-                    "장갑": "장갑", "글러브": "장갑",
-                    "망토": "망토", "케이프": "망토",
-                    "벨트": "벨트",
-                    "어깨": "어깨장식", "어깨장식": "어깨장식", "숄더": "어깨장식",
-                    "반지": "반지", "링": "반지",
-                    "무기": "무기", "웨폰": "무기",
-                    "보조": "보조무기", "보조무기": "보조무기", "방패": "보조무기",
-                    "엠블렘": "엠블렘", "엠블": "엠블렘",
-                    "뱃지": "뱃지", "배지": "뱃지",
-                    "훈장": "훈장", "메달": "훈장",
-                    "안드로이드": "안드로이드", "안드": "안드로이드",
-                    "기계심장": "기계심장", "심장": "기계심장", "하트": "기계심장",
-                    "포켓": "포켓아이템", "포켓아이템": "포켓아이템",
-                    "방어구": "방어구", "갑옷": "방어구",
-                    "장신구": "장신구", "악세": "장신구", "악세사리": "장신구", "악세서리": "장신구",
-                    // 아이템 약어 (이름 약어는 순서 매칭으로도 잡히지만 명시적으로도 등록)
-                    "거공": "거대한 공포"
-                };
+                var __slotAlias = SLOT_ALIAS;
                 var __sf = slotFilter.replace(/\s+/g, "");
                 if (__slotAlias[__sf]) slotFilter = __slotAlias[__sf];
-                __eqIsGroup = !!__slotGroups[slotFilter.replace(/\s+/g, "")];
+                __eqIsGroup = !!SLOT_GROUPS[slotFilter.replace(/\s+/g, "")];
             }
 
             // OCID 조회 (캐릭터 없으면 400 → 친절한 안내)
@@ -4319,7 +4326,7 @@ function getEquipment(characterName, replier, slotFilter) {
             function __matchItem(item) {
                 if (!slotFilter) return true;
                 var __fNS = slotFilter.replace(/\s+/g, "");
-                var __terms = __slotGroups[__fNS] || [__fNS];
+                var __terms = SLOT_GROUPS[__fNS] || [__fNS];
                 var __partNS = String(item.item_equipment_part || "").replace(/\s+/g, "");
                 var __slotNS = String(item.item_equipment_slot || "").replace(/\s+/g, "");
                 var __nameNS = String(item.item_name || "").replace(/\s+/g, "");
@@ -5134,20 +5141,31 @@ function getCubeHistory(characterName, itemQuery, days, replier) {
             function dstr(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
             function comma(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
 
-            // 장비명 매칭: 부분일치 → 약어(글자 순서) 매칭
+            // 검색어 정규화: 부위 유사어(목걸이→펜던트 등)를 먼저 치환
             var q = String(itemQuery || "").replace(/\s+/g, "");
-            function nameHit(nm) {
-                var n = String(nm || "").replace(/\s+/g, "");
-                if (q.length === 0) return true;
-                if (n.indexOf(q) !== -1) return true;
-                if (q.length < 2) return false;
+            if (q.length && SLOT_ALIAS[q]) q = SLOT_ALIAS[q].replace(/\s+/g, "");
+            var qTerms = SLOT_GROUPS[q] || [q];
+            function subseq(n, t) {
+                if (t.length < 2) return false;
                 var pos = 0;
-                for (var i = 0; i < q.length; i++) {
-                    var at = n.indexOf(q.charAt(i), pos);
+                for (var i = 0; i < t.length; i++) {
+                    var at = n.indexOf(t.charAt(i), pos);
                     if (at === -1) return false;
                     pos = at + 1;
                 }
                 return true;
+            }
+            // 장비명(부분일치·약어) 또는 부위명으로 매칭
+            function nameHit(rec) {
+                if (q.length === 0) return true;
+                var nm = String(rec.target_item || "").replace(/\s+/g, "");
+                var pt = String(rec.item_equipment_part || "").replace(/\s+/g, "");
+                for (var i = 0; i < qTerms.length; i++) {
+                    var t = qTerms[i];
+                    if (nm.indexOf(t) !== -1) return true;
+                    if (pt.indexOf(t) !== -1) return true;
+                }
+                return subseq(nm, q);
             }
 
             // 일수만큼 하루씩 조회
@@ -5203,7 +5221,7 @@ function getCubeHistory(characterName, itemQuery, days, replier) {
             // 장비 필터
             var hit = [];
             for (var a2 = 0; a2 < all.length; a2++) {
-                if (nameHit(all[a2].target_item)) hit.push(all[a2]);
+                if (nameHit(all[a2])) hit.push(all[a2]);
             }
             if (hit.length === 0) {
                 replier.reply("🎲 '" + itemQuery + "' 큐브 내역\n" + period + "\n\n해당 장비 기록이 없습니다.\n/큐브 만 입력하면 기간 내 장비 목록을 보여줍니다.");
@@ -5215,12 +5233,17 @@ function getCubeHistory(characterName, itemQuery, days, replier) {
             for (var a3 = 0; a3 < hit.length; a3++) {
                 var r = hit[a3];
                 var isAdd = String(r.cube_type || "").indexOf("에디셔널") !== -1;
-                var gk = (r.character_name || "?") + "|" + (isAdd ? "1" : "0");
+                var gk = (r.character_name || "?") + "|" + (isAdd ? "1" : "0") + "|" + (r.target_item || "?");
                 if (!groups[gk]) { groups[gk] = []; gorder.push(gk); }
                 groups[gk].push(r);
             }
 
-            var realName = hit[hit.length - 1].target_item || itemQuery;
+            var __names = {}, __nOrder = [];
+            for (var a4 = 0; a4 < hit.length; a4++) {
+                var __tn = hit[a4].target_item || "?";
+                if (!__names[__tn]) { __names[__tn] = 1; __nOrder.push(__tn); }
+            }
+            var realName = __nOrder.length === 1 ? __nOrder[0] : (itemQuery + " (" + __nOrder.length + "종)");
             var msg = "🎲 " + realName + "\n" + period + " · 총 " + comma(hit.length) + "회\n";
             msg += "━━━━━━━━━━━━";
 
@@ -5240,7 +5263,7 @@ function getCubeHistory(characterName, itemQuery, days, replier) {
                 var last = list[list.length - 1];
                 var grade = parts[1] === "1" ? last.additional_potential_option_grade : last.potential_option_grade;
 
-                msg += "\n\n[" + parts[0] + "] " + (parts[1] === "1" ? "에디셔널" : "일반") + " 잠재";
+                msg += "\n\n[" + parts[0] + "] " + (__nOrder.length > 1 ? parts[2] + " " : "") + (parts[1] === "1" ? "에디셔널" : "일반") + " 잠재";
                 msg += "\n  사용 " + comma(list.length) + "회 · 등급상승 " + ups + "회";
                 if (grade) msg += "\n  현재 등급: " + grade;
                 if (lastUp) msg += "\n  🎯 천장 " + comma(since) + "회 (마지막 상승 " + lastUp.substring(5, 10) + ")";
