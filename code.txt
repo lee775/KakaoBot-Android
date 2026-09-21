@@ -287,8 +287,10 @@ function responsePart1(room, msg, sender, isGroupChat, replier, imageDB, package
     if (msg == "/음식") {
         foodchoice(replier);
     }
-    if (msg == "/코디") {
-        cody(replier);
+    if (msg === "/코디" || msg.startsWith("/코디 ")) {
+        var __cdIn = msg.indexOf(" ") !== -1 ? msg.substring(msg.indexOf(" ") + 1).trim() : "";
+        if (!__cdIn) cody(replier);
+        else codyChar(__cdIn, replier);
     }
     if (msg === "/수로" || msg.startsWith("/수로 ")) {
         var __srIn = msg.indexOf(" ") !== -1 ? msg.substring(msg.indexOf(" ") + 1).trim() : "";
@@ -664,6 +666,13 @@ function money(replier) {
 
 function cody(replier) {
     replier.reply("https://meaegi.com/dressing-room");
+}
+
+// 메애기 캐릭터 코디 페이지 (한글 닉네임은 인코딩 필요)
+function codyChar(name, replier) {
+    var nm = String(name || "").trim();
+    if (!nm) { cody(replier); return; }
+    replier.reply("👗 " + nm + " 코디\n" + "https://meaegi.com/s/" + encodeURIComponent(nm));
 }
 
 function bunbae(replier) {
@@ -6022,6 +6031,7 @@ function option(replier) {
     m += "/분배 - 보스 분배금 계산\n";
     m += "/음식 - 점심 추천\n";
     m += "/코디 - 코디 사이트\n";
+    m += "/코디 [닉] - 메애기 캐릭터 코디\n";
     m += "/로또 [세트수] - 로또 추첨(세트끼리 안겹침, 최대7)\n";
     m += "/명당 - 강화 명당 랜덤 추천\n\n";
 
