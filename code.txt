@@ -3312,7 +3312,7 @@ if (__oldest && data2 && data2.character_level != null) {
         }
         else if(decodeURIComponent(characterName)=="유랑극단")
         {
-          Tag="새로운 별 💫";
+          Tag="행동대장 🔥";
         }
         else if(decodeURIComponent(characterName)=="센애")
         {
@@ -3958,7 +3958,7 @@ if (__oldest && data2 && data2.character_level != null) {
             "플로렌스": "✨ 현자",
             "썬쿨": "✨ 현자",
             "아스티핀": "😈 대악마",
-            "유랑극단": "👊 전설의 해적",
+            "유랑극단": "👊 운명의 스펙터",
             "꼬야씨": "⚔️ 왕국 대검사",
             "좋냥": "⚔️ 왕국 대검사",
             "조믈": "🗡️ 왕국 밀정",
