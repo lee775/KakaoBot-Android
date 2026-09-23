@@ -4686,6 +4686,12 @@ function responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packag
         return;
     }
 
+    // ===== /건실단 =====
+    if (msg === "/건실단") {
+        checkGunsil(replier);
+        return;
+    }
+
     // ===== /바보 =====
     if (msg === "/바보") {
         replier.reply("속물");
@@ -5511,6 +5517,95 @@ function getCubeHistory(characterName, itemQuery, days, replier) {
     thread.start();
 }
 
+// ===== /건실단 (단원별 최근 3일 큐브·스타포스 활동 체크) =====
+// 단원 추가: 아래 배열에 이름만 넣으면 됨 (API_KEY_ACCOUNTS 에 키 등록된 캐릭터여야 조회 가능)
+var GUNSIL_MEMBERS = ["플로렌스"];
+var GUNSIL_DAYS = 3;   // 오늘 포함
+
+function checkGunsil(replier) {
+    var thread = new java.lang.Thread(function() {
+        try {
+            function pad(n) { return n < 10 ? "0" + n : "" + n; }
+            function dstr(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+
+            var dates = [];
+            for (var dd = GUNSIL_DAYS - 1; dd >= 0; dd--) dates.push(dstr(new Date(Date.now() - dd * 86400000)));
+
+            // 같은 키(계정)끼리 묶어서 계정당 날짜별 1회씩만 호출
+            var byKey = {}, keyOrder = [], unregistered = [];
+            for (var i = 0; i < GUNSIL_MEMBERS.length; i++) {
+                var nm = GUNSIL_MEMBERS[i];
+                var k = CHAR_API_KEYS[nm];
+                if (!k) { unregistered.push(nm); continue; }
+                if (!byKey[k]) { byKey[k] = []; keyOrder.push(k); }
+                byKey[k].push(nm);
+            }
+
+            var stat = {};   // 이름 -> { cube, sf, last }
+            for (var m = 0; m < GUNSIL_MEMBERS.length; m++) stat[GUNSIL_MEMBERS[m]] = { cube: 0, sf: 0, last: "" };
+
+            function fetchCount(url, key, listField) {
+                try {
+                    var conn = org.jsoup.Jsoup.connect(url)
+                        .header("accept", "application/json")
+                        .header("x-nxopen-api-key", key)
+                        .ignoreContentType(true).ignoreHttpErrors(true)
+                        .timeout(10000).execute();
+                    if (conn.statusCode() !== 200) return [];
+                    var j = JSON.parse(conn.body());
+                    return (j && j[listField]) || [];
+                } catch (e) { return []; }
+            }
+
+            for (var ki = 0; ki < keyOrder.length; ki++) {
+                var key = keyOrder[ki];
+                var names = byKey[key];
+                for (var di = 0; di < dates.length; di++) {
+                    var cubes = fetchCount(CUBE_HISTORY_URL + "?count=1000&date=" + dates[di], key, "cube_history");
+                    var sfs = fetchCount(STARFORCE_HISTORY_URL + "?count=1000&date=" + dates[di], key, "starforce_history");
+                    for (var a = 0; a < cubes.length; a++) {
+                        var cn = cubes[a].character_name;
+                        if (names.indexOf(cn) === -1) continue;
+                        stat[cn].cube++;
+                        if (cubes[a].date_create > stat[cn].last) stat[cn].last = cubes[a].date_create;
+                    }
+                    for (var b = 0; b < sfs.length; b++) {
+                        var sn = sfs[b].character_name;
+                        if (names.indexOf(sn) === -1) continue;
+                        stat[sn].sf++;
+                        if (sfs[b].date_create > stat[sn].last) stat[sn].last = sfs[b].date_create;
+                    }
+                }
+            }
+
+            var active = 0;
+            var msg = "🔨 건실단 활동 체크\n";
+            msg += "최근 " + GUNSIL_DAYS + "일 (" + dates[0].substring(5) + " ~ " + dates[dates.length - 1].substring(5) + ")\n";
+            msg += "━━━━━━━━━━━━";
+            for (var r = 0; r < GUNSIL_MEMBERS.length; r++) {
+                var nm2 = GUNSIL_MEMBERS[r];
+                if (unregistered.indexOf(nm2) !== -1) {
+                    msg += "\n⚠️ " + nm2 + " — API 키 미등록";
+                    continue;
+                }
+                var st = stat[nm2];
+                if (st.cube + st.sf > 0) {
+                    active++;
+                    msg += "\n✅ " + nm2 + " — 큐브 " + st.cube + "회 · 스타포스 " + st.sf + "회";
+                    msg += "\n     마지막 활동 " + st.last.substring(5, 10) + " " + st.last.substring(11, 16);
+                } else {
+                    msg += "\n❌ " + nm2 + " — 기록 없음";
+                }
+            }
+            msg += "\n\n활동 " + active + " / " + GUNSIL_MEMBERS.length + "명";
+            replier.reply(msg);
+        } catch (e) {
+            replier.reply("건실단 조회 오류: " + (e.message || e));
+        }
+    });
+    thread.start();
+}
+
 // ===== /수로 (지하 수로 점수) =====
 function getSuroScore(characterName, replier) {
     var thread = new java.lang.Thread(function() {
@@ -6022,6 +6117,7 @@ function option(replier) {
     m += "/수로 [닉] - 지하 수로 점수\n";
     m += "/큐브 [닉] [장비|부위] [일수] - 큐브·천장\n";
     m += "/스타포스 [닉] [장비|부위] [일수] - 강화 내역\n";
+    m += "/건실단 - 단원 3일간 큐브·스포 활동 체크\n";
     m += "※ 본인 계정 API 키 필요, 반영은 하루 늦음\n\n";
 
     m += "📦 길드 / 잡학\n";
