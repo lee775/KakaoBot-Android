@@ -5541,10 +5541,15 @@ function checkGunsil(replier) {
                 byKey[k].push(nm);
             }
 
-            var stat = {};   // 이름 -> { cube, sf, last }
-            for (var m = 0; m < GUNSIL_MEMBERS.length; m++) stat[GUNSIL_MEMBERS[m]] = { cube: 0, sf: 0, last: "" };
+            // 이름 -> { 날짜 -> {cube, sf} }, 합계
+            var stat = {};
+            for (var m = 0; m < GUNSIL_MEMBERS.length; m++) {
+                var perDay = {};
+                for (var d0 = 0; d0 < dates.length; d0++) perDay[dates[d0]] = { cube: 0, sf: 0 };
+                stat[GUNSIL_MEMBERS[m]] = { day: perDay, cube: 0, sf: 0 };
+            }
 
-            function fetchCount(url, key, listField) {
+            function fetchList(url, key, listField) {
                 try {
                     var conn = org.jsoup.Jsoup.connect(url)
                         .header("accept", "application/json")
@@ -5561,19 +5566,20 @@ function checkGunsil(replier) {
                 var key = keyOrder[ki];
                 var names = byKey[key];
                 for (var di = 0; di < dates.length; di++) {
-                    var cubes = fetchCount(CUBE_HISTORY_URL + "?count=1000&date=" + dates[di], key, "cube_history");
-                    var sfs = fetchCount(STARFORCE_HISTORY_URL + "?count=1000&date=" + dates[di], key, "starforce_history");
+                    var dt = dates[di];
+                    var cubes = fetchList(CUBE_HISTORY_URL + "?count=1000&date=" + dt, key, "cube_history");
+                    var sfs = fetchList(STARFORCE_HISTORY_URL + "?count=1000&date=" + dt, key, "starforce_history");
                     for (var a = 0; a < cubes.length; a++) {
                         var cn = cubes[a].character_name;
                         if (names.indexOf(cn) === -1) continue;
+                        stat[cn].day[dt].cube++;
                         stat[cn].cube++;
-                        if (cubes[a].date_create > stat[cn].last) stat[cn].last = cubes[a].date_create;
                     }
                     for (var b = 0; b < sfs.length; b++) {
                         var sn = sfs[b].character_name;
                         if (names.indexOf(sn) === -1) continue;
+                        stat[sn].day[dt].sf++;
                         stat[sn].sf++;
-                        if (sfs[b].date_create > stat[sn].last) stat[sn].last = sfs[b].date_create;
                     }
                 }
             }
@@ -5585,17 +5591,20 @@ function checkGunsil(replier) {
             for (var r = 0; r < GUNSIL_MEMBERS.length; r++) {
                 var nm2 = GUNSIL_MEMBERS[r];
                 if (unregistered.indexOf(nm2) !== -1) {
-                    msg += "\n⚠️ " + nm2 + " — API 키 미등록";
+                    msg += "\n\n⚠️ " + nm2 + " — API 키 미등록";
                     continue;
                 }
                 var st = stat[nm2];
-                if (st.cube + st.sf > 0) {
-                    active++;
-                    msg += "\n✅ " + nm2 + " — 큐브 " + st.cube + "회 · 스타포스 " + st.sf + "회";
-                    msg += "\n     마지막 활동 " + st.last.substring(5, 10) + " " + st.last.substring(11, 16);
-                } else {
-                    msg += "\n❌ " + nm2 + " — 기록 없음";
+                var on = st.cube + st.sf > 0;
+                if (on) active++;
+                msg += "\n\n" + (on ? "✅ " : "❌ ") + nm2;
+                for (var di2 = 0; di2 < dates.length; di2++) {
+                    var dv = st.day[dates[di2]];
+                    msg += "\n  " + dates[di2].substring(5) + "  ";
+                    if (dv.cube + dv.sf === 0) msg += "-";
+                    else msg += "큐브 " + dv.cube + " · 스포 " + dv.sf;
                 }
+                msg += "\n  합계  큐브 " + st.cube + " · 스포 " + st.sf;
             }
             msg += "\n\n활동 " + active + " / " + GUNSIL_MEMBERS.length + "명";
             replier.reply(msg);
