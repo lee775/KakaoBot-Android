@@ -5517,10 +5517,12 @@ function getCubeHistory(characterName, itemQuery, days, replier) {
     thread.start();
 }
 
-// ===== /건실단 (단원별 최근 3일 큐브·스타포스 활동 체크) =====
+// ===== /건실단 (단원별 최근 3일 잠재능력 재설정·스타포스 활동 체크) =====
 // 단원 추가: 아래 배열에 이름만 넣으면 됨 (API_KEY_ACCOUNTS 에 키 등록된 캐릭터여야 조회 가능)
 var GUNSIL_MEMBERS = ["플로렌스"];
 var GUNSIL_DAYS = 3;   // 오늘 포함
+// 여기서 "큐브"는 실제 큐브가 아니라 잠재능력 재설정 / 에디셔널 잠재능력 재설정 (history/potential)
+var POTENTIAL_HISTORY_URL = "https://open.api.nexon.com/maplestory/v1/history/potential";
 
 function checkGunsil(replier) {
     var thread = new java.lang.Thread(function() {
@@ -5541,12 +5543,12 @@ function checkGunsil(replier) {
                 byKey[k].push(nm);
             }
 
-            // 이름 -> { 날짜 -> {cube, sf} }, 합계
+            // 이름 -> { 날짜 -> {pot(잠재), add(에디), sf} }, 합계
             var stat = {};
             for (var m = 0; m < GUNSIL_MEMBERS.length; m++) {
                 var perDay = {};
-                for (var d0 = 0; d0 < dates.length; d0++) perDay[dates[d0]] = { cube: 0, sf: 0 };
-                stat[GUNSIL_MEMBERS[m]] = { day: perDay, cube: 0, sf: 0 };
+                for (var d0 = 0; d0 < dates.length; d0++) perDay[dates[d0]] = { pot: 0, add: 0, sf: 0 };
+                stat[GUNSIL_MEMBERS[m]] = { day: perDay, pot: 0, add: 0, sf: 0 };
             }
 
             function fetchList(url, key, listField) {
@@ -5567,13 +5569,18 @@ function checkGunsil(replier) {
                 var names = byKey[key];
                 for (var di = 0; di < dates.length; di++) {
                     var dt = dates[di];
-                    var cubes = fetchList(CUBE_HISTORY_URL + "?count=1000&date=" + dt, key, "cube_history");
+                    var pots = fetchList(POTENTIAL_HISTORY_URL + "?count=1000&date=" + dt, key, "potential_history");
                     var sfs = fetchList(STARFORCE_HISTORY_URL + "?count=1000&date=" + dt, key, "starforce_history");
-                    for (var a = 0; a < cubes.length; a++) {
-                        var cn = cubes[a].character_name;
+                    for (var a = 0; a < pots.length; a++) {
+                        var cn = pots[a].character_name;
                         if (names.indexOf(cn) === -1) continue;
-                        stat[cn].day[dt].cube++;
-                        stat[cn].cube++;
+                        if (String(pots[a].potential_type || "").indexOf("에디셔널") !== -1) {
+                            stat[cn].day[dt].add++;
+                            stat[cn].add++;
+                        } else {
+                            stat[cn].day[dt].pot++;
+                            stat[cn].pot++;
+                        }
                     }
                     for (var b = 0; b < sfs.length; b++) {
                         var sn = sfs[b].character_name;
@@ -5595,16 +5602,16 @@ function checkGunsil(replier) {
                     continue;
                 }
                 var st = stat[nm2];
-                var on = st.cube + st.sf > 0;
+                var on = st.pot + st.add + st.sf > 0;
                 if (on) active++;
                 msg += "\n\n" + (on ? "✅ " : "❌ ") + nm2;
                 for (var di2 = 0; di2 < dates.length; di2++) {
                     var dv = st.day[dates[di2]];
                     msg += "\n  " + dates[di2].substring(5) + "  ";
-                    if (dv.cube + dv.sf === 0) msg += "-";
-                    else msg += "큐브 " + dv.cube + " · 스포 " + dv.sf;
+                    if (dv.pot + dv.add + dv.sf === 0) msg += "-";
+                    else msg += "잠재 " + dv.pot + " · 에디 " + dv.add + " · 스타포스 " + dv.sf;
                 }
-                msg += "\n  합계  큐브 " + st.cube + " · 스포 " + st.sf;
+                msg += "\n  합계  잠재 " + st.pot + " · 에디 " + st.add + " · 스타포스 " + st.sf;
             }
             msg += "\n\n활동 " + active + " / " + GUNSIL_MEMBERS.length + "명";
             replier.reply(msg);
@@ -6126,7 +6133,7 @@ function option(replier) {
     m += "/수로 [닉] - 지하 수로 점수\n";
     m += "/큐브 [닉] [장비|부위] [일수] - 큐브·천장\n";
     m += "/스타포스 [닉] [장비|부위] [일수] - 강화 내역\n";
-    m += "/건실단 - 단원 3일간 큐브·스포 활동 체크\n";
+    m += "/건실단 - 단원 3일간 잠재재설정·스타포스 활동 체크\n";
     m += "※ 본인 계정 API 키 필요, 반영은 하루 늦음\n\n";
 
     m += "📦 길드 / 잡학\n";
