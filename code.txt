@@ -3470,7 +3470,7 @@ if (__oldest && data2 && data2.character_level != null) {
         }
         else if(decodeURIComponent(characterName)=="냥연진")
         {
-          Tag="✨ 코디왕";
+          Tag="👗 코디왕";
         }
         else if(decodeURIComponent(characterName)=="뜯든")
         {
@@ -3992,7 +3992,7 @@ if (__oldest && data2 && data2.character_level != null) {
             "센애": "⚔️ 왕국 기사",
             "태준바라깅": "⚔️ 왕국 기사",
             "승에": "👊 해적",
-            "냥연진": "✨ 궁정 마법사",
+            "냥연진"🪦 부활대기중",
             "초쿄레니": "⚔️ 왕국 기사",
             "나준희": "✨ 궁정 마법사",
             "강떠": "🗡️ 암살자",
