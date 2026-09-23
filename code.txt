@@ -5349,6 +5349,8 @@ function getStarforceHistory(characterName, itemQuery, days, replier) {
 // 넥슨 history/cube 는 하루 단위 조회(count 최소 10, date 필수)라 일수만큼 반복 호출.
 // upgrade_guarantee_count 는 넥슨이 0으로만 주므로, 천장은 "마지막 등급상승 이후 사용 횟수"로 직접 계산.
 var CUBE_HISTORY_URL = "https://open.api.nexon.com/maplestory/v1/history/cube";
+// 잠재능력 재설정 / 에디셔널 잠재능력 재설정 내역 (/큐브, /건실단 공용)
+var POTENTIAL_HISTORY_URL = "https://open.api.nexon.com/maplestory/v1/history/potential";
 var CUBE_DEFAULT_DAYS = 7;
 var CUBE_MAX_DAYS = 30;
 
@@ -5402,18 +5404,40 @@ function getCubeHistory(characterName, itemQuery, days, replier) {
                 var ds = dstr(new Date(Date.now() - dd * 86400000));
                 if (!from) from = ds;
                 to = ds;
+                // 큐브 + 잠재능력 재설정(history/potential) 같이 조회
+                var dayOk = false;
                 try {
                     var conn = org.jsoup.Jsoup.connect(CUBE_HISTORY_URL + "?count=1000&date=" + ds)
                         .header("accept", "application/json")
                         .header("x-nxopen-api-key", __apiKey)
                         .ignoreContentType(true).ignoreHttpErrors(true)
                         .timeout(10000).execute();
-                    if (conn.statusCode() !== 200) continue;
-                    okDays++;
-                    var j = JSON.parse(conn.body());
-                    var h = (j && j.cube_history) || [];
-                    for (var k = 0; k < h.length; k++) all.push(h[k]);
+                    if (conn.statusCode() === 200) {
+                        dayOk = true;
+                        var j = JSON.parse(conn.body());
+                        var h = (j && j.cube_history) || [];
+                        for (var k = 0; k < h.length; k++) all.push(h[k]);
+                    }
                 } catch (e1) {}
+                try {
+                    var pconn = org.jsoup.Jsoup.connect(POTENTIAL_HISTORY_URL + "?count=1000&date=" + ds)
+                        .header("accept", "application/json")
+                        .header("x-nxopen-api-key", __apiKey)
+                        .ignoreContentType(true).ignoreHttpErrors(true)
+                        .timeout(10000).execute();
+                    if (pconn.statusCode() === 200) {
+                        dayOk = true;
+                        var pj = JSON.parse(pconn.body());
+                        var ph = (pj && pj.potential_history) || [];
+                        // 재설정 기록은 cube_type 대신 potential_type → 같은 필드로 맞춰서 합침
+                        //  ("에디셔널 잠재능력 재설정"은 "에디셔널" 포함이라 에디 그룹으로 자동 분류)
+                        for (var pk = 0; pk < ph.length; pk++) {
+                            if (!ph[pk].cube_type) ph[pk].cube_type = ph[pk].potential_type || "잠재능력 재설정";
+                            all.push(ph[pk]);
+                        }
+                    }
+                } catch (e2) {}
+                if (dayOk) okDays++;
             }
             if (okDays === 0) {
                 replyApiKeyNeeded(replier, plain, "큐브 내역");
@@ -5436,7 +5460,7 @@ function getCubeHistory(characterName, itemQuery, days, replier) {
                     cnt[nm1]++;
                 }
                 order.sort(function (x, y) { return cnt[y] - cnt[x]; });
-                var m0 = "🎲 큐브 내역 (장비별)\n" + period + " · 총 " + comma(all.length) + "회\n";
+                var m0 = "🎲 큐브·재설정 내역 (장비별)\n" + period + " · 총 " + comma(all.length) + "회\n";
                 m0 += "━━━━━━━━━━━━\n";
                 for (var o = 0; o < order.length && o < 15; o++) {
                     m0 += comma(cnt[order[o]]) + "회  " + order[o] + "\n";
@@ -5521,8 +5545,7 @@ function getCubeHistory(characterName, itemQuery, days, replier) {
 // 단원 추가: 아래 배열에 이름만 넣으면 됨 (API_KEY_ACCOUNTS 에 키 등록된 캐릭터여야 조회 가능)
 var GUNSIL_MEMBERS = ["플로렌스"];
 var GUNSIL_DAYS = 3;   // 오늘 포함
-// 여기서 "큐브"는 실제 큐브가 아니라 잠재능력 재설정 / 에디셔널 잠재능력 재설정 (history/potential)
-var POTENTIAL_HISTORY_URL = "https://open.api.nexon.com/maplestory/v1/history/potential";
+// 건실단은 실제 큐브가 아니라 잠재능력 재설정 / 에디셔널 잠재능력 재설정(POTENTIAL_HISTORY_URL)만 집계
 
 function checkGunsil(replier) {
     var thread = new java.lang.Thread(function() {
