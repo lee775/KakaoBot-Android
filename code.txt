@@ -3470,7 +3470,7 @@ if (__oldest && data2 && data2.character_level != null) {
         }
         else if(decodeURIComponent(characterName)=="냥연진")
         {
-          Tag="✨ 성스러운 사제";
+          Tag="✨ 코디왕";
         }
         else if(decodeURIComponent(characterName)=="뜯든")
         {
@@ -5542,8 +5542,11 @@ function getCubeHistory(characterName, itemQuery, days, replier) {
 }
 
 // ===== /건실단 (단원별 최근 3일 잠재능력 재설정·스타포스 활동 체크) =====
-// 단원 추가: 아래 배열에 이름만 넣으면 됨 (API_KEY_ACCOUNTS 에 키 등록된 캐릭터여야 조회 가능)
-var GUNSIL_MEMBERS = ["플로렌스"];
+// 단원 추가: { name: "이름", start: "YYYY-MM-DD" } 형식 (start = 건실단 시작일, 1일차)
+// API_KEY_ACCOUNTS 에 키 등록된 캐릭터여야 조회 가능. 시작일 이전 기록은 집계하지 않음.
+var GUNSIL_MEMBERS = [
+    { name: "플로렌스", start: "2026-09-23" }
+];
 var GUNSIL_DAYS = 3;   // 오늘 포함
 // 건실단은 실제 큐브가 아니라 잠재능력 재설정 / 에디셔널 잠재능력 재설정(POTENTIAL_HISTORY_URL)만 집계
 
@@ -5552,26 +5555,29 @@ function checkGunsil(replier) {
         try {
             function pad(n) { return n < 10 ? "0" + n : "" + n; }
             function dstr(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+            function toDate(s) { var p = s.split("-"); return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])); }
+            function dayDiff(a, b) { return Math.round((toDate(b).getTime() - toDate(a).getTime()) / 86400000); }
 
+            var today = dstr(new Date());
             var dates = [];
             for (var dd = GUNSIL_DAYS - 1; dd >= 0; dd--) dates.push(dstr(new Date(Date.now() - dd * 86400000)));
 
             // 같은 키(계정)끼리 묶어서 계정당 날짜별 1회씩만 호출
-            var byKey = {}, keyOrder = [], unregistered = [];
+            var byKey = {}, keyOrder = [];
             for (var i = 0; i < GUNSIL_MEMBERS.length; i++) {
-                var nm = GUNSIL_MEMBERS[i];
-                var k = CHAR_API_KEYS[nm];
-                if (!k) { unregistered.push(nm); continue; }
+                var mem = GUNSIL_MEMBERS[i];
+                var k = CHAR_API_KEYS[mem.name];
+                if (!k || mem.start > today) continue;
                 if (!byKey[k]) { byKey[k] = []; keyOrder.push(k); }
-                byKey[k].push(nm);
+                byKey[k].push(mem.name);
             }
 
-            // 이름 -> { 날짜 -> {pot(잠재), add(에디), sf} }, 합계
+            // 이름 -> { 날짜 -> {pot(잠재), add(에디), sf} }
             var stat = {};
             for (var m = 0; m < GUNSIL_MEMBERS.length; m++) {
                 var perDay = {};
                 for (var d0 = 0; d0 < dates.length; d0++) perDay[dates[d0]] = { pot: 0, add: 0, sf: 0 };
-                stat[GUNSIL_MEMBERS[m]] = { day: perDay, pot: 0, add: 0, sf: 0 };
+                stat[GUNSIL_MEMBERS[m].name] = perDay;
             }
 
             function fetchList(url, key, listField) {
@@ -5597,46 +5603,48 @@ function checkGunsil(replier) {
                     for (var a = 0; a < pots.length; a++) {
                         var cn = pots[a].character_name;
                         if (names.indexOf(cn) === -1) continue;
-                        if (String(pots[a].potential_type || "").indexOf("에디셔널") !== -1) {
-                            stat[cn].day[dt].add++;
-                            stat[cn].add++;
-                        } else {
-                            stat[cn].day[dt].pot++;
-                            stat[cn].pot++;
-                        }
+                        if (String(pots[a].potential_type || "").indexOf("에디셔널") !== -1) stat[cn][dt].add++;
+                        else stat[cn][dt].pot++;
                     }
                     for (var b = 0; b < sfs.length; b++) {
                         var sn = sfs[b].character_name;
                         if (names.indexOf(sn) === -1) continue;
-                        stat[sn].day[dt].sf++;
-                        stat[sn].sf++;
+                        stat[sn][dt].sf++;
                     }
                 }
             }
 
             var active = 0;
-            var msg = "🔨 건실단 활동 체크\n";
-            msg += "최근 " + GUNSIL_DAYS + "일 (" + dates[0].substring(5) + " ~ " + dates[dates.length - 1].substring(5) + ")\n";
-            msg += "━━━━━━━━━━━━";
+            var line = "━━━━━━━━━━━━━━";
+            var msg = "🔨 건실단 활동 체크 (최근 " + GUNSIL_DAYS + "일)\n" + line;
             for (var r = 0; r < GUNSIL_MEMBERS.length; r++) {
-                var nm2 = GUNSIL_MEMBERS[r];
-                if (unregistered.indexOf(nm2) !== -1) {
-                    msg += "\n\n⚠️ " + nm2 + " — API 키 미등록";
+                var mb = GUNSIL_MEMBERS[r];
+                if (!CHAR_API_KEYS[mb.name]) {
+                    msg += "\n\n⚠️ " + mb.name + " · API 키 미등록";
                     continue;
                 }
-                var st = stat[nm2];
-                var on = st.pot + st.add + st.sf > 0;
-                if (on) active++;
-                msg += "\n\n" + (on ? "✅ " : "❌ ") + nm2;
-                for (var di2 = 0; di2 < dates.length; di2++) {
-                    var dv = st.day[dates[di2]];
-                    msg += "\n  " + dates[di2].substring(5) + "  ";
-                    if (dv.pot + dv.add + dv.sf === 0) msg += "-";
-                    else msg += "잠재 " + dv.pot + " · 에디 " + dv.add + " · 스타포스 " + dv.sf;
+                if (mb.start > today) {
+                    msg += "\n\n⏳ " + mb.name + " · " + mb.start.substring(5) + " 시작 예정";
+                    continue;
                 }
-                msg += "\n  합계  잠재 " + st.pot + " · 에디 " + st.add + " · 스타포스 " + st.sf;
+                // 시작일 이전 날짜는 집계에서 제외
+                var tp = 0, ta = 0, ts = 0, rows = [];
+                for (var di2 = 0; di2 < dates.length; di2++) {
+                    var dk = dates[di2];
+                    if (dk < mb.start) continue;
+                    var v = stat[mb.name][dk];
+                    tp += v.pot; ta += v.add; ts += v.sf;
+                    if (v.pot + v.add + v.sf > 0) rows.push("🟢 " + dk.substring(5) + "  잠재 " + v.pot + " · 에디 " + v.add + " · 스타포스 " + v.sf);
+                    else rows.push("⚪ " + dk.substring(5) + "  기록 없음");
+                }
+                var on = tp + ta + ts > 0;
+                if (on) active++;
+                var nth = dayDiff(mb.start, today) + 1;
+                msg += "\n\n" + (on ? "✅ " : "❌ ") + mb.name + " · " + nth + "일차 (" + mb.start.substring(5) + " 시작)";
+                msg += "\n" + rows.join("\n");
+                msg += "\n📊 합계  잠재 " + tp + " · 에디 " + ta + " · 스타포스 " + ts;
             }
-            msg += "\n\n활동 " + active + " / " + GUNSIL_MEMBERS.length + "명";
+            msg += "\n\n" + line + "\n활동 " + active + " / " + GUNSIL_MEMBERS.length + "명";
             replier.reply(msg);
         } catch (e) {
             replier.reply("건실단 조회 오류: " + (e.message || e));
