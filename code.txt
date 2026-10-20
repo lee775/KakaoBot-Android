@@ -2102,7 +2102,8 @@ function getMonthlyExpHistory(characterName, replier) {
             
             // 각 월의 경험치 계산
             var result = "📊 [" + decodeURIComponent(characterName) + "] 월별 경험치\n\n";
-            
+            var avgSum = 0, avgCount = 0;
+
             for (var i = 0; i < monthsData.length; i++) {
                 if (monthsData[i].data === null) continue;
                 
@@ -2145,11 +2146,35 @@ function getMonthlyExpHistory(characterName, replier) {
                     }
                     
                     result += monthsData[i].monthText + ": " + expText + " (Lv." + endData.character_level + ")\n";
+
+                    // 평균은 다 끝난 달만 (진행 중인 이번 달 제외), 레벨 데이터가 비어 있는 달도 제외
+                    var avgStartLv = Number(startData.character_level);
+                    var avgEndLv = Number(endData.character_level);
+                    if (i < monthsData.length - 1 &&
+                        avgStartLv >= 200 && avgStartLv <= 300 && avgEndLv >= 200 && avgEndLv <= 300) {
+                        avgSum += monthExp;
+                        avgCount++;
+                    }
                 }
             }
-            
+
+            if (avgCount > 0) {
+                var avgExp = Math.round(avgSum / avgCount);
+                var avgText = "";
+                if (avgExp >= 1000000000000) {
+                    avgText = (avgExp / 1000000000000).toFixed(1) + "조";
+                } else if (avgExp >= 100000000) {
+                    avgText = (avgExp / 100000000).toFixed(1) + "억";
+                } else if (avgExp >= 10000) {
+                    avgText = (avgExp / 10000).toFixed(1) + "만";
+                } else {
+                    avgText = avgExp.toString();
+                }
+                result += "\n📈 월 평균: " + avgText + " (최근 " + avgCount + "개월, 이번 달 제외)\n";
+            }
+
             replier.reply(result);
-            
+
         } catch (error) {
             replier.reply("월별 경험치 집계 중 오류가 발생했습니다: " + error.message);
         }
