@@ -2147,11 +2147,10 @@ function getMonthlyExpHistory(characterName, replier) {
                     
                     result += monthsData[i].monthText + ": " + expText + " (Lv." + endData.character_level + ")\n";
 
-                    // 평균은 다 끝난 달만 (진행 중인 이번 달 제외), 레벨 데이터가 비어 있는 달도 제외
+                    // 평균은 이번 달 포함, 레벨 데이터가 비어 있는 달만 제외
                     var avgStartLv = Number(startData.character_level);
                     var avgEndLv = Number(endData.character_level);
-                    if (i < monthsData.length - 1 &&
-                        avgStartLv >= 200 && avgStartLv <= 300 && avgEndLv >= 200 && avgEndLv <= 300) {
+                    if (avgStartLv >= 200 && avgStartLv <= 300 && avgEndLv >= 200 && avgEndLv <= 300) {
                         avgSum += monthExp;
                         avgCount++;
                     }
@@ -2170,7 +2169,7 @@ function getMonthlyExpHistory(characterName, replier) {
                 } else {
                     avgText = avgExp.toString();
                 }
-                result += "\n📈 월 평균: " + avgText + " (최근 " + avgCount + "개월, 이번 달 제외)\n";
+                result += "\n📈 월 평균: " + avgText + " (최근 " + avgCount + "개월, 이번 달 포함)\n";
             }
 
             replier.reply(result);
