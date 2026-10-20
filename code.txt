@@ -947,107 +947,553 @@ const RANKING_CHARACTERS3 = [
 "마적",
 "브경"
 ]
-// 랭킹 대상 캐릭터 목록
+// 랭킹 대상 캐릭터 목록 (봄비 길드원 전체 · 2026-10-20 넥슨 길드 API 기준 545명)
 const RANKING_CHARACTERS = [
- "덕고미콩",
-"영디",
-"아퐁",
-"좋냥",
-"가람님",
-"굼뱅이상자",
-"늘귤",
-"렌영v",
-"플로렌스",
-"활쏘러가여",
-"다크나이이뚜",
-"담체",
-"뭘해도우냥",
-"유랑극단",
-"너조아",
-"믈빙건",
-"아스티핀",
-"이겜처음함뭐",
-"제육쌈밥사장",
-"처단",
+"사랑해요미카",
 "가령성우팬",
-"그리즈",
-"살귤",
-"세렌팬티도둑",
-"엘리멤",
-"쭌뚜",
-"초전도건틀릿",
-"태준v",
-"페에멜라",
+"하루성우팬",
+"연꽃이날린다",
+"새아성우팬",
+"보나성우팬",
+"대프카",
+"골리",
+"투랑멋쟁이",
+"보마춘광",
 "국진시치",
-"냥연진",
-"비표본위험",
-"태엽준",
-"그대솜이",
-"도횬갓",
-"돈모으는자",
-"메Lia",
-"뿌뿍",
-"센애",
-"아오렌시치",
-"유토피",
-"즐거운갈루스",
-"춤추는신두형",
-"태준시치",
-"화령작",
-"noyes비숍",
-"금발태닝께보",
-"꼬마모찌",
+"연참시치",
 "나우테크시치",
-"대머리공장장",
-"리인카잭",
-"무지개오라",
-"바텀바두기",
-"서울꽃삼",
-"씨단",
-"아란마2분에1",
-"윤하지은",
-"장덕동쓰나미",
-"태준바라깅",
-"팔라딘약한듯",
-"햇님뎐",
-"TreySongz",
-"멍붕바오",
-"빨간옷흰바지",
-"수심각",
-"임중휘",
-"징쨩렌",
+"꿀단지부동산",
+"지평꿈나무",
+"굼뱅이상자",
+"올챙이상자",
+"크뎀오퍼파",
+"굼주인",
+"멍뭉바오",
+"근육얌",
 "코코섬",
-"몰랑용사",
-"별의달빛사수",
-"일일세상",
-"최고의할증료",
-"나준희",
-"뎃카이",
+"그리즈",
+"활든그리즈",
+"쿄코섬",
+"근띠깅",
+"렌띠깅",
+"블띠깅",
+"금발태닝께보",
+"보리먹은토끼",
+"계북이",
+"계진순",
+"김개똥",
+"쌔닛",
+"요아린",
+"김치우동",
+"결사대",
+"껌요",
+"텨헛",
+"참박도",
+"킴헛",
+"맡놔",
+"나로떵민",
+"명사수떵민",
+"내떽",
+"냥연진",
+"너조아",
+"라르하",
+"조아레엔",
+"죠아데엘",
+"조아메에",
+"조아테에",
+"늘귤",
+"큭귤",
+"뽈귤",
+"늘북귤",
+"다크나이이뚜",
+"데몬뚜우우",
+"렌뚜우",
+"아란뚜우우",
+"루미뚜우우",
+"카데나뚜우",
+"담리",
+"덕고미콩",
+"이뿌니고미",
+"고미공주님",
+"고미여신",
+"도횬갓",
+"개금빌런",
+"도횬렌",
+"링크노예장인",
+"라넬사해",
+"뇌정지썬콜",
+"데슬가논",
+"하이랄캡틴",
+"필로네의렌",
+"링꼬야돌아와",
+"주우소혜",
+"김오요예요",
+"렌영서",
+"벧회",
+"썬영서",
+"렌영v",
+"보마영v",
+"윈브영v",
+"은은한쉬프트",
+"려와",
+"바텀바둑이",
+"버텀개",
+"바텀바두기",
+"석상공방",
+"롱징차",
+"모리화차",
+"리인카잭",
+"머퓌",
+"보험처리개꿀",
+"렌종마르지엘",
+"데세코",
+"풍성머퓌",
 "승에",
-"오늘만사또",
-"진담토",
-"티삼스",
-"홍기레렌",
-"Rabbitwren",
-"가상토벤",
-"몸윰",
-"페문",
-"9번감서윤",
-"돌풍준",
-"옹균리",
-"우루루샤",
-"질풍준",
-"피어난류화",
-"젓걜",
-"젼빵씨",
-"반색월",
-"오멘준",
-"섀패마",
-"유렬",
-"총을써보자",
-"아퐁이었던것",
+"뱌다바다",
+"멍붕바오",
+"승에루",
+"타짜고미",
+"말랑한교주",
+"몰랑용사",
+"칼퇴하는백수",
+"칼퇴무브",
+"무지개오라",
+"흑화꼬마법사",
+"뽀야캡짱",
+"깡총뽀야",
+"메뽀스토",
+"뭘해도우냥",
+"뭘해도금냥",
+"뭘해도쿵냥",
+"니얼굴고미",
+"덕수친구덕고",
+"믈빙건",
+"내가만든나로",
+"렌빙건",
+"얼티레테르넬",
+"극저점카데나",
+"별의달빛사수",
+"북극근무자",
+"렌Lia",
+"메Lia",
 "보마Lia",
-    
+"엔젤릭Lia",
+"잠탱이뽀야",
+"꼬마햇님뽀야",
+"뽀야노래할게",
+"럭키뽀츈",
+"뿌뿍",
+"퍄카",
+"핑뿌",
+"천매토비",
+"쥬피선뎌",
+"레드테이프",
+"준월i",
+"김삼필유튜브",
+"탱글삼필",
+"쁘띠삼필",
+"살귤",
+"미군윈",
+"강록최",
+"논푤",
+"서울꽃삼",
+"식엄준",
+"시너준",
+"세렌팬티도둑",
+"직지심체요정",
+"노인틀니뺐기",
+"거지런돈슛맨",
+"김거돈",
+"센애",
+"모르겟소마",
+"하늘색우싼",
+"뿐홍색매화",
+"좀약한애",
+"챌섭할거제",
+"수심각",
+"55개",
+"딱딱아딱딱아",
+"슐리슐리야",
+"습기",
+"자운대",
+"과잉진료",
+"열네번째의문",
+"펌프운전",
+"돌풍속도",
+"압살수",
+"쌍과도",
+"표검술",
+"쌍반월",
+"렌키성",
+"제과도",
+"썬려",
+"썬쿨",
+"고병",
+"이묘용",
+"재획사원",
+"잣둥",
+"꼬마모찌",
+"매콤모찌",
+"씨단",
+"슬픈타비",
+"아아나무야",
+"꼬치피는봄",
+"아니왜그랬지",
+"아침햇살마멋",
+"땅게로",
+"Bailo",
+"아스티핀",
+"환검핀",
+"아오렌시치",
+"삼필콩",
+"아퐁이었던것",
+"아퐁",
+"뚱이야노올자",
+"므마",
+"쯔별",
+"아퐁공주님",
+"앙헤응띠",
+"개화월영스",
+"엘리멤",
+"에옹쓰음",
+"엘니넴",
+"엘미멤",
+"연진꽁",
+"영디",
+"페문",
+"기뼈",
+"메르영디",
+"남편화많이났",
+"겨울달볕",
+"하얀메링이",
+"오뭬리",
+"오은따",
+"레테은따",
+"겸패왕",
+"온천타마고",
+"햄쯔롱",
+"루루계란",
+"계란등장",
+"루나계란",
+"패쓰엽",
+"윈브엽",
+"요브썬",
+"롓녕",
+"유랑극단",
+"말랑한연구원",
+"6시루팡",
+"유랑매화단",
+"칼퇴보법",
+"유지후",
+"이겜처음함뭐",
+"부여성핵주먹",
+"컨시센스",
+"거북왕핵펀치",
+"이렐프리데",
+"위마보마",
+"장송의퇴끼렌",
+"제네마켓칼리",
+"배틀따악",
+"이블서번트",
+"독불꽃놀이",
+"얼음삽입구",
+"렌쟝나우",
+"네크라튠",
+"아이사레테",
+"임중휘",
+"작은달",
+"재획대표",
+"재획전무",
+"재획실장",
+"제육쌈밥사장",
+"제육쌈밥제육",
+"제육쌈밥냉동",
+"제육쌈밥레테",
+"두쫀제육",
+"좋냥",
+"whdsid",
+"즉살",
+"숭앙",
+"지위",
+"메붕쿤",
+"가례",
+"장쳄",
+"쭌뚜",
+"김선호아빠",
+"찌무데벤",
+"찌무",
+"찌잊",
+"이찌무",
+"박찌무",
+"최찌무",
+"찌아재윈브",
+"찌아재스커",
+"찌아재소마",
+"찌아재렌",
+"B메스",
+"처단",
+"니얼굴덕고",
+"고니친구고미",
+"20250108은월",
+"초쿄레니",
+"15중첩처형",
+"레테룽넬",
+"싸대기챌린저",
+"춤추는신두형",
+"챌섭생제르망",
+"뻥꽁꽁",
+"뻥톄",
+"치타",
+"독기품은연",
+"홍기부사수",
+"홍기렌",
+"리윰도전",
+"회피률",
+"돌풍준",
+"질풍준",
+"오멘준",
+"태엽준",
+"유랑준",
+"글윙준",
+"태준바라깅",
+"화산파현호",
+"레테준v",
+"걸태캐논",
+"해방걸로",
+"태준시치",
+"걸태보마",
+"름태준",
+"태준v",
+"습관성허세",
+"태준7",
+"태준돌이",
+"화산파박태준",
+"레테jun",
+"겨울맛우유",
+"하망우유",
+"소망우유",
+"토로우유",
+"도둑츄르릅",
+"지니우유",
+"팔라딘약한듯",
+"오조오억곤쥬",
+"데벤저약한듯",
+"Rabbitwren",
+"썬뻔뻔약해요",
+"레테야캐양",
+"속물",
+"홍련lI",
+"해적Il",
+"보마Il",
+"라모니움",
+"페에멜라",
+"보우멜라",
+"폴아멜라",
+"폭류원킬사냥",
+"노인네직업",
+"표제드",
+"내맘알구있니",
+"Lorence",
+"Tbow",
+"플로렌스",
+"플로보우",
+"홍기신궁",
+"홍기레렌",
+"홍기치지직",
+"홍기레테",
+"화령작",
+"유렬",
+"화렌작",
+"도라매",
+"다자두",
+"활쏘러가여",
+"엘크클로네",
+"술먹으러가여",
+"틴스메리",
+"황다렌",
+"끌고감",
+"키익",
+"황도네벨라",
+"황도",
+"업어감",
+"황도네일리움",
+"어디가시나영",
+"휴지의산책",
+"찐도넛",
+"TreySongz",
+"김세따",
+"세패왕",
+"아산말랑카우",
+"아산말랑명궁",
+"츠근",
+"츠근레엔",
+"츠근레테",
+"noyes비숍",
+"굼뱅님",
+"요격과자칼",
+"사기캐가제맛",
+"자칼듀블",
+"잼도워",
+"쿨감낸화",
+"래태구리",
+"짜호동",
+"쿨바리",
+"극비",
+"미식지",
+"아댈구리",
+"집전소붕이",
+"쿠로타마",
+"마법타마",
+"차가운나로맛",
+"차가운토끼맛",
+"윈브히끼잉",
+"버프후킹",
+"메모리누수중",
+"쌀먹하는백수",
+"화산파장녀",
+"캘버리",
+"서혼검",
+"일루앤",
+"돈모으는자",
+"LENYOU",
+"롱드가좌",
+"롱드가좌18",
+"마루쑤액",
+"히조",
+"투노비",
+"랴꽁",
+"괴도히조",
+"o은월",
+"게임밥잠",
+"금붕붕어",
+"어둠크쿡",
+"최채라",
+"소공상인",
+"스펙트론",
+"레이더스썬",
+"스팩트론",
+"그랬츄",
+"란Ol란Ol",
+"호OI호OI",
+"츄헤헹",
+"하뚜삣",
+"란또롯",
+"와전",
+"봉고차",
+"큐원",
+"Nick",
+"겸광",
+"겸얌이",
+"겸늠",
+"겸읾",
+"겸텟",
+"완벽투",
+"그레거슨",
+"2루수박준순",
+"감감333",
+"OIEH형",
+"혜레",
+"민츨",
+"혜참",
+"혜치",
+"로망장전",
+"나작메돌려줘",
+"Lepaa",
+"덕리버",
+"특급여고생",
+"정수리원턴킬",
+"옥염차",
+"끌핑클",
+"풀재인",
+"야월섬",
+"환월섬",
+"절대안죽음",
+"노잼이라던데",
+"스멜더",
+"렌랑민",
+"프래테",
+"7560",
+"교콱",
+"웍쁠",
+"차쪼",
+"손호준",
+"갓헤드",
+"쁘아머",
+"쁘아무",
+"프아머",
+"굳건이살려줘",
+"천공오토시",
+"돌돌메야",
+"민v수",
+"팅엄",
+"그란시얀3",
+"그란시얀2",
+"승땜",
+"탈신",
+"쮜땜",
+"쩌투",
+"한입거리",
+"호에",
+"후잉",
+"랠름",
+"딸깍딸깍",
+"석꿍",
+"공순이아델양",
+"공돌이클레릭",
+"다대포항렌",
+"다대포항움",
+"다대포레테",
+"펜블령",
+"펜블아",
+"상남하남",
+"어머기분나쁨",
+"일단기분좋음",
+"여객",
+"쵸야렌",
+"규나단",
+"니츠단",
+"꼭지각",
+"조에포스",
+"보마지각",
+"와헌지각",
+"잡혀감",
+"호깨의나로",
+"깨푤",
+"댕유치원",
+"고양이좋당",
+"렘롤이",
+"나는야매로나",
+"나는야슈크림",
+"나는야감튀",
+"제주아홉송도",
+"트페블루",
+"신지드스컹크",
+"송솬사",
+"외힙충",
+"블붕챤",
+"아둠",
+"이어실",
+"더소별",
+"하쏘잉",
+"후지호",
+"홍파",
+"사테비",
+"똑똑한파루코",
+"정상화된나워",
+"레니레나렌",
+"홍토리샷",
+"도치찬",
+"첩깎",
+"도치유챔",
+"요격렌",
+"믿음이",
+"아기뻐",
+"민쩌렌",
+"민큐피",
+"항공대",
+"쟤솜",
+"공대렌",
+"공대혀로"
 ];
 const RANKING_CHARACTERS2 = [
 "흥우양파",
@@ -1373,6 +1819,65 @@ function formatExpValue(exp) {
 }
 
 // 전투력 랭킹 함수
+// ===== 랭킹용 동시 조회 =====
+// 길드원이 500명을 넘어 한 명씩 조회하면 너무 오래 걸려서, 스레드 여러 개로 나눠 동시에 조회한다.
+var RANKING_THREADS = 5;
+
+// 넥슨 API 호출. 요청 과다(429)·서버 오류(5xx)·연결 끊김만 최대 3번 시도하고, 400(없는 캐릭터 등)은 바로 실패.
+function rankingFetch(url) {
+    for (var t = 0; t < 3; t++) {
+        var resp = null;
+        try {
+            resp = org.jsoup.Jsoup.connect(url)
+                .header("accept", "application/json")
+                .header("x-nxopen-api-key", NEXON_API_KEY)
+                .ignoreContentType(true)
+                .ignoreHttpErrors(true)
+                .timeout(10000)
+                .execute();
+        } catch (e) {
+            if (t === 2) throw e;   // 연결 끊김·시간 초과
+        }
+        if (resp) {
+            var code = resp.statusCode();
+            if (code === 200) return resp.body();
+            if ((code !== 429 && code < 500) || t === 2) throw new Error("HTTP " + code);
+        }
+        java.lang.Thread.sleep(400 * (t + 1));
+    }
+    throw new Error("요청 실패");
+}
+
+// list 의 각 이름에 work(name) 을 동시에 실행해 결과(null 아닌 것)를 모아 돌려준다. 순서는 섞인다.
+// onDone(완료수) 는 한 명 끝날 때마다 호출된다(진행 안내용).
+function rankingParallel(list, work, onDone) {
+    var n = list.length;
+    var threadCount = Math.max(1, Math.min(RANKING_THREADS, n));
+    var buckets = [];
+    var workers = [];
+    var done = new java.util.concurrent.atomic.AtomicInteger(0);
+    for (var w = 0; w < threadCount; w++) {
+        buckets.push([]);
+        (function (wi) {
+            workers.push(new java.lang.Thread(function () {
+                for (var i = wi; i < n; i += threadCount) {
+                    var r = null;
+                    try { r = work(list[i]); } catch (e) { r = null; }
+                    if (r) buckets[wi].push(r);
+                    if (onDone) {
+                        try { onDone(Number(done.incrementAndGet())); } catch (e2) {}
+                    }
+                }
+            }));
+        })(w);
+    }
+    for (var s = 0; s < workers.length; s++) workers[s].start();
+    for (var j = 0; j < workers.length; j++) workers[j].join();
+    var out = [];
+    for (var b = 0; b < buckets.length; b++) out = out.concat(buckets[b]);
+    return out;
+}
+
 function getPowerRanking(replier, characterList) {
     replier.reply("🏆 전투력 랭킹 집계 중...\n잠시만 기다려주세요 (" + characterList.length + "명)");
     
@@ -1401,72 +1906,47 @@ function getPowerRanking(replier, characterList) {
                 );
             }
             
-            var rankingData = [];
             var progressInterval = Math.max(1, Math.floor(characterList.length / 3));
-            
-            for (var idx = 0; idx < characterList.length; idx++) {
-                try {
-                    var targetCharName = characterList[idx];
-                    var encodedCharName = encodeURIComponent(targetCharName);
-                    
-                    // OCID 가져오기
-                    var ocidUrl = MAPLE_OCID_API_URL + "?character_name=" + encodedCharName;
-                    var ocidResp = org.jsoup.Jsoup.connect(ocidUrl)
-                        .header("accept", "application/json")
-                        .header("x-nxopen-api-key", NEXON_API_KEY)
-                        .ignoreContentType(true)
-                        .timeout(10000)
-                        .execute()
-                        .body();
-                    var ocidJson = JSON.parse(ocidResp);
-                    var characterOcid = ocidJson.ocid;
-                    
-                    // 일주일치 전투력 데이터 수집
-                    var maxPower = 0;
-                    
-                    for (var d = 0; d < dates.length; d++) {
-                        try {
-                            var statUrl = MAPLE_INF_STAT_URL + "?ocid=" + characterOcid + "&date=" + dates[d];
-                            var statResp = org.jsoup.Jsoup.connect(statUrl)
-                                .header("accept", "application/json")
-                                .header("x-nxopen-api-key", NEXON_API_KEY)
-                                .ignoreContentType(true)
-                                .timeout(10000)
-                                .execute()
-                                .body();
-                            var statJson = JSON.parse(statResp);
-                            
-                            // 전투력 찾기
-                            for (var s = 0; s < statJson.final_stat.length; s++) {
-                                if (statJson.final_stat[s].stat_name === "전투력") {
-                                    var power = Number(statJson.final_stat[s].stat_value);
-                                    if (power > maxPower) {
-                                        maxPower = power;
-                                    }
-                                    break;
+
+            var rankingData = rankingParallel(characterList, function (targetCharName) {
+                var encodedCharName = encodeURIComponent(targetCharName);
+
+                // OCID 가져오기
+                var ocidJson = JSON.parse(rankingFetch(MAPLE_OCID_API_URL + "?character_name=" + encodedCharName));
+                var characterOcid = ocidJson.ocid;
+
+                // 일주일치 전투력 데이터 수집
+                var maxPower = 0;
+
+                for (var d = 0; d < dates.length; d++) {
+                    try {
+                        var statJson = JSON.parse(rankingFetch(MAPLE_INF_STAT_URL + "?ocid=" + characterOcid + "&date=" + dates[d]));
+
+                        // 전투력 찾기
+                        for (var s = 0; s < statJson.final_stat.length; s++) {
+                            if (statJson.final_stat[s].stat_name === "전투력") {
+                                var power = Number(statJson.final_stat[s].stat_value);
+                                if (power > maxPower) {
+                                    maxPower = power;
                                 }
+                                break;
                             }
-                        } catch (e) {
-                            // 해당 날짜 데이터 없으면 스킵
                         }
+                    } catch (e) {
+                        // 해당 날짜 데이터 없으면 스킵
                     }
-                    
-                    if (maxPower > 0) {
-                        rankingData.push({
-                            name: targetCharName,
-                            power: maxPower
-                        });
-                    }
-                    
-                    // 진행 상황 알림
-                    if ((idx + 1) % progressInterval === 0) {
-                        replier.reply("진행중... " + (idx + 1) + "/" + characterList.length);
-                    }
-                    
-                } catch (err) {
-                    continue;
                 }
-            }
+
+                if (maxPower > 0) {
+                    return { name: targetCharName, power: maxPower };
+                }
+                return null;
+            }, function (doneCount) {
+                // 진행 상황 알림
+                if (doneCount % progressInterval === 0) {
+                    replier.reply("진행중... " + doneCount + "/" + characterList.length);
+                }
+            });
             
             // 전투력 내림차순 정렬
             rankingData.sort(function(a, b) {
@@ -1736,84 +2216,50 @@ function getMonthlyRanking(replier) {
                 return Math.max(0, currTotalExp - prevTotalExp);
             }
             
-            // 각 캐릭터의 이번 달 경험치 수집
-            var rankingData = [];
-            
-            // 진행 상황 알림 (10명마다)
+            // 각 캐릭터의 이번 달 경험치 수집 (동시 조회, 실패한 캐릭터는 조용히 스킵)
+            // 진행 상황 알림 (1/3 마다)
             var progressInterval = Math.max(1, Math.floor(RANKING_CHARACTERS.length / 3));
-            
-            for (var idx = 0; idx < RANKING_CHARACTERS.length; idx++) {
-                try {
-                    var targetCharName = RANKING_CHARACTERS[idx];
-                    var encodedCharName = encodeURIComponent(targetCharName);
-                    
-                    // OCID 가져오기
-                    var ocidUrl = MAPLE_OCID_API_URL + "?character_name=" + encodedCharName;
-                    var ocidResp = org.jsoup.Jsoup.connect(ocidUrl)
-                        .header("accept", "application/json")
-                        .header("x-nxopen-api-key", NEXON_API_KEY)
-                        .ignoreContentType(true)
-                        .timeout(10000)
-                        .execute()
-                        .body();
-                    var ocidJson = JSON.parse(ocidResp);
-                    var characterOcid = ocidJson.ocid;
-                    
-                    // 현재 데이터
-                    var currentUrl = MAPLE_INF_API_URL + "?ocid=" + characterOcid;
-                    var currentResp = org.jsoup.Jsoup.connect(currentUrl)
-                        .header("accept", "application/json")
-                        .header("x-nxopen-api-key", NEXON_API_KEY)
-                        .ignoreContentType(true)
-                        .timeout(10000)
-                        .execute()
-                        .body();
-                    var currentJson = JSON.parse(currentResp);
-                    
-                    // 이번 달 1일 0시 데이터
-                    var firstUrl = MAPLE_INF_API_URL + "?ocid=" + characterOcid + "&date=" + day_first;
-                    var firstResp = org.jsoup.Jsoup.connect(firstUrl)
-                        .header("accept", "application/json")
-                        .header("x-nxopen-api-key", NEXON_API_KEY)
-                        .ignoreContentType(true)
-                        .timeout(10000)
-                        .execute()
-                        .body();
-                    var firstJson = JSON.parse(firstResp);
-                    
-                    // 이번 달 경험치 계산
-                    var monthExp = calcGainedExp(
-                        Number(firstJson.character_level),
-                        Number(firstJson.character_exp),
-                        Number(currentJson.character_level),
-                        Number(currentJson.character_exp)
-                    );
-                    
-                    rankingData.push({
-                        name: currentJson.character_name,
-                        exp: monthExp,
-                        level: currentJson.character_level
-                    });
-                    
-                    // 진행 상황 알림
-                    if ((idx + 1) % progressInterval === 0) {
-                        replier.reply("진행중... " + (idx + 1) + "/" + RANKING_CHARACTERS.length);
-                    }
-                    
-                } catch (err) {
-                    // 실패한 캐릭터는 조용히 스킵
-                    continue;
+
+            var rankingData = rankingParallel(RANKING_CHARACTERS, function (targetCharName) {
+                var encodedCharName = encodeURIComponent(targetCharName);
+
+                // OCID 가져오기
+                var ocidJson = JSON.parse(rankingFetch(MAPLE_OCID_API_URL + "?character_name=" + encodedCharName));
+                var characterOcid = ocidJson.ocid;
+
+                // 현재 데이터
+                var currentJson = JSON.parse(rankingFetch(MAPLE_INF_API_URL + "?ocid=" + characterOcid));
+
+                // 이번 달 1일 0시 데이터
+                var firstJson = JSON.parse(rankingFetch(MAPLE_INF_API_URL + "?ocid=" + characterOcid + "&date=" + day_first));
+
+                // 이번 달 경험치 계산
+                var monthExp = calcGainedExp(
+                    Number(firstJson.character_level),
+                    Number(firstJson.character_exp),
+                    Number(currentJson.character_level),
+                    Number(currentJson.character_exp)
+                );
+
+                return {
+                    name: currentJson.character_name,
+                    exp: monthExp,
+                    level: currentJson.character_level
+                };
+            }, function (doneCount) {
+                if (doneCount % progressInterval === 0) {
+                    replier.reply("진행중... " + doneCount + "/" + RANKING_CHARACTERS.length);
                 }
-            }
-            
+            });
+
             // 경험치 내림차순 정렬
             rankingData.sort(function(a, b) {
                 return b.exp - a.exp;
             });
-            
+
             // 결과 출력 (최대 15위까지)
             var result = "🏆 이번 달 경험치 랭킹 🏆\n\n";
-            
+
             var displayCount = Math.min(50, rankingData.length);
             
             for (var j = 0; j < displayCount; j++) {
@@ -1910,8 +2356,8 @@ function getMonthlyRanking3(replier) {
             var rankingData = [];
             
             // 진행 상황 알림 (10명마다)
-            var progressInterval = Math.max(1, Math.floor(RANKING_CHARACTERS.length / 3));
-            
+            var progressInterval = Math.max(1, Math.floor(RANKING_CHARACTERS3.length / 3));
+
             for (var idx = 0; idx < RANKING_CHARACTERS3.length; idx++) {
                 try {
                     var targetCharName = RANKING_CHARACTERS3[idx];
@@ -2080,8 +2526,8 @@ function getMonthlyRanking4(replier) {
             var rankingData = [];
             
             // 진행 상황 알림 (10명마다)
-            var progressInterval = Math.max(1, Math.floor(RANKING_CHARACTERS.length / 3));
-            
+            var progressInterval = Math.max(1, Math.floor(RANKING_CHARACTERS4.length / 3));
+
             for (var idx = 0; idx < RANKING_CHARACTERS4.length; idx++) {
                 try {
                     var targetCharName = RANKING_CHARACTERS4[idx];
@@ -2193,7 +2639,7 @@ function getMonthlyRanking4(replier) {
 // 이번 달 경험치 랭킹 함수
 function getMonthlyRanking2(replier) {
     // 즉시 응답
-    replier.reply("🏆 이번 달 경험치 랭킹 집계 중...\n잠시만 기다려주세요 (" + RANKING_CHARACTERS.length + "명)");
+    replier.reply("🏆 이번 달 경험치 랭킹 집계 중...\n잠시만 기다려주세요 (" + RANKING_CHARACTERS2.length + "명)");
     
     // 백그라운드 스레드로 실행
     var thread = new java.lang.Thread(function() {
@@ -2252,8 +2698,8 @@ function getMonthlyRanking2(replier) {
             var rankingData = [];
             
             // 진행 상황 알림 (10명마다)
-            var progressInterval = Math.max(1, Math.floor(RANKING_CHARACTERS.length / 3));
-            
+            var progressInterval = Math.max(1, Math.floor(RANKING_CHARACTERS2.length / 3));
+
             for (var idx = 0; idx < RANKING_CHARACTERS2.length; idx++) {
                 try {
                     var targetCharName = RANKING_CHARACTERS2[idx];
@@ -2309,7 +2755,7 @@ function getMonthlyRanking2(replier) {
                     
                     // 진행 상황 알림
                     if ((idx + 1) % progressInterval === 0) {
-                        replier.reply("진행중... " + (idx + 1) + "/" + RANKING_CHARACTERS.length);
+                        replier.reply("진행중... " + (idx + 1) + "/" + RANKING_CHARACTERS2.length);
                     }
                     
                 } catch (err) {
