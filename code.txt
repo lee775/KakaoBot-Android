@@ -278,6 +278,7 @@ function responsePart1(room, msg, sender, isGroupChat, replier, imageDB, package
             "/관리등록 사용자명 내용\n→ 특정 사용자 이름으로 글 등록\n\n" +
             "/관리삭제 사용자명\n→ 특정 사용자의 글 삭제\n\n" +
             "/벽지초기화\n→ 모든 벽지 내용 삭제\n\n" +
+            "/테스트\n→ 수로 알림 지금 미리 보내기\n\n" +
             "/관리도움말\n→ 이 도움말 보기"
         );
         return;
@@ -301,6 +302,13 @@ function responsePart1(room, msg, sender, isGroupChat, replier, imageDB, package
         var __sdIn = msg.indexOf(" ") !== -1 ? msg.substring(msg.indexOf(" ") + 1).trim() : "";
         var __sdNm = resolveCharacter(__sdIn, sender, replier);
         if (__sdNm) markSuroDone(String(__sdNm), replier);
+    }
+    if (msg === "/테스트" || msg.startsWith("/테스트 ")) {
+        if (!isAdmin(sender)) {
+            replier.reply("⛔ 관리자만 사용할 수 있는 명령어입니다.");
+        } else {
+            testSuroRemind(replier);
+        }
     }
     // ===== /큐브 [닉] [장비명|부위] [일수] =====
     if (msg === "/큐브" || msg.startsWith("/큐브 ")) {
@@ -6274,22 +6282,41 @@ function checkSuroRemind(replier) {
 
     new java.lang.Thread(function () {
         try {
-            var done = getSuroDone(suroWeekStart(now)).chars;
-            var zero = [];
-            for (var i = 0; i < SURO_REMIND_CHARS.length; i++) {
-                var nm = SURO_REMIND_CHARS[i];
-                if (done[nm]) continue;
-                if (fetchSuroScoreQuiet(nm) === 0) zero.push(nm);
-            }
-            if (zero.length === 0) return;
-            var m = "🌊 수로 알림 · 오늘 자정 초기화\n━━━━━━━━━━━━\n";
-            m += "아직 이번 주 수로 기록이 없어요\n";
-            for (var z = 0; z < zero.length; z++) m += "• " + zero[z] + "\n";
-            m += "\n수로 치고 오세요! 🏃\n\n";
-            m += "※ 넥슨 기록은 하루 늦어서 화요일까지 기준이에요\n";
-            m += "이미 쳤으면 /수로완료 [닉] 입력하면 알림에서 빠져요";
-            replier.reply(m);
+            var m = buildSuroRemind(now);
+            if (m) replier.reply(m);
         } catch (e) {}
+    }).start();
+}
+
+// 알림 문구. 0점 캐릭만 (/수로완료 체크·조회 실패 캐릭 제외), 보낼 캐릭이 없으면 null
+function buildSuroRemind(now) {
+    var done = getSuroDone(suroWeekStart(now)).chars;
+    var zero = [];
+    for (var i = 0; i < SURO_REMIND_CHARS.length; i++) {
+        var nm = SURO_REMIND_CHARS[i];
+        if (done[nm]) continue;
+        if (fetchSuroScoreQuiet(nm) === 0) zero.push(nm);
+    }
+    if (zero.length === 0) return null;
+    var m = "🌊 수로 알림 · 오늘 자정 초기화\n━━━━━━━━━━━━\n";
+    m += "아직 이번 주 수로 기록이 없어요\n";
+    for (var z = 0; z < zero.length; z++) m += "• " + zero[z] + "\n";
+    m += "\n수로 치고 오세요! 🏃\n\n";
+    m += "※ 넥슨 기록은 하루 늦어서 화요일까지 기준이에요\n";
+    m += "이미 쳤으면 /수로완료 [닉] 입력하면 알림에서 빠져요";
+    return m;
+}
+
+// /테스트 (관리자): 요일·시간·발송 기록과 상관없이 지금 이 방에 수로 알림을 미리 보낸다
+function testSuroRemind(replier) {
+    new java.lang.Thread(function () {
+        try {
+            var m = buildSuroRemind(new Date());
+            if (m) replier.reply("🧪 수로 알림 테스트\n(실제 알림은 수요일 20:00~23:30, 30분마다 수다방)\n\n" + m);
+            else replier.reply("🧪 수로 알림 테스트\n\n지금은 보낼 대상이 없어요.\n(" + SURO_REMIND_CHARS.join(" · ") + " 모두 점수가 있거나 /수로완료 체크됨)");
+        } catch (e) {
+            replier.reply("수로 알림 테스트 오류: " + (e.message || e));
+        }
     }).start();
 }
 
