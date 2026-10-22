@@ -297,6 +297,11 @@ function responsePart1(room, msg, sender, isGroupChat, replier, imageDB, package
         var __srNm = resolveCharacter(__srIn, sender, replier);
         if (__srNm) getSuroScore(encodeURIComponent(__srNm), replier);
     }
+    if (msg === "/수로완료" || msg.startsWith("/수로완료 ")) {
+        var __sdIn = msg.indexOf(" ") !== -1 ? msg.substring(msg.indexOf(" ") + 1).trim() : "";
+        var __sdNm = resolveCharacter(__sdIn, sender, replier);
+        if (__sdNm) markSuroDone(String(__sdNm), replier);
+    }
     // ===== /큐브 [닉] [장비명|부위] [일수] =====
     if (msg === "/큐브" || msg.startsWith("/큐브 ")) {
         var __cbArg = msg.indexOf(" ") !== -1 ? msg.substring(msg.indexOf(" ") + 1).trim() : "";
@@ -5079,6 +5084,8 @@ function responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packag
                 replier.reply("그거 아시나요?\n\n" + __tmiFact);
             } catch (eTmi) {}
         }
+        // 수로 알림: 수요일 20:00~23:30 30분 간격 (수다방 메시지 구동)
+        try { checkSuroRemind(replier); } catch (eSr) {}
     }
 
     // 분리된 part 호출
@@ -6176,6 +6183,116 @@ function getSuroScore(characterName, replier) {
     thread.start();
 }
 
+// ===== 수로 알림 (수요일 20:00~23:30, 30분 간격, 봄비 수다방) =====
+// 수로는 목요일 0시에 초기화되므로 수요일이 마지막 날 → 0점인 캐릭만 수다방에 알림.
+// 넥슨 스케줄러 API는 하루 늦게 반영(수요일엔 화요일까지 기록)이라, 이미 친 사람은 /수로완료 로 그 주 알림에서 뺀다.
+// TMI 와 같은 메시지 구동 방식: 수다방에 메시지가 올 때 시간을 확인해, 그 30분 구간에 아직 안 보냈으면 보낸다.
+var SURO_REMIND_CHARS = ["플로렌스", "쿄코섬", "유랑극단"];
+var SURO_REMIND_DAY = 3;                // 수요일 (getDay: 0=일)
+var SURO_REMIND_FROM = 20 * 60;         // 20:00 부터
+var SURO_REMIND_STEP = 30;              // 30분 간격 (마지막 23:30)
+var suroRemindClaim = new java.util.concurrent.ConcurrentHashMap();      // 같은 구간 중복 발송 방지 (동시 메시지)
+var suroDoneLock = new java.util.concurrent.locks.ReentrantLock();       // /수로완료 동시 저장 보호
+
+function suroPad(n) { return n < 10 ? "0" + n : "" + n; }
+function suroDateStr(d) { return d.getFullYear() + "-" + suroPad(d.getMonth() + 1) + "-" + suroPad(d.getDate()); }
+
+// 이번 수로 주의 시작일 (가장 최근 목요일)
+function suroWeekStart(now) {
+    var d = new Date(now.getTime());
+    d.setDate(d.getDate() - ((d.getDay() - 4 + 7) % 7));
+    return suroDateStr(d);
+}
+
+// /수로완료 체크 목록 { week: 목요일 날짜, chars: { 이름: true } } — 주가 바뀌면 빈 목록으로 본다
+function getSuroDone(week) {
+    try {
+        var raw = DataBase.getDataBase("suro_done");
+        if (raw) {
+            var o = JSON.parse(String(raw));
+            if (o && o.week === week && o.chars) return o;
+        }
+    } catch (e) {}
+    return { week: week, chars: {} };
+}
+
+function markSuroDone(name, replier) {
+    if (SURO_REMIND_CHARS.indexOf(name) === -1) {
+        replier.reply("'" + name + "' 은(는) 수로 알림 대상이 아니에요.\n(대상: " + SURO_REMIND_CHARS.join(", ") + ")");
+        return;
+    }
+    suroDoneLock.lock();
+    try {
+        var o = getSuroDone(suroWeekStart(new Date()));
+        o.chars[name] = true;
+        DataBase.setDataBase("suro_done", JSON.stringify(o));
+    } finally {
+        suroDoneLock.unlock();
+    }
+    replier.reply("✅ " + name + " 이번 주 수로 완료 체크!\n남은 수로 알림에서 빠집니다.");
+}
+
+// 수로 점수만 조용히 조회. 수로 항목이 아직 없으면 0, 키 미등록·조회 실패는 -1 (알림 안 보냄)
+function fetchSuroScoreQuiet(name) {
+    try {
+        var key = CHAR_API_KEYS[name];
+        if (!key) return -1;   // 키 없는 캐릭은 기본키로 남의 계정을 조회하지 않음
+        var o = JSON.parse(org.jsoup.Jsoup.connect(MAPLE_OCID_API_URL + "?character_name=" + encodeURIComponent(name))
+            .header("accept", "application/json")
+            .header("x-nxopen-api-key", key)
+            .ignoreContentType(true).ignoreHttpErrors(true)
+            .timeout(10000).execute().body());
+        if (!o || !o.ocid) return -1;
+        var d = JSON.parse(org.jsoup.Jsoup.connect(MAPLE_SCHEDULER_URL + "?ocid=" + o.ocid)
+            .header("accept", "application/json")
+            .header("x-nxopen-api-key", key)
+            .ignoreContentType(true).ignoreHttpErrors(true)
+            .timeout(10000).execute().body());
+        if (!d || d.error) return -1;
+        var arr = d.weekly_contents || [];
+        for (var i = 0; i < arr.length; i++) {
+            if (String(arr[i].content_name || "").indexOf("수로") !== -1) return Number(arr[i].now_count || 0);
+        }
+        return 0;   // 이번 주 수로 항목 없음 = 기록 없음
+    } catch (e) {
+        return -1;
+    }
+}
+
+// 수다방 메시지마다 호출. 수요일 20:00 이후 30분 구간마다 한 번만 보낸다.
+function checkSuroRemind(replier) {
+    var now = new Date();
+    if (now.getDay() !== SURO_REMIND_DAY) return;
+    var mins = now.getHours() * 60 + now.getMinutes();
+    if (mins < SURO_REMIND_FROM) return;
+    var key = suroDateStr(now) + "#" + Math.floor((mins - SURO_REMIND_FROM) / SURO_REMIND_STEP);
+    if (suroRemindClaim.putIfAbsent(key, "1") !== null) return;      // 이 구간은 이미 처리 중/완료
+    var lastSent = "";
+    try { lastSent = String(DataBase.getDataBase("suro_remind_last") || ""); } catch (e0) {}
+    if (lastSent === key) return;                                    // /업데이트 전에 이미 보낸 구간
+    try { DataBase.setDataBase("suro_remind_last", key); } catch (e1) {}
+
+    new java.lang.Thread(function () {
+        try {
+            var done = getSuroDone(suroWeekStart(now)).chars;
+            var zero = [];
+            for (var i = 0; i < SURO_REMIND_CHARS.length; i++) {
+                var nm = SURO_REMIND_CHARS[i];
+                if (done[nm]) continue;
+                if (fetchSuroScoreQuiet(nm) === 0) zero.push(nm);
+            }
+            if (zero.length === 0) return;
+            var m = "🌊 수로 알림 · 오늘 자정 초기화\n━━━━━━━━━━━━\n";
+            m += "아직 이번 주 수로 기록이 없어요\n";
+            for (var z = 0; z < zero.length; z++) m += "• " + zero[z] + "\n";
+            m += "\n수로 치고 오세요! 🏃\n\n";
+            m += "※ 넥슨 기록은 하루 늦어서 화요일까지 기준이에요\n";
+            m += "이미 쳤으면 /수로완료 [닉] 입력하면 알림에서 빠져요";
+            replier.reply(m);
+        } catch (e) {}
+    }).start();
+}
+
 // ===== /주보 (이번주 주간 보스 + 월간 보스) =====
 // 난이도(이지/노말/하드/카오스/익스트림) 무관: 같은 이름 보스를 어느 난이도로든 잡으면 클리어 처리
 function getWeeklyBoss(characterName, replier) {
@@ -6632,6 +6749,7 @@ function option(replier) {
     m += " → 일일·주간·보스 전체\n";
     m += "/주보 [닉] - 이번주 주간·월간 보스\n";
     m += "/수로 [닉] - 지하 수로 점수\n";
+    m += "/수로완료 [닉] - 수요일 수로 알림에서 빼기\n";
     m += "/큐브 [닉] [장비|부위] [일수] - 큐브·천장\n";
     m += "/스타포스 [닉] [장비|부위] [일수] - 강화 내역\n";
     m += "/건실단 - 단원 3일간 잠재재설정·스타포스 활동 체크\n";
