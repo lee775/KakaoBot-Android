@@ -4859,6 +4859,15 @@ function getEquipment(characterName, replier, slotFilter) {
                     if (item.additional_potential_option_2) result.push("    - " + item.additional_potential_option_2);
                     if (item.additional_potential_option_3) result.push("    - " + item.additional_potential_option_3);
                 }
+
+                // 소울 잠재능력 (무기 소울에 붙는 잠재, 증폭 단계는 넥슨 API 값 그대로)
+                if (item.soul_potential_grade) {
+                    result.push("  소울잠재: " + item.soul_potential_grade +
+                        (item.soul_potential_amplified_grade ? " (증폭 " + item.soul_potential_amplified_grade + "단계)" : ""));
+                    if (item.soul_potential_option_1) result.push("    - " + item.soul_potential_option_1);
+                    if (item.soul_potential_option_2) result.push("    - " + item.soul_potential_option_2);
+                    if (item.soul_potential_option_3) result.push("    - " + item.soul_potential_option_3);
+                }
                 result.push("");
             }
 
