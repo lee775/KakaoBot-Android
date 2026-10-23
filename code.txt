@@ -4807,32 +4807,8 @@ function getEquipment(characterName, replier, slotFilter) {
 
             var charName = decodeURIComponent(characterName);
 
-            // 전투력 + 환산 (maplescouter) — 실패해도 장비는 계속 표시
-            function fmtNum(n) {
-                var s = String(Math.floor(Number(n)));
-                return s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-            }
-            var statHeader = [];
-            if (!slotFilter) try {
-                var scUrl = "https://api.maplescouter.com/api/id?name=" + characterName + "&preset=00000&region=kms";
-                var scResp = org.jsoup.Jsoup.connect(scUrl)
-                    .header("api-key", "01ce8bc7-43a0-4122-ae05-e23f07640b9c")
-                    .header("Content-Type", "application/json")
-                    .ignoreContentType(true).ignoreHttpErrors(true)
-                    .timeout(15000)
-                    .execute().body();
-                var scData = JSON.parse(scResp);
-                if (scData && scData.calculatedData) {
-                    var cd = scData.calculatedData;
-                    if (cd.combatPower != null)     statHeader.push("전투력: " + fmtNum(cd.combatPower));
-                    if (cd.boss380_stat != null)    statHeader.push("일반환산: " + fmtNum(cd.boss380_stat));
-                    if (cd.boss380_hexaStat != null) statHeader.push("헥사환산: " + fmtNum(cd.boss380_hexaStat));
-                }
-            } catch (e) {}
-
             // 헤더 (미리보기에 보이는 부분)
             result.push("[" + charName + "] " + (slotFilter ? slotFilter + " 정보" : "장비 정보"));
-            for (var si = 0; si < statHeader.length; si++) result.push(statHeader[si]);
             result.push("================================");
             // 카톡 "전체보기" 트리거: zero-width 3000개 (아래 장비 목록부터 접힘)
             if (!slotFilter || __eqIsGroup) result.push(new Array(3001).join("​"));
@@ -5270,11 +5246,6 @@ function responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packag
             getLink(encodeURIComponent(resolved), replier);
         }
     }
-    if (msg === "/헥사순서" || msg.startsWith("/헥사순서 ")) {
-        var __rHex = resolveName(msg.slice(5).trim(), sender);
-        if (!__rHex) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
-        else getHexaOrder(encodeURIComponent(__rHex), replier);
-    }
     if (msg === "/헥사" || msg.startsWith("/헥사 ")) {
         var __hexArg = msg.slice(3).trim();
         var __hexNums = __hexArg.match(/^(\d+)\s+(\d+)$/);
@@ -5282,16 +5253,8 @@ function responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packag
             // 숫자 2개 → 6차 코어 비용 계산 (예: /헥사 0 30)
             calc(parseInt(__hexNums[1]), parseInt(__hexNums[2]), replier);
         } else {
-            // 닉네임 → 헥사 강화 순서 추천
-            var __rHex2 = resolveName(__hexArg, sender);
-            if (!__rHex2) replier.reply("사용법\n/헥사 0 30 → 6차 코어 비용\n/헥사 닉네임 → 강화 순서 추천");
-            else getHexaOrder(encodeURIComponent(__rHex2), replier);
+            replier.reply("사용법\n/헥사 0 30 → 6차 코어 비용");
         }
-    }
-    if (msg === "/배율" || msg.startsWith("/배율 ")) {
-        var __rRatio = resolveName(msg.slice(3).trim(), sender);
-        if (!__rRatio) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
-        else getBossRatio(encodeURIComponent(__rRatio), replier);
     }
     if (msg === "/썬데이" || msg === "/썬데이메이플" || msg === "/ㅆㄷㅇ") {
         getSundayMaple(replier, room);
@@ -5372,227 +5335,11 @@ function shortenUrl(longUrl) {
     } catch (e) {}
     return longUrl;
 }
+// /환산: maplescouter 링크만 보냄 (maplescouter 가 사람 인증을 넣어 봇에서 환산 수치를 못 가져옴)
 function getLink(idlink, replier) {
     var thread = new java.lang.Thread(function() {
         var siteUrl = "https://maplescouter.com/ko/info?name=" + idlink;
-        try {
-            var url = "https://api.maplescouter.com/api/id?name=" + idlink + "&preset=00000&region=kms";
-            var resp = org.jsoup.Jsoup.connect(url)
-                .header("api-key", "01ce8bc7-43a0-4122-ae05-e23f07640b9c")
-                .header("Content-Type", "application/json")
-                .ignoreContentType(true)
-                .ignoreHttpErrors(true)
-                .execute()
-                .body();
-            var data = JSON.parse(resp);
-            // maplescouter 점검 중 등 서버 측 에러 응답
-            if (data && data.code && data.code !== 200 && data.message) {
-                replier.reply("⚠️ " + data.message + "\n사이트: " + siteUrl);
-                return;
-            }
-            if (!data || !data.calculatedData) {
-                replier.reply("캐릭터 정보를 불러오지 못했습니다.\n사이트: " + siteUrl);
-                return;
-            }
-            var d = data.calculatedData;
-            function fmt(n) {
-                var s = String(Math.floor(Number(n)));
-                return s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-            }
-            var name = decodeURIComponent(idlink);
-            var shortUrl = shortenUrl(siteUrl);
-            replier.reply(
-                "[" + name + "] " + d.class + "\n" +
-                "전투력: " + fmt(d.combatPower) + "\n" +
-                "일반환산: " + fmt(d.boss380_stat) + "\n" +
-                "헥사환산: " + fmt(d.boss380_hexaStat) + "\n\n" +
-                "🔗 " + shortUrl
-            );
-        } catch (e) {
-            replier.reply("환산 조회 실패\n사이트: " + siteUrl);
-        }
-    });
-    thread.start();
-}
-function getBossRatio(idlink, replier) {
-    var thread = new java.lang.Thread(function() {
-        try {
-            var url = "https://api.maplescouter.com/api/id?name=" + idlink + "&preset=00000&region=kms";
-            var rconn = org.jsoup.Jsoup.connect(url)
-                .header("api-key", "01ce8bc7-43a0-4122-ae05-e23f07640b9c")
-                .header("Content-Type", "application/json")
-                .ignoreContentType(true)
-                .ignoreHttpErrors(true)
-                .timeout(15000)
-                .execute();
-            if (rconn.statusCode() !== 200) {
-                replier.reply("[" + decodeURIComponent(idlink) + "] 조회 실패 — 닉네임을 확인해주세요.\n사용법: /배율 닉네임");
-                return;
-            }
-            var data = JSON.parse(rconn.body());
-            if (!data || !data.calculatedData || !data.userApiData || !data.userApiData.info) {
-                replier.reply("캐릭터 정보를 불러오지 못했습니다. 닉네임을 확인해주세요.");
-                return;
-            }
-            var cd = data.calculatedData;
-            var info = data.userApiData.info;
-            var charLv = parseInt(info.character_level) || 0;
-            var charArc = parseInt(info.arcaneForce) || 0;
-            var charAuth = parseInt(info.authenticForce) || 0;
-            var name = decodeURIComponent(idlink);
-            var cls = cd.class || "";
-            var displayStat = Number(cd.boss380_hexaStat);
-            var dmg300 = Number(cd.calculatedHexaDamage_300);
-            var dmg380 = Number(cd.calculatedHexaDamage_380);
-            var sp300 = cd.spline_300;
-            var sp380 = cd.spline_380;
-
-            // 보스 메타: [보스명, lv, arc, auth, isBM, cut, guard]
-            var BOSSES = [
-                ["익스트림 카링",          285, 0,    480, 0, 199502, 380],
-                ["익스 최초의 대적자",      290, 0,    460, 0, 218508, 380],
-                ["익스트림 칼로스",        285, 0,    440, 0, 96146,  380],
-                ["데스티니 발드릭스",      290, 0,    700, 0, 479156, 380],
-                ["하드 발드릭스",          290, 0,    700, 0, 479156, 380],
-                ["하드 찬란한 흉성",        280, 0,    400, 0, 306927, 380],
-                ["데스티니 림보",          285, 0,    500, 0, 295559, 380],
-                ["하드 림보",              285, 0,    500, 0, 295559, 380],
-                ["데스티니 대적자",        285, 0,    340, 0, 257423, 380],
-                ["익스트림 세렌",          285, 0,    200, 0, 215678, 380],
-                ["하드 최초의 대적자",      285, 0,    340, 0, 204618, 380],
-                ["하드 카링",              285, 0,    350, 0, 199502, 380],
-                ["노멀 발드릭스",          290, 0,    700, 0, 212958, 380],
-                ["익스 검은마법사",        280, 1320, 0,   1, 169507, 300],
-                ["데스티니 카링",          285, 0,    480, 0, 166252, 380],
-                ["노멀 림보",              285, 0,    500, 0, 150568, 380],
-                ["데스티니 칼로스",        285, 0,    440, 0, 133002, 380],
-                ["카오스 칼로스",          285, 0,    330, 0, 133002, 380],
-                ["데스티니 세렌",          285, 0,    200, 0, 86740,  380],
-                ["노멀 카링",              285, 0,    330, 0, 70001,  380],
-                ["노멀 찬란한 흉성",        280, 0,    400, 0, 68206,  380],
-                ["익스트림 스우",          285, 0,    0,   0, 52045,  380],
-                ["챔피언 칼로스",          285, 0,    330, 0, 40101,  380],
-                ["노멀 최초의 대적자",      280, 0,    320, 0, 34103,  380],
-                ["노멀 칼로스",            285, 0,    300, 0, 27329,  380],
-                ["챔피언 세렌",            275, 0,    200, 0, 20674,  380],
-                ["이지 카링",              275, 0,    230, 0, 18472,  380],
-                ["하드 세렌",              275, 0,    200, 0, 17015,  380],
-                ["이지 최초의 대적자",      270, 0,    220, 0, 11400,  380],
-                ["이지 감시자 칼로스",      270, 0,    200, 0, 8436,   380],
-                ["하드 검은마법사",        275, 1320, 0,   1, 16510,  300],
-                ["챔피언 검은마법사",      275, 1320, 0,   1, 12885,  300]
-            ];
-
-            // 레벨 차이 → 데미지 배율 (×100, 클램프 +5/-14)
-            var LV_TBL = {
-                "5":120, "4":118, "3":116, "2":114, "1":112, "0":110,
-                "-1":105.3, "-2":100.7, "-3":96.2, "-4":91.8, "-5":87.5,
-                "-6":85, "-7":82.5, "-8":80, "-9":77.5, "-10":75,
-                "-11":72.5, "-12":70, "-13":67.5, "-14":65
-            };
-            function lvDmg(cl, bl) {
-                var g = cl - bl;
-                if (g > 5) g = 5;
-                if (g < -14) g = -14;
-                return LV_TBL[g.toString()] / 100;
-            }
-            function arcDmg(bArc, cArc) {
-                if (!bArc) return 1.0;
-                var p = cArc / bArc * 100;
-                if (p < 10) return 0.10;
-                if (p < 30) return 0.30;
-                if (p < 50) return 0.60;
-                if (p < 70) return 0.70;
-                if (p < 100) return 0.80;
-                if (p < 110) return 1.00;
-                if (p < 130) return 1.10;
-                if (p < 150) return 1.30;
-                return 1.50;
-            }
-            function authDmg(bAuth, cAuth) {
-                if (!bAuth) return 1.0;
-                var d = cAuth - bAuth;
-                if (d < -90) return 0.05;
-                if (d < -80) return 0.10;
-                if (d < -70) return 0.20;
-                if (d < -60) return 0.30;
-                if (d < -50) return 0.40;
-                if (d < -40) return 0.50;
-                if (d < -30) return 0.60;
-                if (d < -20) return 0.70;
-                if (d < -10) return 0.80;
-                if (d < 0)   return 0.90;
-                if (d < 10)  return 1.00;
-                if (d < 20)  return 1.05;
-                if (d < 30)  return 1.10;
-                if (d < 40)  return 1.15;
-                if (d < 50)  return 1.20;
-                return 1.25;
-            }
-            function factor(boss) {
-                var bLv = boss[1], bArc = boss[2], bAuth = boss[3], isBM = boss[4];
-                var R = arcDmg(bArc, charArc);
-                var D = authDmg(bAuth, charAuth);
-                var T = lvDmg(charLv, bLv);
-                var P = 1.0;
-                if (bArc) P = isBM ? 1.1 : 1.5;
-                var norm = 1.2 * P * (bAuth ? 1.25 : 1.0);
-                return (R * D * T) / norm;
-            }
-
-            // cubic Hermite spline 역함수: y(데미지) → x(환산값)
-            function inverseSpline(spline, target) {
-                var x = spline.x, y = spline.y, m = spline.m, n = x.length;
-                if (target <= y[0]) return x[0];
-                if (target >= y[n-1]) return x[n-1];
-                var lo = 0, hi = n - 1;
-                while (lo + 1 < hi) {
-                    var mid = (lo + hi) >> 1;
-                    if (y[mid] <= target) lo = mid; else hi = mid;
-                }
-                var x0 = x[lo], x1 = x[lo+1];
-                var y0 = y[lo], y1 = y[lo+1];
-                var m0 = m[lo], m1 = m[lo+1];
-                var dx = x1 - x0;
-                var t = (target - y0) / (y1 - y0);
-                for (var it = 0; it < 30; it++) {
-                    var t2 = t*t, t3 = t2*t;
-                    var h00 = 2*t3 - 3*t2 + 1;
-                    var h10 = t3 - 2*t2 + t;
-                    var h01 = -2*t3 + 3*t2;
-                    var h11 = t3 - t2;
-                    var yT = h00*y0 + h10*dx*m0 + h01*y1 + h11*dx*m1;
-                    var dh00 = 6*t2 - 6*t;
-                    var dh10 = 3*t2 - 4*t + 1;
-                    var dh01 = -6*t2 + 6*t;
-                    var dh11 = 3*t2 - 2*t;
-                    var dyT = dh00*y0 + dh10*dx*m0 + dh01*y1 + dh11*dx*m1;
-                    if (Math.abs(yT - target) < 0.5) break;
-                    if (dyT === 0) break;
-                    t -= (yT - target) / dyT;
-                    if (t < 0) t = 0;
-                    if (t > 1) t = 1;
-                }
-                return x0 + t * dx;
-            }
-
-            var msg = "[" + name + "] " + cls + "\n";
-            msg += "헥사환산: " + displayStat + "\n\n";
-            msg += "보스별 클리어 배율\n";
-            for (var i = 0; i < BOSSES.length; i++) {
-                var b = BOSSES[i];
-                var f = factor(b);
-                var guard = b[6];
-                var baseDmg = (guard === 300) ? dmg300 : dmg380;
-                var spline = (guard === 300) ? sp300 : sp380;
-                var penaltyStat = inverseSpline(spline, baseDmg * f);
-                var pct = Math.round(penaltyStat / b[5] * 100);
-                msg += b[0] + ": " + pct + "%\n";
-            }
-            replier.reply(msg.replace(/\n+$/, ""));
-        } catch (e) {
-            replier.reply("배율 조회 실패 — 잠시 후 다시 시도하거나 닉네임을 확인해주세요.");
-        }
+        replier.reply("[" + decodeURIComponent(idlink) + "] 환산\n🔗 " + shortenUrl(siteUrl));
     });
     thread.start();
 }
@@ -6610,82 +6357,6 @@ function getCurrentEvents(replier) {
     });
     thread.start();
 }
-function getHexaOrder(idlink, replier) {
-    var thread = new java.lang.Thread(function() {
-        try {
-            var infoUrl = "https://api.maplescouter.com/api/id?name=" + idlink + "&preset=00000&region=kms";
-            var infoConn = org.jsoup.Jsoup.connect(infoUrl)
-                .header("api-key", "01ce8bc7-43a0-4122-ae05-e23f07640b9c")
-                .header("Content-Type", "application/json")
-                .ignoreContentType(true)
-                .ignoreHttpErrors(true)
-                .timeout(15000)
-                .execute();
-            if (infoConn.statusCode() !== 200) {
-                replier.reply("[" + decodeURIComponent(idlink) + "] 조회 실패 — 닉네임을 확인해주세요.\n사용법: /헥사 닉네임");
-                return;
-            }
-            var info = JSON.parse(infoConn.body());
-            if (!info || !info.calculatedData || !info.userStat) {
-                replier.reply("캐릭터 정보를 불러오지 못했습니다. 닉네임을 확인해주세요.");
-                return;
-            }
-            var className = info.calculatedData.class || "";
-            var body = JSON.stringify({
-                myHexa: info.userStat.hexa,
-                specEff: info.calculatedData.specEfficiency,
-                sole: false,
-                suro: false,
-                cycle: "3",
-                userStat: info.userStat
-            });
-            var postUrl = "https://api.maplescouter.com/api/calc/hexa-order?class=" + encodeURIComponent(className);
-            var hexaConn = org.jsoup.Jsoup.connect(postUrl)
-                .method(org.jsoup.Connection.Method.POST)
-                .header("api-key", "01ce8bc7-43a0-4122-ae05-e23f07640b9c")
-                .header("Content-Type", "application/json")
-                .ignoreContentType(true)
-                .ignoreHttpErrors(true)
-                .timeout(20000)
-                .requestBody(body)
-                .execute();
-            if (hexaConn.statusCode() !== 200) {
-                replier.reply("헥사 순서 조회 실패 — 잠시 후 다시 시도해주세요.");
-                return;
-            }
-            var hexa = JSON.parse(hexaConn.body());
-            if (!hexa || !hexa.class_hexa) {
-                replier.reply("헥사 순서 조회 실패: 응답 형식 오류");
-                return;
-            }
-            var arr = hexa.class_hexa;
-            var pos = hexa.myPosition || 0;
-            var name = decodeURIComponent(idlink);
-            if (pos >= arr.length) {
-                replier.reply("[" + name + "] " + className + "\n헥사 강화 완료!");
-                return;
-            }
-            function fmt(n) {
-                var s = String(Math.floor(Number(n)));
-                return s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-            }
-            var msg = "[" + name + "] " + className + "\n";
-            msg += "헥사 진행률: " + pos + "/" + arr.length + "\n";
-            msg += "다음 강화 추천\n";
-            var shown = 0;
-            for (var i = pos; i < arr.length && shown < 7; i++) {
-                var row = arr[i];
-                shown++;
-                msg += shown + ". " + row[0] + " → Lv" + row[1]
-                     + " (조각 " + fmt(row[4]) + ", 솔 " + fmt(row[3]) + ")\n";
-            }
-            replier.reply(msg.replace(/\n+$/, ""));
-        } catch (e) {
-            replier.reply("헥사 순서 조회 실패 — 잠시 후 다시 시도하거나 닉네임을 확인해주세요.");
-        }
-    });
-    thread.start();
-}
 function starforce(chance, count, replier) {
     let success = 0;
     let fail = 0;
@@ -6720,10 +6391,8 @@ function option(replier) {
     m += "🔍 캐릭터 조회\n";
     m += "─────────────────\n";
     m += "/환산 [닉] / && [닉]\n";
-    m += " → 전투력·일반환산·헥사환산\n";
-    m += "/배율 [닉] - 보스별 클리어 배율\n";
-    m += "/헥사순서 [닉] - 헥사 강화 순서\n";
-    m += "/헥사 [닉] 순서 / [0 30] 코어비용\n";
+    m += " → maplescouter 환산 링크\n";
+    m += "/헥사 [0 30] - 6차 코어비용\n";
     m += "/ㄱㅎㅊ [닉] - 종합 정보\n";
     m += "/경험치 [닉] - 현재 경험치\n";
     m += "/tmi [닉] - 캐릭터 TMI\n";
