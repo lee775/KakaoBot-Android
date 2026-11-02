@@ -279,6 +279,8 @@ function responsePart1(room, msg, sender, isGroupChat, replier, imageDB, package
             "/관리삭제 사용자명\n→ 특정 사용자의 글 삭제\n\n" +
             "/벽지초기화\n→ 모든 벽지 내용 삭제\n\n" +
             "/테스트\n→ 수로 알림 지금 미리 보내기\n\n" +
+            "/건실단 실패 [닉]\n→ 해당 단원 실패 처리\n\n" +
+            "/건실단 초기화 [닉]\n→ 해당 단원 오늘부터 1일차로 재시작\n\n" +
             "/관리도움말\n→ 이 도움말 보기"
         );
         return;
@@ -5157,6 +5159,20 @@ function responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packag
     }
 
     // ===== /건실단 =====
+    if (msg === "/건실단 실패" || msg.startsWith("/건실단 실패 ")) {
+        if (!isAdmin(sender)) { replier.reply("⛔ 관리자만 사용할 수 있는 명령어입니다."); return; }
+        var __gfIn = msg.substring("/건실단 실패".length).trim();
+        if (!__gfIn) { replier.reply("사용법\n/건실단 실패 [닉] → 해당 단원 실패 처리"); return; }
+        setGunsilFail(__gfIn, replier);
+        return;
+    }
+    if (msg === "/건실단 초기화" || msg.startsWith("/건실단 초기화 ")) {
+        if (!isAdmin(sender)) { replier.reply("⛔ 관리자만 사용할 수 있는 명령어입니다."); return; }
+        var __grIn = msg.substring("/건실단 초기화".length).trim();
+        if (!__grIn) { replier.reply("사용법\n/건실단 초기화 [닉] → 해당 단원 오늘부터 1일차로 재시작"); return; }
+        resetGunsil(__grIn, replier);
+        return;
+    }
     if (msg === "/건실단") {
         checkGunsil(replier);
         return;
@@ -5785,11 +5801,54 @@ function getCubeHistory(characterName, itemQuery, days, replier) {
 // ===== /건실단 (단원별 최근 3일 잠재능력 재설정·스타포스 활동 체크) =====
 // 단원 추가: { name: "이름", start: "YYYY-MM-DD" } 형식 (start = 건실단 시작일, 1일차)
 // API_KEY_ACCOUNTS 에 키 등록된 캐릭터여야 조회 가능. 시작일 이전 기록은 집계하지 않음.
+// fail: true = 기본 실패 상태(시드). 실제 상태는 DataBase override 가 우선(아래 gunsilMemberState).
 var GUNSIL_MEMBERS = [
-    { name: "플로렌스", start: "2026-09-23" }
+    { name: "플로렌스", start: "2026-11-02", fail: true }
 ];
 var GUNSIL_DAYS = 3;   // 오늘 포함
 // 건실단은 실제 큐브가 아니라 잠재능력 재설정 / 에디셔널 잠재능력 재설정(POTENTIAL_HISTORY_URL)만 집계
+
+// 건실단 실패/초기화 상태는 DataBase 에 저장 → 재시작·/업데이트 후에도 유지
+var GUNSIL_DB_KEY = "gunsil_state";
+var gunsilLock = new java.util.concurrent.locks.ReentrantLock();
+
+function gunsilPad(n) { return n < 10 ? "0" + n : "" + n; }
+function gunsilToday() { var d = new Date(); return d.getFullYear() + "-" + gunsilPad(d.getMonth() + 1) + "-" + gunsilPad(d.getDate()); }
+function getGunsilState() {
+    try {
+        var raw = DataBase.getDataBase(GUNSIL_DB_KEY);
+        if (raw) { var o = JSON.parse(String(raw)); if (o) return o; }
+    } catch (e) {}
+    return {};
+}
+function saveGunsilState(o) { try { DataBase.setDataBase(GUNSIL_DB_KEY, JSON.stringify(o)); } catch (e) {} }
+// 멤버의 실제 상태: DataBase override 우선, 없으면 config(fail 플래그) 기준
+//   { status: "실패", date } | { status: "진행중", start }
+function gunsilMemberState(mem) {
+    var st = getGunsilState();
+    if (st[mem.name]) return st[mem.name];
+    if (mem.fail) return { status: "실패" };
+    return { status: "진행중", start: mem.start };
+}
+function isGunsilMember(name) {
+    for (var i = 0; i < GUNSIL_MEMBERS.length; i++) if (GUNSIL_MEMBERS[i].name === name) return true;
+    return false;
+}
+function setGunsilFail(name, replier) {
+    if (!isGunsilMember(name)) { replier.reply("'" + name + "' 은(는) 건실단 단원이 아니에요."); return; }
+    gunsilLock.lock();
+    try { var o = getGunsilState(); o[name] = { status: "실패", date: gunsilToday() }; saveGunsilState(o); }
+    finally { gunsilLock.unlock(); }
+    replier.reply("❌ " + name + " 건실단 실패 처리했어요.\n/건실단 초기화 " + name + " 로 다시 시작할 수 있어요.");
+}
+function resetGunsil(name, replier) {
+    if (!isGunsilMember(name)) { replier.reply("'" + name + "' 은(는) 건실단 단원이 아니에요."); return; }
+    var t = gunsilToday();
+    gunsilLock.lock();
+    try { var o = getGunsilState(); o[name] = { status: "진행중", start: t }; saveGunsilState(o); }
+    finally { gunsilLock.unlock(); }
+    replier.reply("🔄 " + name + " 건실단 초기화했어요.\n오늘(" + t + ")부터 1일차로 다시 셉니다.");
+}
 
 function checkGunsil(replier) {
     var thread = new java.lang.Thread(function() {
@@ -5803,12 +5862,19 @@ function checkGunsil(replier) {
             var dates = [];
             for (var dd = GUNSIL_DAYS - 1; dd >= 0; dd--) dates.push(dstr(new Date(Date.now() - dd * 86400000)));
 
-            // 같은 키(계정)끼리 묶어서 계정당 날짜별 1회씩만 호출
+            // 멤버별 실제 상태(실패/진행중) — DataBase override 우선
+            var eff = {};
+            for (var ei = 0; ei < GUNSIL_MEMBERS.length; ei++) {
+                eff[GUNSIL_MEMBERS[ei].name] = gunsilMemberState(GUNSIL_MEMBERS[ei]);
+            }
+
+            // 같은 키(계정)끼리 묶어서 계정당 날짜별 1회씩만 호출 (실패 처리된 단원은 조회 안 함)
             var byKey = {}, keyOrder = [];
             for (var i = 0; i < GUNSIL_MEMBERS.length; i++) {
                 var mem = GUNSIL_MEMBERS[i];
+                var es = eff[mem.name];
                 var k = CHAR_API_KEYS[mem.name];
-                if (!k || mem.start > today) continue;
+                if (!k || es.status === "실패" || es.start > today) continue;
                 if (!byKey[k]) { byKey[k] = []; keyOrder.push(k); }
                 byKey[k].push(mem.name);
             }
@@ -5860,19 +5926,24 @@ function checkGunsil(replier) {
             var msg = "🔨 건실단 활동 체크 (최근 " + GUNSIL_DAYS + "일)\n" + line;
             for (var r = 0; r < GUNSIL_MEMBERS.length; r++) {
                 var mb = GUNSIL_MEMBERS[r];
+                var ms = eff[mb.name];
+                if (ms.status === "실패") {
+                    msg += "\n\n❌ " + mb.name + " · 실패" + (ms.date ? " (" + ms.date.substring(5) + ")" : "");
+                    continue;
+                }
                 if (!CHAR_API_KEYS[mb.name]) {
                     msg += "\n\n⚠️ " + mb.name + " · API 키 미등록";
                     continue;
                 }
-                if (mb.start > today) {
-                    msg += "\n\n⏳ " + mb.name + " · " + mb.start.substring(5) + " 시작 예정";
+                if (ms.start > today) {
+                    msg += "\n\n⏳ " + mb.name + " · " + ms.start.substring(5) + " 시작 예정";
                     continue;
                 }
                 // 시작일 이전 날짜는 집계에서 제외
                 var tp = 0, ta = 0, ts = 0, rows = [];
                 for (var di2 = 0; di2 < dates.length; di2++) {
                     var dk = dates[di2];
-                    if (dk < mb.start) continue;
+                    if (dk < ms.start) continue;
                     var v = stat[mb.name][dk];
                     tp += v.pot; ta += v.add; ts += v.sf;
                     if (v.pot + v.add + v.sf > 0) rows.push("🟢 " + dk.substring(5) + "  잠재 " + v.pot + " · 에디 " + v.add + " · 스타포스 " + v.sf);
@@ -5880,8 +5951,8 @@ function checkGunsil(replier) {
                 }
                 var on = tp + ta + ts > 0;
                 if (on) active++;
-                var nth = dayDiff(mb.start, today) + 1;
-                msg += "\n\n" + (on ? "✅ " : "❌ ") + mb.name + " · " + nth + "일차 (" + mb.start.substring(5) + " 시작)";
+                var nth = dayDiff(ms.start, today) + 1;
+                msg += "\n\n" + (on ? "✅ " : "❌ ") + mb.name + " · " + nth + "일차 (" + ms.start.substring(5) + " 시작)";
                 msg += "\n" + rows.join("\n");
                 msg += "\n📊 합계  잠재 " + tp + " · 에디 " + ta + " · 스타포스 " + ts;
             }
