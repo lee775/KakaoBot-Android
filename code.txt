@@ -1836,7 +1836,8 @@ function formatExpValue(exp) {
 // 전투력 랭킹 함수
 // ===== 랭킹용 동시 조회 =====
 // 길드원이 500명을 넘어 한 명씩 조회하면 너무 오래 걸려서, 스레드 여러 개로 나눠 동시에 조회한다.
-var RANKING_THREADS = 5;
+var RANKING_THREADS = 10;
+var POWER_RANK_DAYS = 3;   // 전투력 랭킹: 최근 N일만 조회해 최댓값(과거 7일 → 3일로 호출 축소)
 
 // 넥슨 API 호출. 요청 과다(429)·서버 오류(5xx)·연결 끊김만 최대 3번 시도하고, 400(없는 캐릭터 등)은 바로 실패.
 function rankingFetch(url) {
@@ -1893,6 +1894,48 @@ function rankingParallel(list, work, onDone) {
     return out;
 }
 
+// ===== OCID 캐시 (이름→고유번호. OCID 는 캐릭터명이 바뀌어도 유지되므로 캐시 안전, 7일 TTL 로 위생 관리) =====
+var OCID_CACHE_KEY = "ocid_cache";
+var OCID_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+var ocidCacheLock = new java.util.concurrent.locks.ReentrantLock();
+
+function ocidNowMs() { return new Date().getTime(); }
+function loadOcidCache() {
+    try { var raw = DataBase.getDataBase(OCID_CACHE_KEY); if (raw) { var o = JSON.parse(String(raw)); if (o) return o; } } catch (e) {}
+    return {};
+}
+function cachedOcid(cache, name) {
+    var e = cache[name];
+    if (e && e.ocid && (ocidNowMs() - (e.t || 0) < OCID_TTL_MS)) return e.ocid;
+    return null;
+}
+// rankingParallel work 안에서 OCID 조회: 캐시 히트면 재사용, 미스면 API 호출 후 newOcids(동시성 안전)에 적재
+function resolveOcid(cache, newOcids, name, encodedName) {
+    var hit = cachedOcid(cache, name);
+    if (hit) return hit;
+    var ocidJson = JSON.parse(rankingFetch(MAPLE_OCID_API_URL + "?character_name=" + encodedName));
+    var oc = ocidJson.ocid;
+    if (oc) newOcids.put(name, String(oc));
+    return oc;
+}
+// rankingParallel 종료 후 새로 조회한 OCID 를 캐시에 한 번만 병합 저장
+function flushOcidCache(newOcids) {
+    try {
+        var keys = newOcids.keySet().toArray();
+        if (!keys.length) return;
+        ocidCacheLock.lock();
+        try {
+            var fresh = loadOcidCache();
+            var now = ocidNowMs();
+            for (var i = 0; i < keys.length; i++) {
+                var k = keys[i];
+                fresh[String(k)] = { ocid: String(newOcids.get(k)), t: now };
+            }
+            DataBase.setDataBase(OCID_CACHE_KEY, JSON.stringify(fresh));
+        } finally { ocidCacheLock.unlock(); }
+    } catch (e) {}
+}
+
 function getPowerRanking(replier, characterList) {
     replier.reply("🏆 전투력 랭킹 집계 중...\n잠시만 기다려주세요 (" + characterList.length + "명)");
     
@@ -1910,9 +1953,9 @@ function getPowerRanking(replier, characterList) {
             
             var today = new Date(baseDate);
             
-            // 일주일치 날짜 생성 (2~8일 전)
+            // 최근 날짜 생성 (2~(1+POWER_RANK_DAYS)일 전, 각 날짜 전투력 중 최댓값 사용)
             var dates = [];
-            for (var i = 2; i <= 8; i++) {
+            for (var i = 2; i <= 1 + POWER_RANK_DAYS; i++) {
                 var date = new Date(today.getTime() - 86400000 * i);
                 dates.push(
                     date.getFullYear() + "-" +
@@ -1921,14 +1964,14 @@ function getPowerRanking(replier, characterList) {
                 );
             }
             
+            var ocidCache = loadOcidCache();
+            var newOcids = new java.util.concurrent.ConcurrentHashMap();
             var progressInterval = Math.max(1, Math.floor(characterList.length / 3));
 
             var rankingData = rankingParallel(characterList, function (targetCharName) {
                 var encodedCharName = encodeURIComponent(targetCharName);
 
-                // OCID 가져오기
-                var ocidJson = JSON.parse(rankingFetch(MAPLE_OCID_API_URL + "?character_name=" + encodedCharName));
-                var characterOcid = ocidJson.ocid;
+                var characterOcid = resolveOcid(ocidCache, newOcids, targetCharName, encodedCharName);
 
                 // 일주일치 전투력 데이터 수집
                 var maxPower = 0;
@@ -1962,6 +2005,7 @@ function getPowerRanking(replier, characterList) {
                     replier.reply("진행중... " + doneCount + "/" + characterList.length);
                 }
             });
+            flushOcidCache(newOcids);
             
             // 전투력 내림차순 정렬
             rankingData.sort(function(a, b) {
@@ -2198,9 +2242,9 @@ function getMonthlyExpHistory(characterName, replier) {
 }
 
 // 이번 달 경험치 랭킹 함수
-function getMonthlyRanking(replier) {
+function getMonthlyRankingList(replier, list, displayLimit) {
     // 즉시 응답
-    replier.reply("🏆 이번 달 경험치 랭킹 집계 중...\n잠시만 기다려주세요 (" + RANKING_CHARACTERS.length + "명)");
+    replier.reply("🏆 이번 달 경험치 랭킹 집계 중...\n잠시만 기다려주세요 (" + list.length + "명)");
     
     // 백그라운드 스레드로 실행
     var thread = new java.lang.Thread(function() {
@@ -2257,14 +2301,14 @@ function getMonthlyRanking(replier) {
             
             // 각 캐릭터의 이번 달 경험치 수집 (동시 조회, 실패한 캐릭터는 조용히 스킵)
             // 진행 상황 알림 (1/3 마다)
-            var progressInterval = Math.max(1, Math.floor(RANKING_CHARACTERS.length / 3));
+            var ocidCache = loadOcidCache();
+            var newOcids = new java.util.concurrent.ConcurrentHashMap();
+            var progressInterval = Math.max(1, Math.floor(list.length / 3));
 
-            var rankingData = rankingParallel(RANKING_CHARACTERS, function (targetCharName) {
+            var rankingData = rankingParallel(list, function (targetCharName) {
                 var encodedCharName = encodeURIComponent(targetCharName);
 
-                // OCID 가져오기
-                var ocidJson = JSON.parse(rankingFetch(MAPLE_OCID_API_URL + "?character_name=" + encodedCharName));
-                var characterOcid = ocidJson.ocid;
+                var characterOcid = resolveOcid(ocidCache, newOcids, targetCharName, encodedCharName);
 
                 // 현재 데이터
                 var currentJson = JSON.parse(rankingFetch(MAPLE_INF_API_URL + "?ocid=" + characterOcid));
@@ -2287,9 +2331,10 @@ function getMonthlyRanking(replier) {
                 };
             }, function (doneCount) {
                 if (doneCount % progressInterval === 0) {
-                    replier.reply("진행중... " + doneCount + "/" + RANKING_CHARACTERS.length);
+                    replier.reply("진행중... " + doneCount + "/" + list.length);
                 }
             });
+            flushOcidCache(newOcids);
 
             // 경험치 내림차순 정렬
             rankingData.sort(function(a, b) {
@@ -2299,347 +2344,7 @@ function getMonthlyRanking(replier) {
             // 결과 출력 (최대 15위까지)
             var result = "🏆 이번 달 경험치 랭킹 🏆\n\n";
 
-            var displayCount = Math.min(50, rankingData.length);
-            
-            for (var j = 0; j < displayCount; j++) {
-                var item = rankingData[j];
-                var expText = "";
-                var expVal = item.exp;
-                
-                if (expVal >= 1000000000000) {
-                    expText = (expVal / 1000000000000).toFixed(1) + "조";
-                } else if (expVal >= 100000000) {
-                    expText = (expVal / 100000000).toFixed(1) + "억";
-                } else if (expVal >= 10000) {
-                    expText = (expVal / 10000).toFixed(1) + "만";
-                } else {
-                    expText = expVal.toString();
-                }
-                
-                var medal = "";
-                if (j === 0) medal = "🥇";
-                else if (j === 1) medal = "🥈";
-                else if (j === 2) medal = "🥉";
-                else medal = (j + 1) + "위";
-                
-                result += medal + " " + item.name + " (Lv." + item.level + ")\n    " + expText + "\n";
-            }
-            
-            replier.reply(result);
-            
-        } catch (error) {
-            replier.reply("랭킹 집계 중 오류가 발생했습니다.");
-        }
-    });
-    
-    thread.start();
-}
-function getMonthlyRanking3(replier) {
-    // 즉시 응답
-    replier.reply("🏆 이번 달 경험치 랭킹 집계 중...\n잠시만 기다려주세요 (" + RANKING_CHARACTERS3.length + "명)");
-    
-    // 백그라운드 스레드로 실행
-    var thread = new java.lang.Thread(function() {
-        try {
-            // padStart 대체 함수
-            function pad(num) {
-                return num < 10 ? "0" + num : "" + num;
-            }
-            
-            var baseDate = new Date();
-            if (baseDate.getHours() >= 0 && baseDate.getHours() < 6) {
-                baseDate.setDate(baseDate.getDate() - 1);
-                baseDate.setHours(23, 50, 0, 0);
-            }
-            
-            var today = new Date(baseDate);
-            
-            // 이번 달 1일 0시 데이터를 가져오기 위해 전달 마지막날 날짜 계산
-            var prevMonthLast = new Date(today.getTime());
-            prevMonthLast.setDate(1);
-            prevMonthLast.setDate(prevMonthLast.getDate() - 1);
-            
-            var day_first =
-                prevMonthLast.getFullYear() + "-" +
-                pad(prevMonthLast.getMonth() + 1) + "-" +
-                pad(prevMonthLast.getDate());
-            
-            var expToNext = [
-2207026470,2471869646,2768494003,3100713283,3472798876,3889534741,4356278909,4879032378,5464516263,6120258214,
-7956335678,8831532602,9803001188,10881331318,12078277762,15701761090,17114919588,18655262350,20334235961,22164317197,
-28813612356,30830565220,32988704785,35297914119,37768768107,49099398539,52536356436,56213901386,60148874483,64359295696,
-83667084404,86177096936,88762409844,91425282139,94168040603,122418452783,126091006366,129873736556,133769948652,137783047111,
-179117961244,184491500081,190026245083,195727032435,201598843408,262078496430,269940851322,278039076861,286380249166,294971656640,
-442457484960,455731209508,469403145793,483485240166,497989797370,512929491291,528317376029,544166897309,560491904228,577306661354,
-1731919984062,1749239183902,1766731575741,1784398891498,1802242880412,2342915744535,2366344901980,2390008350999,2413908434508,2438047518853,
-5412465491853,5466590146771,5521256048238,5576468608720,5632233294807,11377111255510,12514822381061,13766304619167,15142935081083,16657228589191,
-33647601750165,37012361925181,40713598117699,44784957929468,49263453722414,99512176519276,109463394171203,120409733588323,132450706947155,145695777641870,
-294305470836577,323736017920234,356109619712257,391720581683482,430892639851830,870403132500696,957443445750765,1053187790325841,1158506569358425,1737759854037637];
-            
-            var cumExp = [0];
-            for (var i = 0; i < expToNext.length; i++) {
-                cumExp[i + 1] = cumExp[i] + expToNext[i];
-            }
-            
-            function calcGainedExp(prevLv, prevExp, currLv, currExp) {
-                if (prevLv < 200 || prevLv > 300 || currLv < 200 || currLv > 300 ||
-                    (currLv < prevLv || (currLv === prevLv && currExp < prevExp))) {
-                    return 0;
-                }
-                var prevTotalExp = cumExp[prevLv - 200] + (prevExp || 0);
-                var currTotalExp = cumExp[currLv - 200] + (currExp || 0);
-                return Math.max(0, currTotalExp - prevTotalExp);
-            }
-            
-            // 각 캐릭터의 이번 달 경험치 수집
-            var rankingData = [];
-            
-            // 진행 상황 알림 (10명마다)
-            var progressInterval = Math.max(1, Math.floor(RANKING_CHARACTERS3.length / 3));
-
-            for (var idx = 0; idx < RANKING_CHARACTERS3.length; idx++) {
-                try {
-                    var targetCharName = RANKING_CHARACTERS3[idx];
-                    var encodedCharName = encodeURIComponent(targetCharName);
-                    
-                    // OCID 가져오기
-                    var ocidUrl = MAPLE_OCID_API_URL + "?character_name=" + encodedCharName;
-                    var ocidResp = org.jsoup.Jsoup.connect(ocidUrl)
-                        .header("accept", "application/json")
-                        .header("x-nxopen-api-key", NEXON_API_KEY)
-                        .ignoreContentType(true)
-                        .timeout(10000)
-                        .execute()
-                        .body();
-                    var ocidJson = JSON.parse(ocidResp);
-                    var characterOcid = ocidJson.ocid;
-                    
-                    // 현재 데이터
-                    var currentUrl = MAPLE_INF_API_URL + "?ocid=" + characterOcid;
-                    var currentResp = org.jsoup.Jsoup.connect(currentUrl)
-                        .header("accept", "application/json")
-                        .header("x-nxopen-api-key", NEXON_API_KEY)
-                        .ignoreContentType(true)
-                        .timeout(10000)
-                        .execute()
-                        .body();
-                    var currentJson = JSON.parse(currentResp);
-                    
-                    // 이번 달 1일 0시 데이터
-                    var firstUrl = MAPLE_INF_API_URL + "?ocid=" + characterOcid + "&date=" + day_first;
-                    var firstResp = org.jsoup.Jsoup.connect(firstUrl)
-                        .header("accept", "application/json")
-                        .header("x-nxopen-api-key", NEXON_API_KEY)
-                        .ignoreContentType(true)
-                        .timeout(10000)
-                        .execute()
-                        .body();
-                    var firstJson = JSON.parse(firstResp);
-                    
-                    // 이번 달 경험치 계산
-                    var monthExp = calcGainedExp(
-                        Number(firstJson.character_level),
-                        Number(firstJson.character_exp),
-                        Number(currentJson.character_level),
-                        Number(currentJson.character_exp)
-                    );
-                    
-                    rankingData.push({
-                        name: currentJson.character_name,
-                        exp: monthExp,
-                        level: currentJson.character_level
-                    });
-                    
-                    // 진행 상황 알림
-                    if ((idx + 1) % progressInterval === 0) {
-                        replier.reply("진행중... " + (idx + 1) + "/" + RANKING_CHARACTERS3.length);
-                    }
-                    
-                } catch (err) {
-                    // 실패한 캐릭터는 조용히 스킵
-                    continue;
-                }
-            }
-            
-            // 경험치 내림차순 정렬
-            rankingData.sort(function(a, b) {
-                return b.exp - a.exp;
-            });
-            
-            // 결과 출력 (최대 15위까지)
-            var result = "🏆 이번 달 경험치 랭킹 🏆\n\n";
-            
-            var displayCount = Math.min(15, rankingData.length);
-            
-            for (var j = 0; j < displayCount; j++) {
-                var item = rankingData[j];
-                var expText = "";
-                var expVal = item.exp;
-                
-                if (expVal >= 1000000000000) {
-                    expText = (expVal / 1000000000000).toFixed(1) + "조";
-                } else if (expVal >= 100000000) {
-                    expText = (expVal / 100000000).toFixed(1) + "억";
-                } else if (expVal >= 10000) {
-                    expText = (expVal / 10000).toFixed(1) + "만";
-                } else {
-                    expText = expVal.toString();
-                }
-                
-                var medal = "";
-                if (j === 0) medal = "🥇";
-                else if (j === 1) medal = "🥈";
-                else if (j === 2) medal = "🥉";
-                else medal = (j + 1) + "위";
-                
-                result += medal + " " + item.name + " (Lv." + item.level + ")\n    " + expText + "\n";
-            }
-            
-            replier.reply(result);
-            
-        } catch (error) {
-            replier.reply("랭킹 집계 중 오류가 발생했습니다.");
-        }
-    });
-    
-    thread.start();
-}
-function getMonthlyRanking4(replier) {
-    // 즉시 응답
-    replier.reply("🏆 이번 달 경험치 랭킹 집계 중...\n잠시만 기다려주세요 (" + RANKING_CHARACTERS4.length + "명)");
-    
-    // 백그라운드 스레드로 실행
-    var thread = new java.lang.Thread(function() {
-        try {
-            // padStart 대체 함수
-            function pad(num) {
-                return num < 10 ? "0" + num : "" + num;
-            }
-            
-            var baseDate = new Date();
-            if (baseDate.getHours() >= 0 && baseDate.getHours() < 6) {
-                baseDate.setDate(baseDate.getDate() - 1);
-                baseDate.setHours(23, 50, 0, 0);
-            }
-            
-            var today = new Date(baseDate);
-            
-            // 이번 달 1일 0시 데이터를 가져오기 위해 전달 마지막날 날짜 계산
-            var prevMonthLast = new Date(today.getTime());
-            prevMonthLast.setDate(1);
-            prevMonthLast.setDate(prevMonthLast.getDate() - 1);
-            
-            var day_first =
-                prevMonthLast.getFullYear() + "-" +
-                pad(prevMonthLast.getMonth() + 1) + "-" +
-                pad(prevMonthLast.getDate());
-            
-            var expToNext = [
-2207026470,2471869646,2768494003,3100713283,3472798876,3889534741,4356278909,4879032378,5464516263,6120258214,
-7956335678,8831532602,9803001188,10881331318,12078277762,15701761090,17114919588,18655262350,20334235961,22164317197,
-28813612356,30830565220,32988704785,35297914119,37768768107,49099398539,52536356436,56213901386,60148874483,64359295696,
-83667084404,86177096936,88762409844,91425282139,94168040603,122418452783,126091006366,129873736556,133769948652,137783047111,
-179117961244,184491500081,190026245083,195727032435,201598843408,262078496430,269940851322,278039076861,286380249166,294971656640,
-442457484960,455731209508,469403145793,483485240166,497989797370,512929491291,528317376029,544166897309,560491904228,577306661354,
-1731919984062,1749239183902,1766731575741,1784398891498,1802242880412,2342915744535,2366344901980,2390008350999,2413908434508,2438047518853,
-5412465491853,5466590146771,5521256048238,5576468608720,5632233294807,11377111255510,12514822381061,13766304619167,15142935081083,16657228589191,
-33647601750165,37012361925181,40713598117699,44784957929468,49263453722414,99512176519276,109463394171203,120409733588323,132450706947155,145695777641870,
-294305470836577,323736017920234,356109619712257,391720581683482,430892639851830,870403132500696,957443445750765,1053187790325841,1158506569358425,1737759854037637];
-            
-            var cumExp = [0];
-            for (var i = 0; i < expToNext.length; i++) {
-                cumExp[i + 1] = cumExp[i] + expToNext[i];
-            }
-            
-            function calcGainedExp(prevLv, prevExp, currLv, currExp) {
-                if (prevLv < 200 || prevLv > 300 || currLv < 200 || currLv > 300 ||
-                    (currLv < prevLv || (currLv === prevLv && currExp < prevExp))) {
-                    return 0;
-                }
-                var prevTotalExp = cumExp[prevLv - 200] + (prevExp || 0);
-                var currTotalExp = cumExp[currLv - 200] + (currExp || 0);
-                return Math.max(0, currTotalExp - prevTotalExp);
-            }
-            
-            // 각 캐릭터의 이번 달 경험치 수집
-            var rankingData = [];
-            
-            // 진행 상황 알림 (10명마다)
-            var progressInterval = Math.max(1, Math.floor(RANKING_CHARACTERS4.length / 3));
-
-            for (var idx = 0; idx < RANKING_CHARACTERS4.length; idx++) {
-                try {
-                    var targetCharName = RANKING_CHARACTERS4[idx];
-                    var encodedCharName = encodeURIComponent(targetCharName);
-                    
-                    // OCID 가져오기
-                    var ocidUrl = MAPLE_OCID_API_URL + "?character_name=" + encodedCharName;
-                    var ocidResp = org.jsoup.Jsoup.connect(ocidUrl)
-                        .header("accept", "application/json")
-                        .header("x-nxopen-api-key", NEXON_API_KEY)
-                        .ignoreContentType(true)
-                        .timeout(10000)
-                        .execute()
-                        .body();
-                    var ocidJson = JSON.parse(ocidResp);
-                    var characterOcid = ocidJson.ocid;
-                    
-                    // 현재 데이터
-                    var currentUrl = MAPLE_INF_API_URL + "?ocid=" + characterOcid;
-                    var currentResp = org.jsoup.Jsoup.connect(currentUrl)
-                        .header("accept", "application/json")
-                        .header("x-nxopen-api-key", NEXON_API_KEY)
-                        .ignoreContentType(true)
-                        .timeout(10000)
-                        .execute()
-                        .body();
-                    var currentJson = JSON.parse(currentResp);
-                    
-                    // 이번 달 1일 0시 데이터
-                    var firstUrl = MAPLE_INF_API_URL + "?ocid=" + characterOcid + "&date=" + day_first;
-                    var firstResp = org.jsoup.Jsoup.connect(firstUrl)
-                        .header("accept", "application/json")
-                        .header("x-nxopen-api-key", NEXON_API_KEY)
-                        .ignoreContentType(true)
-                        .timeout(10000)
-                        .execute()
-                        .body();
-                    var firstJson = JSON.parse(firstResp);
-                    
-                    // 이번 달 경험치 계산
-                    var monthExp = calcGainedExp(
-                        Number(firstJson.character_level),
-                        Number(firstJson.character_exp),
-                        Number(currentJson.character_level),
-                        Number(currentJson.character_exp)
-                    );
-                    
-                    rankingData.push({
-                        name: currentJson.character_name,
-                        exp: monthExp,
-                        level: currentJson.character_level
-                    });
-                    
-                    // 진행 상황 알림
-                    if ((idx + 1) % progressInterval === 0) {
-                        replier.reply("진행중... " + (idx + 1) + "/" + RANKING_CHARACTERS4.length);
-                    }
-                    
-                } catch (err) {
-                    // 실패한 캐릭터는 조용히 스킵
-                    continue;
-                }
-            }
-            
-            // 경험치 내림차순 정렬
-            rankingData.sort(function(a, b) {
-                return b.exp - a.exp;
-            });
-            
-            // 결과 출력 (최대 15위까지)
-            var result = "🏆 이번 달 경험치 랭킹 🏆\n\n";
-            
-            var displayCount = Math.min(50, rankingData.length);
+            var displayCount = Math.min(displayLimit, rankingData.length);
             
             for (var j = 0; j < displayCount; j++) {
                 var item = rankingData[j];
@@ -2675,177 +2380,11 @@ function getMonthlyRanking4(replier) {
     thread.start();
 }
 
-// 이번 달 경험치 랭킹 함수
-function getMonthlyRanking2(replier) {
-    // 즉시 응답
-    replier.reply("🏆 이번 달 경험치 랭킹 집계 중...\n잠시만 기다려주세요 (" + RANKING_CHARACTERS2.length + "명)");
-    
-    // 백그라운드 스레드로 실행
-    var thread = new java.lang.Thread(function() {
-        try {
-            // padStart 대체 함수
-            function pad(num) {
-                return num < 10 ? "0" + num : "" + num;
-            }
-            
-            var baseDate = new Date();
-            if (baseDate.getHours() >= 0 && baseDate.getHours() < 6) {
-                baseDate.setDate(baseDate.getDate() - 1);
-                baseDate.setHours(23, 50, 0, 0);
-            }
-            
-            var today = new Date(baseDate);
-            
-            // 이번 달 1일 0시 데이터를 가져오기 위해 전달 마지막날 날짜 계산
-            var prevMonthLast = new Date(today.getTime());
-            prevMonthLast.setDate(1);
-            prevMonthLast.setDate(prevMonthLast.getDate() - 1);
-            
-            var day_first =
-                prevMonthLast.getFullYear() + "-" +
-                pad(prevMonthLast.getMonth() + 1) + "-" +
-                pad(prevMonthLast.getDate());
-            
-            var expToNext = [
-2207026470,2471869646,2768494003,3100713283,3472798876,3889534741,4356278909,4879032378,5464516263,6120258214,
-7956335678,8831532602,9803001188,10881331318,12078277762,15701761090,17114919588,18655262350,20334235961,22164317197,
-28813612356,30830565220,32988704785,35297914119,37768768107,49099398539,52536356436,56213901386,60148874483,64359295696,
-83667084404,86177096936,88762409844,91425282139,94168040603,122418452783,126091006366,129873736556,133769948652,137783047111,
-179117961244,184491500081,190026245083,195727032435,201598843408,262078496430,269940851322,278039076861,286380249166,294971656640,
-442457484960,455731209508,469403145793,483485240166,497989797370,512929491291,528317376029,544166897309,560491904228,577306661354,
-1731919984062,1749239183902,1766731575741,1784398891498,1802242880412,2342915744535,2366344901980,2390008350999,2413908434508,2438047518853,
-5412465491853,5466590146771,5521256048238,5576468608720,5632233294807,11377111255510,12514822381061,13766304619167,15142935081083,16657228589191,
-33647601750165,37012361925181,40713598117699,44784957929468,49263453722414,99512176519276,109463394171203,120409733588323,132450706947155,145695777641870,
-294305470836577,323736017920234,356109619712257,391720581683482,430892639851830,870403132500696,957443445750765,1053187790325841,1158506569358425,1737759854037637];
-            
-            var cumExp = [0];
-            for (var i = 0; i < expToNext.length; i++) {
-                cumExp[i + 1] = cumExp[i] + expToNext[i];
-            }
-            
-            function calcGainedExp(prevLv, prevExp, currLv, currExp) {
-                if (prevLv < 200 || prevLv > 300 || currLv < 200 || currLv > 300 ||
-                    (currLv < prevLv || (currLv === prevLv && currExp < prevExp))) {
-                    return 0;
-                }
-                var prevTotalExp = cumExp[prevLv - 200] + (prevExp || 0);
-                var currTotalExp = cumExp[currLv - 200] + (currExp || 0);
-                return Math.max(0, currTotalExp - prevTotalExp);
-            }
-            
-            // 각 캐릭터의 이번 달 경험치 수집
-            var rankingData = [];
-            
-            // 진행 상황 알림 (10명마다)
-            var progressInterval = Math.max(1, Math.floor(RANKING_CHARACTERS2.length / 3));
-
-            for (var idx = 0; idx < RANKING_CHARACTERS2.length; idx++) {
-                try {
-                    var targetCharName = RANKING_CHARACTERS2[idx];
-                    var encodedCharName = encodeURIComponent(targetCharName);
-                    
-                    // OCID 가져오기
-                    var ocidUrl = MAPLE_OCID_API_URL + "?character_name=" + encodedCharName;
-                    var ocidResp = org.jsoup.Jsoup.connect(ocidUrl)
-                        .header("accept", "application/json")
-                        .header("x-nxopen-api-key", NEXON_API_KEY)
-                        .ignoreContentType(true)
-                        .timeout(10000)
-                        .execute()
-                        .body();
-                    var ocidJson = JSON.parse(ocidResp);
-                    var characterOcid = ocidJson.ocid;
-                    
-                    // 현재 데이터
-                    var currentUrl = MAPLE_INF_API_URL + "?ocid=" + characterOcid;
-                    var currentResp = org.jsoup.Jsoup.connect(currentUrl)
-                        .header("accept", "application/json")
-                        .header("x-nxopen-api-key", NEXON_API_KEY)
-                        .ignoreContentType(true)
-                        .timeout(10000)
-                        .execute()
-                        .body();
-                    var currentJson = JSON.parse(currentResp);
-                    
-                    // 이번 달 1일 0시 데이터
-                    var firstUrl = MAPLE_INF_API_URL + "?ocid=" + characterOcid + "&date=" + day_first;
-                    var firstResp = org.jsoup.Jsoup.connect(firstUrl)
-                        .header("accept", "application/json")
-                        .header("x-nxopen-api-key", NEXON_API_KEY)
-                        .ignoreContentType(true)
-                        .timeout(10000)
-                        .execute()
-                        .body();
-                    var firstJson = JSON.parse(firstResp);
-                    
-                    // 이번 달 경험치 계산
-                    var monthExp = calcGainedExp(
-                        Number(firstJson.character_level),
-                        Number(firstJson.character_exp),
-                        Number(currentJson.character_level),
-                        Number(currentJson.character_exp)
-                    );
-                    
-                    rankingData.push({
-                        name: currentJson.character_name,
-                        exp: monthExp,
-                        level: currentJson.character_level
-                    });
-                    
-                    // 진행 상황 알림
-                    if ((idx + 1) % progressInterval === 0) {
-                        replier.reply("진행중... " + (idx + 1) + "/" + RANKING_CHARACTERS2.length);
-                    }
-                    
-                } catch (err) {
-                    // 실패한 캐릭터는 조용히 스킵
-                    continue;
-                }
-            }
-            
-            // 경험치 내림차순 정렬
-            rankingData.sort(function(a, b) {
-                return b.exp - a.exp;
-            });
-            
-            // 결과 출력 (최대 15위까지)
-            var result = "🏆 이번 달 경험치 랭킹 🏆\n\n";
-            
-            var displayCount = Math.min(15, rankingData.length);
-            
-            for (var j = 0; j < displayCount; j++) {
-                var item = rankingData[j];
-                var expText = "";
-                var expVal = item.exp;
-                
-                if (expVal >= 1000000000000) {
-                    expText = (expVal / 1000000000000).toFixed(1) + "조";
-                } else if (expVal >= 100000000) {
-                    expText = (expVal / 100000000).toFixed(1) + "억";
-                } else if (expVal >= 10000) {
-                    expText = (expVal / 10000).toFixed(1) + "만";
-                } else {
-                    expText = expVal.toString();
-                }
-                
-                var medal = "";
-                if (j === 0) medal = "🥇";
-                else if (j === 1) medal = "🥈";
-                else if (j === 2) medal = "🥉";
-                else medal = (j + 1) + "위";
-                
-                result += medal + " " + item.name + " (Lv." + item.level + ")\n    " + expText + "\n";
-            }
-            
-            replier.reply(result);
-            
-        } catch (error) {
-            replier.reply("랭킹 집계 중 오류가 발생했습니다.");
-        }
-    });
-    
-    thread.start();
-}
+// 월별 경험치 랭킹 (봄비 전체 / 시계꽃 / 랭킹 / 스타) — 모두 동시 조회 + OCID 캐시 공유
+function getMonthlyRanking(replier)  { getMonthlyRankingList(replier, RANKING_CHARACTERS, 50); }
+function getMonthlyRanking2(replier) { getMonthlyRankingList(replier, RANKING_CHARACTERS2, 15); }
+function getMonthlyRanking3(replier) { getMonthlyRankingList(replier, RANKING_CHARACTERS3, 15); }
+function getMonthlyRanking4(replier) { getMonthlyRankingList(replier, RANKING_CHARACTERS4, 50); }
 function getPower(power,replier)
 {
 //일주일 시간표기
