@@ -1575,16 +1575,19 @@ function responsePart2(room, msg, sender, isGroupChat, replier, imageDB, package
     }
     if (msg.startsWith("@@") && !msg.startsWith("@@@")) {  // 공백 없이도(@@쿄코, @@295) 동작
         var rawAt2 = msg.slice(2).trim();
+        var forceAt2 = false;
+        if (rawAt2.slice(-1) === "!") { forceAt2 = true; rawAt2 = rawAt2.slice(0, -1).trim(); }
         var partsAt2 = rawAt2 ? rawAt2.split(/\s+/) : [];
+        if (partsAt2.length > 1 && (partsAt2[partsAt2.length - 1] === "새로고침" || partsAt2[partsAt2.length - 1] === "갱신")) { forceAt2 = true; partsAt2 = partsAt2.slice(0, -1); rawAt2 = partsAt2.join(" "); }
         var firstAt2 = partsAt2[0];
         if (firstAt2 === "봄비") {
-            getMonthlyRanking(replier);
+            getMonthlyRanking(replier, forceAt2);
         } else if (firstAt2 === "시계꽃") {
-            getMonthlyRanking2(replier);
+            getMonthlyRanking2(replier, forceAt2);
         } else if (firstAt2 === "랭킹") {
-            getMonthlyRanking3(replier);
+            getMonthlyRanking3(replier, forceAt2);
         } else if (firstAt2 === "스타") {
-            getMonthlyRanking4(replier);
+            getMonthlyRanking4(replier, forceAt2);
         } else {
             var targetLvl2 = null, nameStr2 = rawAt2;
             if (partsAt2.length >= 2 && /^\d+$/.test(partsAt2[partsAt2.length - 1])) {
@@ -1618,12 +1621,17 @@ function responsePart2(room, msg, sender, isGroupChat, replier, imageDB, package
     }
     if (msg.startsWith("@@@@")) {  // 공백 없이도 동작
         var raw4 = msg.slice(4).trim();
-        if (raw4 === "헤르메스") {
-            getPowerRanking(replier, RANKING_CHARACTERS);
-        } else if (raw4 === "시계꽃") {
-            getPowerRanking(replier, RANKING_CHARACTERS2);
-        } else if (raw4 === "스타") {
-            getPowerRanking(replier, RANKING_CHARACTERS4);
+        var force4 = false;
+        if (raw4.slice(-1) === "!") { force4 = true; raw4 = raw4.slice(0, -1).trim(); }
+        var parts4 = raw4 ? raw4.split(/\s+/) : [];
+        if (parts4.length > 1 && (parts4[parts4.length - 1] === "새로고침" || parts4[parts4.length - 1] === "갱신")) { force4 = true; parts4 = parts4.slice(0, -1); raw4 = parts4.join(" "); }
+        var first4 = parts4[0];
+        if (first4 === "헤르메스") {
+            getPowerRanking(replier, RANKING_CHARACTERS, "power:헤르메스", force4);
+        } else if (first4 === "시계꽃") {
+            getPowerRanking(replier, RANKING_CHARACTERS2, "power:시계꽃", force4);
+        } else if (first4 === "스타") {
+            getPowerRanking(replier, RANKING_CHARACTERS4, "power:스타", force4);
         } else {
             var res4 = resolveName(raw4, sender);
             if (!res4) replier.reply("닉네임을 입력하거나 /캐릭터등록 으로 등록해주세요.");
@@ -1836,7 +1844,7 @@ function formatExpValue(exp) {
 // 전투력 랭킹 함수
 // ===== 랭킹용 동시 조회 =====
 // 길드원이 500명을 넘어 한 명씩 조회하면 너무 오래 걸려서, 스레드 여러 개로 나눠 동시에 조회한다.
-var RANKING_THREADS = 10;
+var RANKING_THREADS = 20;
 var POWER_RANK_DAYS = 3;   // 전투력 랭킹: 최근 N일만 조회해 최댓값(과거 7일 → 3일로 호출 축소)
 
 // 넥슨 API 호출. 요청 과다(429)·서버 오류(5xx)·연결 끊김만 최대 3번 시도하고, 400(없는 캐릭터 등)은 바로 실패.
@@ -1936,7 +1944,76 @@ function flushOcidCache(newOcids) {
     } catch (e) {}
 }
 
-function getPowerRanking(replier, characterList) {
+
+// ===== 결과·월초·전투력 과거 데이터 캐시 =====
+var RANK_RESULT_KEY = "rankresult_cache";
+var RANK_RESULT_TTL_MS = 10 * 60 * 1000;   // 완성 랭킹 10분 캐시(강제 새로고침 가능)
+var MONTHSTART_KEY = "monthstart_cache";    // 이번 달 1일 스냅샷(달 내내 고정)
+var POWERSTAT_KEY = "powerstat_cache";      // 전투력 과거 날짜 기록(지난 날짜 불변)
+var rankResultLock = new java.util.concurrent.locks.ReentrantLock();
+var monthStartLock = new java.util.concurrent.locks.ReentrantLock();
+var powerStatLock = new java.util.concurrent.locks.ReentrantLock();
+
+function psDateStr(d) { function p(n) { return n < 10 ? "0" + n : "" + n; } return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()); }
+function getRankResult(cacheKey) {
+    if (!cacheKey) return null;
+    try {
+        var raw = DataBase.getDataBase(RANK_RESULT_KEY);
+        if (!raw) return null;
+        var o = JSON.parse(String(raw));
+        var e = o && o[cacheKey];
+        if (e && e.text && (ocidNowMs() - (e.t || 0) < RANK_RESULT_TTL_MS)) return e.text;
+    } catch (ex) {}
+    return null;
+}
+function saveRankResult(cacheKey, text) {
+    if (!cacheKey) return;
+    rankResultLock.lock();
+    try {
+        var o = {};
+        try { var raw = DataBase.getDataBase(RANK_RESULT_KEY); if (raw) { var p = JSON.parse(String(raw)); if (p) o = p; } } catch (e) {}
+        var now = ocidNowMs();
+        for (var k in o) { if (o.hasOwnProperty(k) && (now - (o[k].t || 0) >= RANK_RESULT_TTL_MS)) delete o[k]; }
+        o[cacheKey] = { t: now, text: text };
+        DataBase.setDataBase(RANK_RESULT_KEY, JSON.stringify(o));
+    } finally { rankResultLock.unlock(); }
+}
+function loadMonthStart(dayFirst) {
+    try { var raw = DataBase.getDataBase(MONTHSTART_KEY); if (raw) { var o = JSON.parse(String(raw)); if (o && o.day === dayFirst && o.data) return o.data; } } catch (e) {}
+    return {};
+}
+function flushMonthStart(dayFirst, newMap) {
+    try {
+        var keys = newMap.keySet().toArray();
+        if (!keys.length) return;
+        monthStartLock.lock();
+        try {
+            var cur = loadMonthStart(dayFirst);
+            for (var i = 0; i < keys.length; i++) { var kk = keys[i]; cur[String(kk)] = newMap.get(kk); }
+            DataBase.setDataBase(MONTHSTART_KEY, JSON.stringify({ day: dayFirst, data: cur }));
+        } finally { monthStartLock.unlock(); }
+    } catch (e) {}
+}
+function loadPowerStat() {
+    try { var raw = DataBase.getDataBase(POWERSTAT_KEY); if (raw) { var o = JSON.parse(String(raw)); if (o) return o; } } catch (e) {}
+    return {};
+}
+function flushPowerStat(newMap) {
+    try {
+        var keys = newMap.keySet().toArray();
+        if (!keys.length) return;
+        powerStatLock.lock();
+        try {
+            var cur = loadPowerStat();
+            for (var i = 0; i < keys.length; i++) { var kk = keys[i]; cur[String(kk)] = newMap.get(kk); }
+            var cy = psDateStr(new Date(new Date().getTime() - 10 * 86400000));
+            for (var k in cur) { if (cur.hasOwnProperty(k)) { var dp = k.split("|")[1]; if (dp && dp < cy) delete cur[k]; } }
+            DataBase.setDataBase(POWERSTAT_KEY, JSON.stringify(cur));
+        } finally { powerStatLock.unlock(); }
+    } catch (e) {}
+}
+function getPowerRanking(replier, characterList, cacheKey, force) {
+    if (!force) { var __c = getRankResult(cacheKey); if (__c) { replier.reply(__c); return; } }
     replier.reply("🏆 전투력 랭킹 집계 중...\n잠시만 기다려주세요 (" + characterList.length + "명)");
     
     var thread = new java.lang.Thread(function() {
@@ -1966,6 +2043,8 @@ function getPowerRanking(replier, characterList) {
             
             var ocidCache = loadOcidCache();
             var newOcids = new java.util.concurrent.ConcurrentHashMap();
+            var psCache = loadPowerStat();
+            var newPs = new java.util.concurrent.ConcurrentHashMap();
             var progressInterval = Math.max(1, Math.floor(characterList.length / 3));
 
             var rankingData = rankingParallel(characterList, function (targetCharName) {
@@ -1977,21 +2056,22 @@ function getPowerRanking(replier, characterList) {
                 var maxPower = 0;
 
                 for (var d = 0; d < dates.length; d++) {
+                    var __pk = characterOcid + "|" + dates[d];
+                    var __cv = psCache[__pk];
+                    if (__cv !== undefined) { if (__cv > maxPower) maxPower = __cv; continue; }
                     try {
                         var statJson = JSON.parse(rankingFetch(MAPLE_INF_STAT_URL + "?ocid=" + characterOcid + "&date=" + dates[d]));
-
-                        // 전투력 찾기
+                        var __dv = 0;
                         for (var s = 0; s < statJson.final_stat.length; s++) {
                             if (statJson.final_stat[s].stat_name === "전투력") {
-                                var power = Number(statJson.final_stat[s].stat_value);
-                                if (power > maxPower) {
-                                    maxPower = power;
-                                }
+                                __dv = Number(statJson.final_stat[s].stat_value);
                                 break;
                             }
                         }
+                        newPs.put(__pk, __dv);
+                        if (__dv > maxPower) maxPower = __dv;
                     } catch (e) {
-                        // 해당 날짜 데이터 없으면 스킵
+                        // 지난 날짜 조회 실패는 캐시하지 않음(다음에 재시도)
                     }
                 }
 
@@ -2006,6 +2086,7 @@ function getPowerRanking(replier, characterList) {
                 }
             });
             flushOcidCache(newOcids);
+            flushPowerStat(newPs);
             
             // 전투력 내림차순 정렬
             rankingData.sort(function(a, b) {
@@ -2029,6 +2110,7 @@ function getPowerRanking(replier, characterList) {
                 result += medal + " " + item.name + "\n    " + powerText + "\n";
             }
             
+            saveRankResult(cacheKey, result);
             replier.reply(result);
             
         } catch (error) {
@@ -2242,8 +2324,9 @@ function getMonthlyExpHistory(characterName, replier) {
 }
 
 // 이번 달 경험치 랭킹 함수
-function getMonthlyRankingList(replier, list, displayLimit) {
+function getMonthlyRankingList(replier, list, displayLimit, cacheKey, force) {
     // 즉시 응답
+    if (!force) { var __c = getRankResult(cacheKey); if (__c) { replier.reply(__c); return; } }
     replier.reply("🏆 이번 달 경험치 랭킹 집계 중...\n잠시만 기다려주세요 (" + list.length + "명)");
     
     // 백그라운드 스레드로 실행
@@ -2303,6 +2386,8 @@ function getMonthlyRankingList(replier, list, displayLimit) {
             // 진행 상황 알림 (1/3 마다)
             var ocidCache = loadOcidCache();
             var newOcids = new java.util.concurrent.ConcurrentHashMap();
+            var msCache = loadMonthStart(day_first);
+            var newMs = new java.util.concurrent.ConcurrentHashMap();
             var progressInterval = Math.max(1, Math.floor(list.length / 3));
 
             var rankingData = rankingParallel(list, function (targetCharName) {
@@ -2313,13 +2398,21 @@ function getMonthlyRankingList(replier, list, displayLimit) {
                 // 현재 데이터
                 var currentJson = JSON.parse(rankingFetch(MAPLE_INF_API_URL + "?ocid=" + characterOcid));
 
-                // 이번 달 1일 0시 데이터
-                var firstJson = JSON.parse(rankingFetch(MAPLE_INF_API_URL + "?ocid=" + characterOcid + "&date=" + day_first));
+                // 이번 달 1일 0시 데이터 (달 내내 고정 → 캐시)
+                var __ms = msCache[characterOcid];
+                var firstLv, firstExp;
+                if (__ms) { firstLv = __ms.lv; firstExp = __ms.exp; }
+                else {
+                    var firstJson = JSON.parse(rankingFetch(MAPLE_INF_API_URL + "?ocid=" + characterOcid + "&date=" + day_first));
+                    firstLv = Number(firstJson.character_level);
+                    firstExp = Number(firstJson.character_exp);
+                    newMs.put(characterOcid, { lv: firstLv, exp: firstExp });
+                }
 
                 // 이번 달 경험치 계산
                 var monthExp = calcGainedExp(
-                    Number(firstJson.character_level),
-                    Number(firstJson.character_exp),
+                    firstLv,
+                    firstExp,
                     Number(currentJson.character_level),
                     Number(currentJson.character_exp)
                 );
@@ -2335,6 +2428,7 @@ function getMonthlyRankingList(replier, list, displayLimit) {
                 }
             });
             flushOcidCache(newOcids);
+            flushMonthStart(day_first, newMs);
 
             // 경험치 내림차순 정렬
             rankingData.sort(function(a, b) {
@@ -2370,6 +2464,7 @@ function getMonthlyRankingList(replier, list, displayLimit) {
                 result += medal + " " + item.name + " (Lv." + item.level + ")\n    " + expText + "\n";
             }
             
+            saveRankResult(cacheKey, result);
             replier.reply(result);
             
         } catch (error) {
@@ -2381,10 +2476,10 @@ function getMonthlyRankingList(replier, list, displayLimit) {
 }
 
 // 월별 경험치 랭킹 (봄비 전체 / 시계꽃 / 랭킹 / 스타) — 모두 동시 조회 + OCID 캐시 공유
-function getMonthlyRanking(replier)  { getMonthlyRankingList(replier, RANKING_CHARACTERS, 50); }
-function getMonthlyRanking2(replier) { getMonthlyRankingList(replier, RANKING_CHARACTERS2, 15); }
-function getMonthlyRanking3(replier) { getMonthlyRankingList(replier, RANKING_CHARACTERS3, 15); }
-function getMonthlyRanking4(replier) { getMonthlyRankingList(replier, RANKING_CHARACTERS4, 50); }
+function getMonthlyRanking(replier, force)  { getMonthlyRankingList(replier, RANKING_CHARACTERS, 50, "monthly:봄비", force); }
+function getMonthlyRanking2(replier, force) { getMonthlyRankingList(replier, RANKING_CHARACTERS2, 15, "monthly:시계꽃", force); }
+function getMonthlyRanking3(replier, force) { getMonthlyRankingList(replier, RANKING_CHARACTERS3, 15, "monthly:랭킹", force); }
+function getMonthlyRanking4(replier, force) { getMonthlyRankingList(replier, RANKING_CHARACTERS4, 50, "monthly:스타", force); }
 function getPower(power,replier)
 {
 //일주일 시간표기
@@ -6046,7 +6141,7 @@ function option(replier) {
 
     m += "🏆 랭킹\n";
     m += "─────────────────\n";
-    m += "@@ 봄비 / 시계꽃 / 랭킹 / 스타\n";
+    m += "@@ 봄비 / 시계꽃 / 랭킹 / 스타  (끝에 ! = 새로고침)\n";
     m += " → 길드 월간 경험치 랭킹\n";
     m += "@@@@ 헤르메스 / 시계꽃 / 스타\n";
     m += " → 길드 전투력 랭킹\n\n";
