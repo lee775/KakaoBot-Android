@@ -4211,6 +4211,7 @@ if (__oldest && data2 && data2.character_level != null) {
             "보마Lia": "🏹 왕국 궁수",
             "꽁윤하": "✨ 궁정 마법사",
             "랙돌바다": "⚔️ 왕국 기사",
+            "요야어오우에": "👑 세종대왕",
         };
         var fantasyTag = fantasyTags[decodeURIComponent(characterName)] || "";
 
