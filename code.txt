@@ -3379,7 +3379,7 @@ if (__oldest && data2 && data2.character_level != null) {
         }
         else if(decodeURIComponent(characterName)=="속물")
         {
-          Tag="🖤 속이 시커먼 야 이 속물";
+          Tag="콩진호";
         }
         else if(decodeURIComponent(characterName)=="쿄코섬")
         {
@@ -4053,7 +4053,7 @@ if (__oldest && data2 && data2.character_level != null) {
         // 판타지 칭호 (고정 - 30일 최고치 기준 126명)
         var fantasyTags = {
             "쿄코섬": "🖤 시커먼 속물",
-            "속물": "🧡 콩진호",
+            "속물": "🧡 마음은 따뜻한",
             "처단": "⚔️ 천하제일검",
             "영디": "⛓️ 쇄혼의 지배자",
             "페에멜라": "⚔️ 『에공삼삼의 검』",
@@ -4212,7 +4212,7 @@ if (__oldest && data2 && data2.character_level != null) {
             "꽁윤하": "✨ 궁정 마법사",
             "랙돌바다": "⚔️ 왕국 기사",
             "요야어오우에": "👑 세종대왕",
-            "Nick": "🏆 최초의 만렙 달성자",
+            "Nick": "🌠 정점을 가장 먼저 밟은 자",
         };
         var fantasyTag = fantasyTags[decodeURIComponent(characterName)] || "";
 
