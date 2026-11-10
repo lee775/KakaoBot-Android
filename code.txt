@@ -4401,8 +4401,43 @@ function getEquipment(characterName, replier, slotFilter) {
                     String(d.getDate()).padStart(2, "0");
             }
 
-            // 장비 조회 (먼저 오늘 데이터)
-            var equipUrl = MAPLE_ITEM_EQUIPMENT_URL + "?ocid=" + ocidData.ocid;
+            // 최근 7일(어제~7일 전) 중 전투력이 가장 높은 날 찾기 (오늘 날짜는 API 미제공)
+            // 전투력 최고일의 장비 세팅을 보여준다 (메획/사냥 세팅 대신 본 세팅이 잡힘)
+            var bestDateStr = null;   // null이면 최신(날짜 미지정) 데이터
+            var bestPower = -1;
+            if (!slotFilter) {
+                for (var dayBack = 1; dayBack <= 7; dayBack++) {
+                    try {
+                        var sDate = new Date(Date.now() - 86400000 * dayBack);
+                        var sDateStr = formatDate(sDate);
+                        var statConn = org.jsoup.Jsoup.connect(MAPLE_INF_STAT_URL + "?ocid=" + ocidData.ocid + "&date=" + sDateStr)
+                            .header("accept", "application/json")
+                            .header("x-nxopen-api-key", NEXON_API_KEY)
+                            .ignoreContentType(true)
+                            .ignoreHttpErrors(true)
+                            .execute();
+                        if (statConn.statusCode() !== 200) continue;
+                        var statData = JSON.parse(statConn.body());
+                        if (!statData || !statData.final_stat) continue;
+                        var dayPower = -1;
+                        for (var si = 0; si < statData.final_stat.length; si++) {
+                            if (statData.final_stat[si].stat_name === "전투력") {
+                                dayPower = Number(statData.final_stat[si].stat_value);
+                                break;
+                            }
+                        }
+                        if (dayPower > bestPower) {
+                            bestPower = dayPower;
+                            bestDateStr = sDateStr;
+                        }
+                    } catch (e) {
+                        continue;
+                    }
+                }
+            }
+
+            // 장비 조회: 전투력 최고일 기준(있으면), 없으면 최신
+            var equipUrl = MAPLE_ITEM_EQUIPMENT_URL + "?ocid=" + ocidData.ocid + (bestDateStr ? "&date=" + bestDateStr : "");
             var equipResp = org.jsoup.Jsoup.connect(equipUrl)
                 .header("accept", "application/json")
                 .header("x-nxopen-api-key", NEXON_API_KEY)
@@ -4410,34 +4445,6 @@ function getEquipment(characterName, replier, slotFilter) {
                 .execute()
                 .body();
             var equipData = JSON.parse(equipResp);
-
-            // 메소/드롭 옵션이 있으면 이전 날짜 확인 (부위 조회는 건너뜀 → 빠르게)
-            if (!slotFilter && hasDropMesoOption(equipData)) {
-                for (var dayBack = 2; dayBack <= 8; dayBack++) {
-                    try {
-                        var pastDate = new Date(Date.now() - 86400000 * dayBack);
-                        var dateStr = formatDate(pastDate);
-                        var pastUrl = MAPLE_ITEM_EQUIPMENT_URL + "?ocid=" + ocidData.ocid + "&date=" + dateStr;
-                        var pastConn = org.jsoup.Jsoup.connect(pastUrl)
-                            .header("accept", "application/json")
-                            .header("x-nxopen-api-key", NEXON_API_KEY)
-                            .ignoreContentType(true)
-                            .ignoreHttpErrors(true)
-                            .execute();
-                        if (pastConn.statusCode() !== 200) {
-                            continue;
-                        }
-                        var pastResp = pastConn.body();
-                        var pastData = JSON.parse(pastResp);
-                        if (pastData && pastData.item_equipment && !hasDropMesoOption(pastData)) {
-                            equipData = pastData;
-                            break;
-                        }
-                    } catch (e) {
-                        continue;
-                    }
-                }
-            }
 
             // 결과 포맷팅
             var result = [];
@@ -4447,6 +4454,7 @@ function getEquipment(characterName, replier, slotFilter) {
 
             // 헤더 (미리보기에 보이는 부분)
             result.push("[" + charName + "] " + (slotFilter ? slotFilter + " 정보" : "장비 정보"));
+            if (!slotFilter && bestDateStr) result.push("📅 " + bestDateStr + " 세팅 (최근 7일 중 전투력 최고일 · " + formatNumber(bestPower) + ")");
             result.push("================================");
             // 카톡 "전체보기" 트리거: zero-width 3000개 (아래 장비 목록부터 접힘)
             if (!slotFilter || __eqIsGroup) result.push(new Array(3001).join("​"));
