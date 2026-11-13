@@ -4888,9 +4888,11 @@ function responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packag
         return;
     }
 
-    // ===== /업데이트 (관리자 전용) =====
+    // ===== /업데이트 (관리자 + 앱 테스트 기능) =====
     if (msg === "/업데이트") {
-        if (typeof ADMINS !== "undefined" && ADMINS.indexOf(sender) === -1) {
+        // 앱 테스트 기능(기본 room "테스트방" / sender "테스터")에서도 허용
+        var __isTestCtx = (room === "테스트방" || sender === "테스터");
+        if (typeof ADMINS !== "undefined" && ADMINS.indexOf(sender) === -1 && !__isTestCtx) {
             replier.reply("권한이 없습니다. 관리자만 사용 가능합니다.");
             return;
         }
@@ -4898,8 +4900,7 @@ function responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packag
             replier.reply("BotUpdate 미주입 (앱 재빌드/재설치 필요)");
             return;
         }
-        replier.reply("⏳ 최신 스크립트 가져오는 중...");
-        new java.lang.Thread(function() {
+        function __doUpdate() {
             try {
                 // CDN 캐시 회피: 최신 commit SHA 조회 → SHA 기반 raw URL 호출
                 // GitHub raw는 path 동일하면 Fastly 5분 캐시(query 무시)지만
@@ -4924,7 +4925,13 @@ function responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packag
             } catch (e) {
                 replier.reply("/업데이트 오류: " + e);
             }
-        }).start();
+        }
+        replier.reply("⏳ 최신 스크립트 가져오는 중...");
+        if (__isTestCtx) {
+            __doUpdate();                             // 테스트: 동기 실행(결과가 테스트 창 3초 캡처에 보이도록)
+        } else {
+            new java.lang.Thread(__doUpdate).start(); // 실제 메시지: 백그라운드
+        }
         return;
     }
 
