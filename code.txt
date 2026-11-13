@@ -336,30 +336,24 @@ function responsePart1(room, msg, sender, isGroupChat, replier, imageDB, package
         var __cbNm = __cbNick || resolveCharacter("", sender, replier);
         if (__cbNm) getCubeHistory(encodeURIComponent(__cbNm), __cbItem, __cbDays, replier);
     }
-    // ===== /스타포스 [닉] [장비명|부위] [일수] =====
-    if (msg === "/스타포스" || msg.startsWith("/스타포스 ")) {
-        var __sfArg = msg.indexOf(" ") !== -1 ? msg.substring(msg.indexOf(" ") + 1).trim() : "";
-        var __sfDays = SF_DEFAULT_DAYS;
-        var __sfM = __sfArg.match(/(?:^|\s)(\d+)$/);
-        if (__sfM) {
-            __sfDays = parseInt(__sfM[1], 10);
-            __sfArg = __sfArg.substring(0, __sfArg.length - __sfM[0].length).trim();
+    // (/스타포스 강화내역 명령은 삭제됨 → /랭킹 별 로 대체)
+
+    // ===== /랭킹 [경험치|별]  (끝에 ! = 새로고침) =====
+    if (msg === "/랭킹" || msg.startsWith("/랭킹")) {
+        var __rkArg = msg.slice(3).trim();
+        var __rkForce = false;
+        if (__rkArg.slice(-1) === "!") { __rkForce = true; __rkArg = __rkArg.slice(0, -1).trim(); }
+        if (__rkArg === "") {
+            replier.reply("🏆 랭킹 메뉴\n─────────────────\n• /랭킹 경험치  → 이번 달 길드 경험치 랭킹\n• /랭킹 별      → 길드 스타포스(별) 랭킹\n(끝에 ! 붙이면 새로고침)");
+        } else if (__rkArg === "경험치" || __rkArg === "경험" || __rkArg === "exp") {
+            getMonthlyRanking(replier, __rkForce);
+        } else if (__rkArg === "별" || __rkArg === "별랭킹" || __rkArg === "스타포스" || __rkArg === "성") {
+            getStarRanking(replier, RANKING_CHARACTERS, "star:봄비", __rkForce);
+        } else {
+            replier.reply("🏆 랭킹 메뉴\n─────────────────\n• /랭킹 경험치\n• /랭킹 별\n(끝에 ! 붙이면 새로고침)");
         }
-        if (!(__sfDays >= 1)) __sfDays = 1;
-        if (__sfDays > SF_MAX_DAYS) __sfDays = SF_MAX_DAYS;
-        var __sfNick = "", __sfItem = __sfArg;
-        var __sfSp = __sfArg.indexOf(" ");
-        var __sfFirst = __sfSp === -1 ? __sfArg : __sfArg.substring(0, __sfSp);
-        // 첫 토큰이 등록 캐릭터거나, 토큰이 2개 이상이면서 부위어가 아니면 닉네임으로 간주
-        if (__sfFirst && (CHAR_API_KEYS[__sfFirst] ||
-            (__sfSp !== -1 && !SLOT_ALIAS[__sfFirst] && !SLOT_GROUPS[__sfFirst]))) {
-            __sfNick = __sfFirst;
-            __sfItem = __sfSp === -1 ? "" : __sfArg.substring(__sfSp + 1).trim();
-        }
-        var __sfNm = __sfNick || resolveCharacter("", sender, replier);
-        if (__sfNm) getStarforceHistory(encodeURIComponent(__sfNm), __sfItem, __sfDays, replier);
     }
-    
+
     if (msg.indexOf("검은돈") !== -1 || msg.indexOf("/창고") !== -1) {
         money(replier);
     }
@@ -2120,6 +2114,72 @@ function getPowerRanking(replier, characterList, cacheKey, force) {
     
     thread.start();
 }
+
+// 별(스타포스) 랭킹 — 22성=1점, 성 1개당 +1점(30성=9점) 합계로 순위 (길드 전체)
+function getStarRanking(replier, characterList, cacheKey, force) {
+    if (!force) { var __c = getRankResult(cacheKey); if (__c) { replier.reply(__c); return; } }
+    replier.reply("⭐ 스타포스(별) 랭킹 집계 중...\n잠시만 기다려주세요 (" + characterList.length + "명)");
+
+    var thread = new java.lang.Thread(function() {
+        try {
+            var ocidCache = loadOcidCache();
+            var newOcids = new java.util.concurrent.ConcurrentHashMap();
+            var progressInterval = Math.max(1, Math.floor(characterList.length / 3));
+
+            var rankingData = rankingParallel(characterList, function (targetCharName) {
+                var encodedCharName = encodeURIComponent(targetCharName);
+                var characterOcid = resolveOcid(ocidCache, newOcids, targetCharName, encodedCharName);
+                try {
+                    var equip = JSON.parse(rankingFetch(MAPLE_ITEM_EQUIPMENT_URL + "?ocid=" + characterOcid));
+                    if (!equip || !equip.item_equipment) return null;
+                    var score = 0, cnt = 0, topStar = 0;
+                    for (var e = 0; e < equip.item_equipment.length; e++) {
+                        var sf = parseInt(equip.item_equipment[e].starforce, 10);
+                        if (!(sf >= 22)) continue;
+                        score += (sf - 21);
+                        cnt++;
+                        if (sf > topStar) topStar = sf;
+                    }
+                    if (score > 0) return { name: targetCharName, score: score, cnt: cnt, top: topStar };
+                    return null;
+                } catch (e) {
+                    return null;
+                }
+            }, function (doneCount) {
+                if (doneCount % progressInterval === 0) {
+                    replier.reply("진행중... " + doneCount + "/" + characterList.length);
+                }
+            });
+            flushOcidCache(newOcids);
+
+            rankingData.sort(function (a, b) {
+                if (b.score !== a.score) return b.score - a.score;
+                return b.top - a.top;
+            });
+
+            var result = "⭐ 스타포스(별) 랭킹 ⭐\n(22성=1점 · 성 1개당 +1점)\n\n";
+            var displayCount = Math.min(30, rankingData.length);
+            for (var j = 0; j < displayCount; j++) {
+                var item = rankingData[j];
+                var medal = "";
+                if (j === 0) medal = "🥇";
+                else if (j === 1) medal = "🥈";
+                else if (j === 2) medal = "🥉";
+                else medal = (j + 1) + "위";
+                result += medal + " " + item.name + "\n    " + item.score + "점 (22성↑ " + item.cnt + "개 · 최고 " + item.top + "성)\n";
+            }
+            if (rankingData.length === 0) result += "22성 이상 장비를 가진 길드원이 없습니다.\n";
+
+            saveRankResult(cacheKey, result);
+            replier.reply(result);
+        } catch (error) {
+            replier.reply("스타포스 랭킹 집계 중 오류가 발생했습니다: " + (error.message || error));
+        }
+    });
+
+    thread.start();
+}
+
 // 월별 경험치 히스토리 함수
 function getMonthlyExpHistory(characterName, replier) {
     //replier.reply("📊 월별 경험치 집계 중...\n잠시만 기다려주세요");
@@ -5060,192 +5120,6 @@ function replyApiKeyNeeded(replier, charName, what) {
     );
 }
 
-// ===== /스타포스 (강화 내역) =====
-// 넥슨 history/starforce 에는 item_equipment_part 가 없으므로,
-// 부위 키워드(귀걸이 등)는 착용 장비에서 "부위 -> 장비명"을 역으로 찾아서 매칭한다.
-var STARFORCE_HISTORY_URL = "https://open.api.nexon.com/maplestory/v1/history/starforce";
-var SF_DEFAULT_DAYS = 7;
-var SF_MAX_DAYS = 30;
-
-function getStarforceHistory(characterName, itemQuery, days, replier) {
-    var thread = new java.lang.Thread(function() {
-        try {
-            var plain = characterName;
-            try { plain = decodeURIComponent(characterName); } catch (e0) {}
-
-            if (!CHAR_API_KEYS[plain]) {
-                replyApiKeyNeeded(replier, plain, "스타포스 내역");
-                return;
-            }
-            var __apiKey = CHAR_API_KEYS[plain];
-
-            function pad(n) { return n < 10 ? "0" + n : "" + n; }
-            function dstr(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
-            function comma(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
-
-            var q = String(itemQuery || "").replace(/\s+/g, "");
-            if (q.length && SLOT_ALIAS[q]) q = SLOT_ALIAS[q].replace(/\s+/g, "");
-            var qTerms = SLOT_GROUPS[q] || [q];
-
-            // 착용 장비에서 장비명 -> 부위 맵 (활성 + 프리셋 전부)
-            var partOf = {};
-            if (q.length) {
-                try {
-                    var oc = org.jsoup.Jsoup.connect(MAPLE_OCID_API_URL + "?character_name=" + characterName)
-                        .header("accept", "application/json")
-                        .header("x-nxopen-api-key", __apiKey)
-                        .ignoreContentType(true).ignoreHttpErrors(true)
-                        .timeout(10000).execute();
-                    if (oc.statusCode() === 200) {
-                        var od = JSON.parse(oc.body());
-                        if (od && od.ocid) {
-                            var eq = org.jsoup.Jsoup.connect(MAPLE_ITEM_EQUIPMENT_URL + "?ocid=" + od.ocid)
-                                .header("accept", "application/json")
-                                .header("x-nxopen-api-key", __apiKey)
-                                .ignoreContentType(true).ignoreHttpErrors(true)
-                                .timeout(10000).execute();
-                            if (eq.statusCode() === 200) {
-                                var ed = JSON.parse(eq.body());
-                                var buckets = ["item_equipment", "item_equipment_preset_1", "item_equipment_preset_2", "item_equipment_preset_3"];
-                                for (var bi = 0; bi < buckets.length; bi++) {
-                                    var arr = ed[buckets[bi]];
-                                    if (!arr) continue;
-                                    for (var ii = 0; ii < arr.length; ii++) {
-                                        var nm0 = String(arr[ii].item_name || "").replace(/\s+/g, "");
-                                        if (nm0) partOf[nm0] = String(arr[ii].item_equipment_part || "").replace(/\s+/g, "")
-                                                             + "|" + String(arr[ii].item_equipment_slot || "").replace(/\s+/g, "");
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } catch (eEq) {}
-            }
-
-            function subseq(n, t) {
-                if (t.length < 2) return false;
-                var pos = 0;
-                for (var i = 0; i < t.length; i++) {
-                    var at = n.indexOf(t.charAt(i), pos);
-                    if (at === -1) return false;
-                    pos = at + 1;
-                }
-                return true;
-            }
-            function nameHit(rec) {
-                if (q.length === 0) return true;
-                var nm = String(rec.target_item || "").replace(/\s+/g, "");
-                var ps = partOf[nm] || "";
-                for (var i = 0; i < qTerms.length; i++) {
-                    var t = qTerms[i];
-                    if (nm.indexOf(t) !== -1) return true;
-                    if (ps && ps.indexOf(t) !== -1) return true;
-                }
-                return subseq(nm, q);
-            }
-
-            // 일수만큼 하루씩 조회
-            var all = [], okDays = 0, from = "", to = "";
-            for (var dd = days - 1; dd >= 0; dd--) {
-                var ds = dstr(new Date(Date.now() - dd * 86400000));
-                if (!from) from = ds;
-                to = ds;
-                try {
-                    var conn = org.jsoup.Jsoup.connect(STARFORCE_HISTORY_URL + "?count=1000&date=" + ds)
-                        .header("accept", "application/json")
-                        .header("x-nxopen-api-key", __apiKey)
-                        .ignoreContentType(true).ignoreHttpErrors(true)
-                        .timeout(10000).execute();
-                    if (conn.statusCode() !== 200) continue;
-                    okDays++;
-                    var j = JSON.parse(conn.body());
-                    var h = (j && j.starforce_history) || [];
-                    for (var k = 0; k < h.length; k++) all.push(h[k]);
-                } catch (e1) {}
-            }
-            if (okDays === 0) {
-                replyApiKeyNeeded(replier, plain, "스타포스 내역");
-                return;
-            }
-            all.sort(function (a, b) { return a.date_create < b.date_create ? -1 : (a.date_create > b.date_create ? 1 : 0); });
-            var period = "최근 " + days + "일 (" + from.substring(5) + "~" + to.substring(5) + ")";
-
-            // 장비명 미입력 -> 장비별 요약
-            if (q.length === 0) {
-                if (all.length === 0) {
-                    replier.reply("⭐ 스타포스 내역\n" + period + "\n\n기록이 없습니다.");
-                    return;
-                }
-                var cnt = {}, ord = [];
-                for (var s1 = 0; s1 < all.length; s1++) {
-                    var n1 = all[s1].target_item || "?";
-                    if (!cnt[n1]) { cnt[n1] = 0; ord.push(n1); }
-                    cnt[n1]++;
-                }
-                ord.sort(function (x, y) { return cnt[y] - cnt[x]; });
-                var m0 = "⭐ 스타포스 내역 (장비별)\n" + period + " · 총 " + comma(all.length) + "회\n";
-                m0 += "━━━━━━━━━━━━\n";
-                for (var o = 0; o < ord.length && o < 15; o++) m0 += comma(cnt[ord[o]]) + "회  " + ord[o] + "\n";
-                m0 += "\n장비명/부위를 붙이면 상세: /스타포스 " + plain + " " + (ord[0] || "장비명");
-                replier.reply(m0.replace(/\n+$/, ""));
-                return;
-            }
-
-            var hit = [];
-            for (var s2 = 0; s2 < all.length; s2++) if (nameHit(all[s2])) hit.push(all[s2]);
-            if (hit.length === 0) {
-                replier.reply("⭐ 해당 기록이 없습니다.\n" + period + "\n\n/스타포스 " + plain + " 만 입력하면 장비 목록을 보여줍니다.");
-                return;
-            }
-
-            // 장비별 집계
-            var groups = {}, gord = [];
-            for (var s3 = 0; s3 < hit.length; s3++) {
-                var gk = (hit[s3].character_name || "?") + "|" + (hit[s3].target_item || "?");
-                if (!groups[gk]) { groups[gk] = []; gord.push(gk); }
-                groups[gk].push(hit[s3]);
-            }
-            var title = gord.length === 1 ? (hit[hit.length - 1].target_item || itemQuery)
-                                          : (itemQuery + " (" + gord.length + "종)");
-            var msg = "⭐ " + title + "\n[" + plain + "] " + period + " · 총 " + comma(hit.length) + "회\n";
-            msg += "━━━━━━━━━━━━";
-
-            for (var gi = 0; gi < gord.length; gi++) {
-                var list = groups[gord[gi]];
-                var nm2 = gord[gi].split("|")[1];
-                var suc = 0, fail = 0, des = 0, lo = 99, hiSt = -1, destroyed = [];
-                for (var li = 0; li < list.length; li++) {
-                    var r = list[li];
-                    var res = r.item_upgrade_result || "";
-                    if (res === "성공") suc++;
-                    else if (res === "파괴") { des++; destroyed.push(r); }
-                    else fail++;
-                    var bf = Number(r.before_starforce_count || 0);
-                    var af = Number(r.after_starforce_count || 0);
-                    if (bf < lo) lo = bf;
-                    if (af > hiSt) hiSt = af;
-                }
-                var last = list[list.length - 1];
-                var rate = list.length > 0 ? Math.round(suc * 1000 / list.length) / 10 : 0;
-
-                if (gord.length > 1) msg += "\n\n[" + nm2 + "]";
-                else msg += "\n";
-                msg += "\n시도 " + comma(list.length) + "회 · 성공 " + suc + " · 실패 " + fail + " · 파괴 " + des;
-                msg += "\n성공률 " + rate + "%";
-                msg += "\n" + lo + "성 → " + hiSt + "성 (마지막 " + Number(last.after_starforce_count || 0) + "성)";
-                for (var di = 0; di < destroyed.length; di++) {
-                    var dr = destroyed[di];
-                    msg += "\n💥 " + dr.date_create.substring(5, 10) + " " + Number(dr.before_starforce_count || 0) + "성에서 파괴 (" + (dr.destroy_defence || "") + ")";
-                }
-            }
-            replier.reply(msg);
-        } catch (e) {
-            replier.reply("스타포스 내역 조회 오류: " + (e.message || e));
-        }
-    });
-    thread.start();
-}
-
 // ===== /큐브 (큐브 사용 내역 + 천장 카운트) =====
 // 넥슨 history/cube 는 하루 단위 조회(count 최소 10, date 필수)라 일수만큼 반복 호출.
 // upgrade_guarantee_count 는 넥슨이 0으로만 주므로, 천장은 "마지막 등급상승 이후 사용 횟수"로 직접 계산.
@@ -6155,6 +6029,8 @@ function option(replier) {
     m += " → 길드 월간 경험치 랭킹\n";
     m += "@@@@ 헤르메스 / 시계꽃 / 스타\n";
     m += " → 길드 전투력 랭킹\n\n";
+    m += "/랭킹 경험치 / 별  (끝에 ! = 새로고침)\n";
+    m += " → 경험치 랭킹 · 스타포스(별) 랭킹\n\n";
 
     m += "🎮 시뮬레이터 / 계산기\n";
     m += "─────────────────\n";
@@ -6171,7 +6047,6 @@ function option(replier) {
     m += "/수로 [닉] - 지하 수로 점수\n";
     m += "/수로완료 [닉] - 수요일 수로 알림에서 빼기\n";
     m += "/큐브 [닉] [장비|부위] [일수] - 큐브·천장\n";
-    m += "/스타포스 [닉] [장비|부위] [일수] - 강화 내역\n";
     m += "/건실단 - 단원 3일간 잠재재설정·스타포스 활동 체크\n";
     m += "※ 본인 계정 API 키 필요, 반영은 하루 늦음\n\n";
 
