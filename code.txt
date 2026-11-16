@@ -2126,21 +2126,54 @@ function getStarRanking(replier, characterList, cacheKey, force) {
             var newOcids = new java.util.concurrent.ConcurrentHashMap();
             var progressInterval = Math.max(1, Math.floor(characterList.length / 3));
 
+            // 한 프리셋(장비 배열)의 별점수: 22성=1점, 성 1개당 +1점
+            function __presetScore(arr) {
+                var sc = 0, c = 0, tp = 0;
+                if (arr) for (var i = 0; i < arr.length; i++) {
+                    var sf = parseInt(arr[i].starforce, 10);
+                    if (!(sf >= 22)) continue;
+                    sc += (sf - 21); c++; if (sf > tp) tp = sf;
+                }
+                return { score: sc, cnt: c, top: tp };
+            }
+            // 메획 세팅 판별: 그리드 펜던트가 있거나 잠재에 메소/드롭/아이템 획득이 하나라도 있으면 true
+            function __isFarmPreset(arr) {
+                if (!arr) return false;
+                for (var i = 0; i < arr.length; i++) {
+                    var it = arr[i];
+                    if (String(it.item_name || "").indexOf("그리드 펜던트") !== -1) return true;
+                    var opts = [it.potential_option_1, it.potential_option_2, it.potential_option_3,
+                                it.additional_potential_option_1, it.additional_potential_option_2, it.additional_potential_option_3];
+                    for (var j = 0; j < opts.length; j++) {
+                        var o = opts[j];
+                        if (o && (o.indexOf("메소") !== -1 || o.indexOf("드롭") !== -1 || o.indexOf("아이템 획득") !== -1)) return true;
+                    }
+                }
+                return false;
+            }
+
             var rankingData = rankingParallel(characterList, function (targetCharName) {
                 var encodedCharName = encodeURIComponent(targetCharName);
                 var characterOcid = resolveOcid(ocidCache, newOcids, targetCharName, encodedCharName);
                 try {
                     var equip = JSON.parse(rankingFetch(MAPLE_ITEM_EQUIPMENT_URL + "?ocid=" + characterOcid));
-                    if (!equip || !equip.item_equipment) return null;
-                    var score = 0, cnt = 0, topStar = 0;
-                    for (var e = 0; e < equip.item_equipment.length; e++) {
-                        var sf = parseInt(equip.item_equipment[e].starforce, 10);
-                        if (!(sf >= 22)) continue;
-                        score += (sf - 21);
-                        cnt++;
-                        if (sf > topStar) topStar = sf;
+                    if (!equip) return null;
+                    // 후보: 활성 + 프리셋 1~3. 메획 아닌(깨끗한) 세팅이 있으면 그중에서, 없으면 활성 세팅으로 폴백.
+                    // (프리셋 데이터는 item-equipment 응답에 함께 오므로 추가 호출 없음)
+                    var keys = ["item_equipment", "item_equipment_preset_1", "item_equipment_preset_2", "item_equipment_preset_3"];
+                    var cands = [];
+                    for (var k = 0; k < keys.length; k++) { var a = equip[keys[k]]; if (a && a.length) cands.push(a); }
+                    if (!cands.length) return null;
+                    var clean = [];
+                    for (var ci = 0; ci < cands.length; ci++) { if (!__isFarmPreset(cands[ci])) clean.push(cands[ci]); }
+                    var pool = clean.length ? clean : [equip.item_equipment || cands[0]];
+                    // 풀 중 별점수가 가장 높은 세팅을 그 캐릭터 대표값으로
+                    var best = { score: -1, cnt: 0, top: 0 };
+                    for (var pi = 0; pi < pool.length; pi++) {
+                        var s = __presetScore(pool[pi]);
+                        if (s.score > best.score) best = s;
                     }
-                    if (score > 0) return { name: targetCharName, score: score, cnt: cnt, top: topStar };
+                    if (best.score > 0) return { name: targetCharName, score: best.score, cnt: best.cnt, top: best.top };
                     return null;
                 } catch (e) {
                     return null;
@@ -2157,7 +2190,7 @@ function getStarRanking(replier, characterList, cacheKey, force) {
                 return b.top - a.top;
             });
 
-            var result = "⭐ 스타포스(별) 랭킹 ⭐\n(22성=1점 · 성 1개당 +1점)\n\n";
+            var result = "⭐ 스타포스(별) 랭킹 ⭐\n(22성=1점 · 성 1개당 +1점 · 메획 세팅 제외)\n\n";
             var displayCount = Math.min(30, rankingData.length);
             for (var j = 0; j < displayCount; j++) {
                 var item = rankingData[j];
@@ -4884,7 +4917,7 @@ function responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packag
 
     // ===== /바보 =====
     if (msg === "/바보") {
-        replier.reply("속물");
+        replier.reply("플로렌스");
         return;
     }
 
