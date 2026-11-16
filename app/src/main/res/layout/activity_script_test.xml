@@ -199,15 +199,34 @@
         android:textSize="12sp"
         android:paddingBottom="4dp" />
 
-    <!-- 응답 결과 라벨 -->
-    <TextView
+    <!-- 응답 결과 라벨 + 복사 버튼 -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="응답 결과"
-        android:textColor="#e94560"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:paddingBottom="4dp" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="4dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="응답 결과"
+            android:textColor="#e94560"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCopyResult"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="복사"
+            android:textSize="12sp"
+            android:minWidth="0dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            style="@style/Widget.Material3.Button.TextButton" />
+    </LinearLayout>
 
     <!-- 응답 표시 영역 -->
     <ScrollView
@@ -225,6 +244,7 @@
             android:textColor="#53ff53"
             android:textSize="13sp"
             android:fontFamily="monospace"
+            android:textIsSelectable="true"
             android:text="메시지를 입력하고 전송 버튼을 누르세요.\n봇의 응답이 여기에 표시됩니다.\n" />
     </ScrollView>
 

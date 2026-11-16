@@ -1,5 +1,8 @@
 package com.wook.kakaobot.ui
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Bundle
 import android.view.inputmethod.EditorInfo
 import android.widget.Toast
@@ -39,6 +42,8 @@ class ScriptTestActivity : AppCompatActivity() {
             resultBuffer.clear()
             binding.tvResult.text = "결과가 초기화되었습니다.\n"
         }
+
+        binding.btnCopyResult.setOnClickListener { copyResultToClipboard() }
 
         binding.btnSend.setOnClickListener { sendTestMessage() }
 
@@ -110,6 +115,17 @@ class ScriptTestActivity : AppCompatActivity() {
                 binding.btnSend.text = "전송"
             }
         }
+    }
+
+    private fun copyResultToClipboard() {
+        val text = resultBuffer.toString()
+        if (text.isEmpty()) {
+            Toast.makeText(this, "복사할 내용이 없습니다", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("봇 테스트 결과", text))
+        Toast.makeText(this, "결과를 복사했습니다", Toast.LENGTH_SHORT).show()
     }
 
     private fun appendResult(text: String) {
