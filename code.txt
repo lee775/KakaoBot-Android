@@ -6127,15 +6127,15 @@ function cubeSim(tokens, replier) {
         var up;
         if (hasCap && fails >= cap) { up = true; }      // 천장 도달 → 보장 승급
         else { up = (Math.random() * 100) < p; }
-        if (up) { lines.push("등업"); upAt = n; break; }
+        if (up) { lines.push("등업!!"); upAt = n; break; }
         lines.push("실패"); fails++;
     }
 
-    var ZW = new Array(3001).join("​");           // 전체보기 유도용(폭 0 문자)
+    var ZW = new Array(1001).join("​");           // 전체보기 유도용(폭 0 문자)
     var out = "결과보기\n==========" + ZW + "\n";
     if (upAt > 0) {
         var byPity = hasCap && (upAt - 1) >= cap;
-        out += "🎉 " + upAt + "번째에 등업!" + (byPity ? " (천장)" : "") + "\n\n";
+        out += "🎉 " + upAt + "번째에 등업!!" + (byPity ? " (천장)" : "") + "\n\n";
     } else {
         out += "💀 " + count + "번 모두 실패 (등업 X)\n\n";
     }
