@@ -4804,7 +4804,10 @@ var CMD_KEYWORDS = [
     "투력", "헥사", "확률", "환산", "경험치", "건실단", "내캐릭터", "도움말", "등록",
     "기능", "6차", "tmi", "ㄱㄴ", "ㄱㅎㅊ", "ㅆㄷㅇ", "ㅈㅂ", "ㅈㅌㄹ", "ㅌㄹ",
     // 잠재능력 등급 상승 시뮬레이터 토큰 (/잠재 에픽 100 미라클)
-    "잠재능력재설정", "에디셔널잠재", "에디재설정", "잠재재설정", "에디잠재", "잠재", "에디", "소울"
+    "잠재능력재설정", "에디셔널잠재", "에디재설정", "잠재재설정", "에디잠재", "잠재", "에디", "소울",
+    // 치킨 프랜차이즈 메뉴 추천 토큰 (/bhc /bbq /교촌 ... /치킨)
+    "노랑통닭", "또래오래", "처갓집", "처가집", "육십계", "호식이", "푸라닭",
+    "교촌", "굽네", "네네", "노랑", "60계", "자담", "치킨"
 ];
 function normalizeSlashCommand(msg) {
     if (typeof msg !== "string") return msg;
@@ -5054,6 +5057,13 @@ function responseWorker(room, msg, sender, isGroupChat, replier, imageDB, packag
             cubeSim(__cbTok, replier);
             return;
         }
+    }
+    // ===== 치킨 프랜차이즈 메뉴 추천 (/bhc /bbq /교촌 ... /치킨) =====
+    if (msg.charAt(0) === "/") {
+        var __ckTok = msg.slice(1).split(/\s+/)[0];
+        var __ck = __ckTok ? __ckTok.toLowerCase() : "";
+        if (__ck === "치킨" || __ck === "chicken") { chickenRandom(replier); return; }
+        if (CHICKEN_ALIAS.hasOwnProperty(__ck)) { chickenPick(CHICKEN_ALIAS[__ck], replier); return; }
     }
     if (msg === "/환산" || msg.startsWith("/환산 ") || msg === "&&" || msg.startsWith("&& ")) {
         var rawArg = msg.startsWith("/환산") ? msg.slice(3).trim() : msg.slice(2).trim();
@@ -6145,6 +6155,60 @@ function cubeSim(tokens, replier) {
            "\n승급확률 " + cubeFmtPct(p) + "% · 천장 " + (hasCap ? (cap + "회") : "없음");
     replier.reply(out);
 }
+// ===================== 치킨 프랜차이즈 메뉴 추천 =====================
+// /bhc /bbq /교촌 ... → 해당 브랜드 시그니처 메뉴 중 랜덤 추천(메인 1 + 대안 2)
+// /치킨 → 랜덤 브랜드 추천
+var CHICKEN = {
+    "bhc":      { name:"BHC",             menus:["뿌링클","맛초킹","골드킹","치즈볼","바삭클","커리퀸","콜팝","핫후라이드","양념치킨","후라이드"] },
+    "bbq":      { name:"BBQ",             menus:["황금올리브","자메이카 통다리구이","황올크리스피","핫황금올리브","시크릿양념","파더스치킨","꾸브라꼬꼬닭","황올 반반"] },
+    "교촌":     { name:"교촌치킨",        menus:["허니콤보","레드콤보","교촌오리지날","허니오리지날","레드윙","교촌윙","교촌스틱","반반콤보"] },
+    "굽네":     { name:"굽네치킨",        menus:["고추바사삭","볼케이노","갈비천왕","오리지널","남해마늘바사삭","치즈바사삭"] },
+    "네네":     { name:"네네치킨",        menus:["스노윙치즈","반반치킨","소이갈릭","오리엔탈파닭","핫블링","크리미언"] },
+    "푸라닭":   { name:"푸라닭",          menus:["블랙알리오","콘소메치킨","로스트넛갈릭","고추치킨","치즈볼"] },
+    "처갓집":   { name:"처갓집양념치킨",  menus:["슈프림양념치킨","후라이드","간장치킨","파닭","슈프림반반"] },
+    "또래오래": { name:"또래오래",        menus:["후라이드","양념치킨","간장치킨","파닭","땡초치킨"] },
+    "노랑통닭": { name:"노랑통닭",        menus:["후라이드","양념통닭","땡초불족","반반","통닭"] },
+    "60계":     { name:"60계치킨",        menus:["지파이","리얼후라이드","땡초바사삭","양념치킨","간장치킨"] },
+    "호식이":   { name:"호식이두마리치킨", menus:["후라이드","양념치킨","간장치킨","파닭"] },
+    "자담":     { name:"자담치킨",        menus:["로제치킨","마늘치킨","후라이드","양념치킨","땡초마요"] }
+};
+var CHICKEN_ALIAS = {
+    "bhc":"bhc", "비에이치씨":"bhc",
+    "bbq":"bbq", "비비큐":"bbq",
+    "교촌":"교촌", "kyochon":"교촌",
+    "굽네":"굽네", "goobne":"굽네",
+    "네네":"네네", "nene":"네네",
+    "푸라닭":"푸라닭",
+    "처갓집":"처갓집", "처가집":"처갓집",
+    "또래오래":"또래오래",
+    "노랑통닭":"노랑통닭", "노랑":"노랑통닭",
+    "60계":"60계", "육십계":"60계",
+    "호식이":"호식이",
+    "자담":"자담"
+};
+function chickenPick(key, replier) {
+    var f = CHICKEN[key];
+    if (!f) return;
+    var pool = f.menus.slice();
+    for (var i = pool.length - 1; i > 0; i--) {   // 셔플
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+    }
+    var out = "🍗 " + f.name + " 추천!\n👉 " + pool[0];
+    var alt = pool.slice(1, 3);
+    if (alt.length) {
+        out += "\n\n다른 것도 땡기면\n";
+        var rows = [];
+        for (var k = 0; k < alt.length; k++) rows.push("· " + alt[k]);
+        out += rows.join("\n");
+    }
+    replier.reply(out);
+}
+function chickenRandom(replier) {
+    var keys = [];
+    for (var k in CHICKEN) if (CHICKEN.hasOwnProperty(k)) keys.push(k);
+    chickenPick(keys[Math.floor(Math.random() * keys.length)], replier);
+}
 function clan(replier)
 {
   replier.reply("https://maple-boss-site.vercel.app/");
@@ -6244,6 +6308,12 @@ function option(replier) {
     m += "/벽지 - 벽지 보기\n";
     m += "/등록 [내용] - 벽지에 글 등록\n";
     m += "/삭제 - 내 글 삭제\n\n";
+
+    m += "🍗 치킨 추천\n";
+    m += "─────────────────\n";
+    m += "/bhc /bbq /교촌 /굽네 /네네 /푸라닭\n";
+    m += "/처갓집 /또래오래 /노랑통닭 /60계 /호식이 /자담\n";
+    m += "/치킨 - 랜덤 브랜드 추천\n\n";
 
     m += "❓ 도움말\n";
     m += "─────────────────\n";
