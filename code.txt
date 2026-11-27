@@ -4306,6 +4306,8 @@ if (__oldest && data2 && data2.character_level != null) {
             "랙돌바다": "⚔️ 왕국 기사",
             "요야어오우에": "👑 세종대왕",
             "Nick": "🌠 정점을 가장 먼저 밟은 자",
+            "활든그리즈": "💛🌟 햇살처럼 반짝이는 황금빛 공주 이안 🌟💛",
+            "활든이": "💛🌟 햇살처럼 반짝이는 황금빛 공주 이안 🌟💛",
         };
         var fantasyTag = fantasyTags[decodeURIComponent(characterName)] || "";
 
